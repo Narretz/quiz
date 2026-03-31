@@ -10,6 +10,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "officeparser": "^6.0.7"
+    "commander": "^14.0.3",
+    "officeparser": "^6.0.7",
+    "pptxgenjs": "^4.0.1"
   }
 }
