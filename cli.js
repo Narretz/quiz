@@ -48,4 +48,49 @@ program
     console.error("Written to", outFile);
   });
 
+program
+  .command("web")
+  .description("Start a local web UI for uploading XLSX and downloading PPTX")
+  .option("-p, --port <number>", "port number", "3000")
+  .action(async (opts) => {
+    const http = await import("http");
+    const fs = await import("fs");
+    const path = await import("path");
+    const root = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1")));
+
+    const mimeTypes = {
+      ".html": "text/html",
+      ".js": "application/javascript",
+      ".css": "text/css",
+    };
+
+    const server = http.createServer((req, res) => {
+      const url = req.url === "/" ? "/index.html" : req.url;
+      const filePath = path.join(root, url);
+
+      // Only serve files under project root
+      if (!filePath.startsWith(root)) {
+        res.writeHead(403);
+        res.end();
+        return;
+      }
+
+      fs.readFile(filePath, (err, data) => {
+        if (err) {
+          res.writeHead(404);
+          res.end("Not found");
+          return;
+        }
+        const ext = path.extname(filePath);
+        res.writeHead(200, { "Content-Type": mimeTypes[ext] || "application/octet-stream" });
+        res.end(data);
+      });
+    });
+
+    const port = parseInt(opts.port);
+    server.listen(port, () => {
+      console.log(`Quiz web UI running at http://localhost:${port}`);
+    });
+  });
+
 program.parse();

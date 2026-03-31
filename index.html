@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quiz XLSX to PPTX</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #333; padding: 2rem; }
+    h1 { margin-bottom: 1rem; }
+    .controls { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    button, label.upload {
+      padding: 0.5rem 1.2rem; border: none; border-radius: 4px; cursor: pointer;
+      font-size: 0.9rem; background: #2563eb; color: #fff;
+    }
+    button:disabled { opacity: 0.4; cursor: default; }
+    button:hover:not(:disabled), label.upload:hover { background: #1d4ed8; }
+    label.upload { display: inline-block; }
+    label.upload input { display: none; }
+    .status { font-size: 0.85rem; color: #666; }
+    .preview { display: flex; flex-wrap: wrap; gap: 1rem; }
+    .slide {
+      width: 320px; height: 180px; background: #fff; border: 1px solid #ccc;
+      border-radius: 4px; padding: 12px; position: relative; overflow: hidden;
+      font-size: 7px; line-height: 1.3; flex-shrink: 0;
+    }
+    .slide.title-slide {
+      display: flex; align-items: center; justify-content: center; text-align: center;
+    }
+    .slide .title-text { font-size: 16px; font-weight: bold; }
+    .slide .q-num { font-size: 10px; font-weight: bold; position: absolute; top: 4px; left: 6px; }
+    .slide .q-de, .slide .q-en { margin-top: 2px; }
+    .slide .q-de { margin-top: 14px; }
+    .slide .answer {
+      position: absolute; bottom: 6px; left: 12px; right: 12px;
+      text-align: center; font-weight: bold; font-size: 8px;
+    }
+    .section-label {
+      width: 100%; font-size: 0.75rem; color: #999; text-transform: uppercase;
+      letter-spacing: 0.05em; margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Quiz XLSX to PPTX</h1>
+  <div class="controls">
+    <label class="upload">
+      Upload .xlsx
+      <input type="file" id="fileInput" accept=".xlsx">
+    </label>
+    <button id="downloadBtn" disabled>Download .pptx</button>
+    <span class="status" id="status"></span>
+  </div>
+  <div class="preview" id="preview"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/officeparser@6.0.7/dist/officeparser.browser.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const statusEl = document.getElementById("status");
+    const previewEl = document.getElementById("preview");
+    let currentQuiz = null;
+
+    // --- Parse XLSX into quiz object (same logic as parse-quiz.js) ---
+
+    function astToQuiz(ast) {
+      const sheet =
+        ast.content.find((s) => s.metadata.sheetName === "Tabelle1") ??
+        ast.content[0];
+
+      let date = null;
+      const rounds = [];
+      let currentRound = null;
+
+      for (const row of sheet.children) {
+        const cells = row.children;
+        const firstCell = cells[0];
+        const firstText = firstCell?.text?.trim() ?? "";
+        const firstIsBold = firstCell?.children?.some((n) => n.formatting?.bold);
+
+        if (!firstText) continue;
+
+        if (date === null && firstIsBold && cells.length === 1) {
+          const serial = parseInt(firstText, 10);
+          if (!isNaN(serial)) {
+            const epoch = new Date(1899, 11, 30);
+            date = new Date(epoch.getTime() + serial * 86400000)
+              .toISOString()
+              .split("T")[0];
+            continue;
+          }
+        }
+
+        const hasAnswerCols = cells.some((c) => c.metadata.col >= 2 && c.text?.trim());
+        if (firstIsBold && !hasAnswerCols) {
+          currentRound = { name: firstText, description: "", questions: [] };
+          rounds.push(currentRound);
+          continue;
+        }
+
+        if (!currentRound) continue;
+
+        if (!hasAnswerCols) {
+          const dePart = firstText;
+          const enPart = cells.find((c) => c.metadata.col === 1)?.text?.trim() ?? "";
+          const desc = enPart ? `${dePart}\n${enPart}` : dePart;
+          currentRound.description = currentRound.description
+            ? currentRound.description + "\n" + desc
+            : desc;
+          continue;
+        }
+
+        const de = firstText;
+        const en = cells.find((c) => c.metadata.col === 1)?.text?.trim() ?? "";
+        const deAnswer = cells.find((c) => c.metadata.col === 2)?.text?.trim() ?? "";
+        const enAnswer = cells.find((c) => c.metadata.col === 3)?.text?.trim() || deAnswer;
+
+        currentRound.questions.push({
+          text: { de, en },
+          answers: { de: deAnswer, en: enAnswer },
+        });
+      }
+
+      return { date, rounds };
+    }
+
+    // --- Preview rendering ---
+
+    function truncate(text, max) {
+      return text.length > max ? text.slice(0, max) + "..." : text;
+    }
+
+    function renderPreview(quiz) {
+      previewEl.innerHTML = "";
+      const slides = buildSlideData(quiz);
+      for (const s of slides) {
+        if (s.type === "label") {
+          const div = document.createElement("div");
+          div.className = "section-label";
+          div.textContent = s.text;
+          previewEl.appendChild(div);
+          continue;
+        }
+        const div = document.createElement("div");
+        div.className = "slide" + (s.type === "title" ? " title-slide" : "");
+        if (s.type === "title") {
+          div.innerHTML = `<span class="title-text">${esc(s.text)}</span>`;
+        } else {
+          let html = `<span class="q-num">${s.num}</span>`;
+          if (s.de) html += `<div class="q-de">${esc(truncate(s.de, 200))}</div>`;
+          if (s.en) html += `<div class="q-en">${esc(truncate(s.en, 200))}</div>`;
+          if (s.answer) html += `<div class="answer">${esc(s.answer)}</div>`;
+          div.innerHTML = html;
+        }
+        previewEl.appendChild(div);
+      }
+    }
+
+    function esc(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    function buildSlideData(quiz) {
+      const slides = [];
+
+      function addTitle(text) { slides.push({ type: "title", text }); }
+
+      function addQuestions(rounds, withAnswers) {
+        for (const round of rounds) {
+          addTitle(round.name);
+          const questions = round.questions;
+          const count = questions.length === 0 ? 10 : questions.length;
+          for (let i = 0; i < count; i++) {
+            const q = questions[i];
+            const s = { type: "question", num: i + 1, de: "", en: "", answer: null };
+            if (q) {
+              s.de = q.text.de;
+              s.en = q.text.en;
+              if (withAnswers) {
+                s.answer = q.answers.de === q.answers.en
+                  ? q.answers.de
+                  : `${q.answers.de} / ${q.answers.en}`;
+              }
+            }
+            slides.push(s);
+          }
+        }
+      }
+
+      function addSection(rounds, label) {
+        slides.push({ type: "label", text: label });
+        addQuestions(rounds, false);
+        addTitle("Break");
+        addTitle("Answers");
+        addQuestions(rounds, true);
+      }
+
+      slides.push({ type: "label", text: "" });
+      addTitle(quiz.date);
+      addSection(quiz.rounds.slice(0, 2), "Section 1");
+      addSection(quiz.rounds.slice(2, 5), "Section 2");
+      addSection(quiz.rounds.slice(5), "Section 3");
+      return slides;
+    }
+
+    // --- PPTX generation (same logic as generate-pptx.js) ---
+
+    function buildPptx(quiz) {
+      const pptx = new PptxGenJS();
+      pptx.layout = "LAYOUT_16x9";
+
+      function addTitleSlide(text) {
+        pptx.addSlide().addText(text, {
+          x: 0, y: 0, w: "100%", h: "100%",
+          fontSize: 40, bold: true, align: "center", valign: "middle",
+        });
+      }
+
+      function addQuestionSlides(rounds, withAnswers) {
+        for (const round of rounds) {
+          addTitleSlide(round.name);
+          const questions = round.questions;
+          const count = questions.length === 0 ? 10 : questions.length;
+          for (let i = 0; i < count; i++) {
+            const slide = pptx.addSlide();
+            const q = questions[i];
+            slide.addText(String(i + 1), {
+              x: 0.3, y: 0.2, w: 0.8, h: 0.5, fontSize: 24, bold: true,
+            });
+            if (q) {
+              slide.addText(q.text.de, {
+                x: 0.5, y: 1, w: 9, h: 1.75, fontSize: 16, valign: "top",
+              });
+              if (q.text.en) {
+                slide.addText(q.text.en, {
+                  x: 0.5, y: 2.75, w: 9, h: 1.75, fontSize: 16, valign: "top",
+                });
+              }
+            }
+            if (withAnswers && q) {
+              const answer = q.answers.de === q.answers.en
+                ? q.answers.de
+                : `${q.answers.de} / ${q.answers.en}`;
+              slide.addText(answer, {
+                x: 0.5, y: 4.8, w: 9, h: 0.7,
+                fontSize: 20, bold: true, align: "center",
+              });
+            }
+          }
+        }
+      }
+
+      function addSection(rounds) {
+        addQuestionSlides(rounds, false);
+        addTitleSlide("Break");
+        addTitleSlide("Answers");
+        addQuestionSlides(rounds, true);
+      }
+
+      addTitleSlide(quiz.date);
+      addSection(quiz.rounds.slice(0, 2));
+      addSection(quiz.rounds.slice(2, 5));
+      addSection(quiz.rounds.slice(5));
+      return pptx;
+    }
+
+    // --- Event handlers ---
+
+    fileInput.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      statusEl.textContent = "Parsing...";
+      downloadBtn.disabled = true;
+      try {
+        const buffer = await file.arrayBuffer();
+        const ast = await officeParser.OfficeParser.parseOffice(buffer);
+        currentQuiz = astToQuiz(ast);
+        renderPreview(currentQuiz);
+        downloadBtn.disabled = false;
+        statusEl.textContent =
+          `${currentQuiz.rounds.length} rounds, ${currentQuiz.date}`;
+      } catch (err) {
+        statusEl.textContent = "Error: " + err.message;
+        console.error(err);
+      }
+    });
+
+    downloadBtn.addEventListener("click", async () => {
+      if (!currentQuiz) return;
+      statusEl.textContent = "Generating PPTX...";
+      try {
+        const pptx = buildPptx(currentQuiz);
+        await pptx.writeFile({ fileName: `quiz-${currentQuiz.date}.pptx` });
+        statusEl.textContent = "Downloaded!";
+      } catch (err) {
+        statusEl.textContent = "Error: " + err.message;
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>
