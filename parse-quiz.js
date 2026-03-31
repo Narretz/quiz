@@ -77,13 +77,3 @@ async function parseQuiz(filePath) {
 }
 
 export { parseQuiz };
-
-// CLI: node parse-quiz.js <file.xlsx>
-const isMain =
-  process.argv[1] &&
-  import.meta.url.endsWith(process.argv[1].replace(/\\/g, "/"));
-if (isMain && process.argv[2]) {
-  parseQuiz(process.argv[2]).then((quiz) => {
-    console.log(JSON.stringify(quiz, null, 2));
-  });
-}
