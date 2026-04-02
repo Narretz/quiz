@@ -36,7 +36,7 @@
       line-height: 1.3; flex-shrink: 0;
     }
     .slide.title-slide {
-      display: flex; align-items: center; justify-content: center; text-align: center;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
     }
     .slide .title-text { font-weight: bold; }
     .slide .img-actions {
@@ -322,9 +322,7 @@
           const count = r.questions.length === 0 ? 10 : r.questions.length;
           for (let i = 0; i < count; i++) sec.indices.push(idx++);
         }
-        tocEntries.push({ label: `Break ${s + 1}`, anchor: `break-${s + 1}` });
-        sec.indices.push(idx++); // Break
-        sec.indices.push(idx++); // Answers
+        sec.indices.push(idx++); // Antworten
         // Answers pass
         for (const r of rounds) {
           tocEntries.push({ label: `${r.name} Answers`, anchor: slugify(r.name) + "-answers" });
@@ -332,6 +330,8 @@
           const count = r.questions.length === 0 ? 10 : r.questions.length;
           for (let i = 0; i < count; i++) sec.indices.push(idx++);
         }
+        tocEntries.push({ label: `Break ${s + 1}`, anchor: `break-${s + 1}` });
+        sec.indices.push(idx++); // Pause
         sections.push(sec);
       }
 
@@ -378,11 +378,15 @@
           if (desc.type === "title") {
             div.className = "slide title-slide";
             // Assign anchor ID to title slides (skip "Answers" divider slides)
-            if (tocIdx < tocEntries.length && desc.text !== "Answers") {
+            if (tocIdx < tocEntries.length && !desc.text.startsWith("Antworten")) {
               div.id = tocEntries[tocIdx].anchor;
               tocIdx++;
             }
-            div.innerHTML = `<span class="title-text" style="font-size:${SLIDE_STYLE.title.fontSize * PT_SCALE}px">${esc(desc.text)}</span>`;
+            let titleHtml = `<span class="title-text" style="font-size:${SLIDE_STYLE.title.fontSize * PT_SCALE}px">${esc(desc.text)}</span>`;
+            if (desc.subtitle) {
+              titleHtml += `<div style="margin-top:12px;font-size:${SLIDE_STYLE.question.fontSize * PT_SCALE}px;white-space:pre-line">${esc(desc.subtitle)}</div>`;
+            }
+            div.innerHTML = titleHtml;
           } else {
             const { q, num, withAnswers, id } = desc;
             const imgEntry = id && slideImages[id];

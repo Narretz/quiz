@@ -144,8 +144,8 @@ export function astToQuiz(ast) {
 export function buildSlideDescriptors(quiz) {
   const slides = [];
 
-  function addTitle(text) {
-    slides.push({ type: "title", text, id: null });
+  function addTitle(text, subtitle) {
+    slides.push({ type: "title", text, subtitle: subtitle || null, id: null });
   }
 
   function addQuestions(rounds, withAnswers) {
@@ -165,9 +165,9 @@ export function buildSlideDescriptors(quiz) {
 
   function addSection(rounds) {
     addQuestions(rounds, false);
-    addTitle("Break");
-    addTitle("Answers");
+    addTitle("Antworten ⬧ Answers", "Bitte tauscht eure Papiere mit einem anderen Team aus.\nPlease swap your papers with another team.");
     addQuestions(rounds, true);
+    addTitle("Pause ⬧ Break", "Wir sehen uns in 10 Minuten.\nSee you in 10 minutes.");
   }
 
   addTitle(quiz.date);
@@ -195,9 +195,15 @@ export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}) {
 
     if (desc.type === "title") {
       slide.addText(desc.text, {
-        x: 0, y: 0, w: "100%", h: "100%",
+        x: 0, y: desc.subtitle ? 0.5 : 0, w: "100%", h: desc.subtitle ? "50%" : "100%",
         fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "middle",
       });
+      if (desc.subtitle) {
+        slide.addText(desc.subtitle, {
+          x: 0.5, y: "55%", w: 9, h: "40%",
+          fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top",
+        });
+      }
       continue;
     }
 
