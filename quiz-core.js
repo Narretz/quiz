@@ -11,7 +11,7 @@ export const SLIDE_STYLE = {
   title:    { fontSize: 40 },
   num:      { fontSize: 23 },
   question: { fontSize: 20, lineSpacing: 110 },
-  answer:   { fontSize: 20 },
+  answer:   { fontSize: 20, color: '#FFF', backgroundColor: '#CC0000' },
 };
 
 export function formatAnswer(q) {
@@ -292,8 +292,8 @@ export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}) {
       slide.addText(answer, {
         x: 0, y: 4.8, w: SLIDE_STYLE.width, h: 0.7,
         fontSize: SLIDE_STYLE.answer.fontSize, bold: true, align: "center",
-        color: "FFFFFF",
-        fill: { color: "CC0000" },
+        color: SLIDE_STYLE.answer.color,
+        fill: { color: SLIDE_STYLE.answer.backgroundColor },
       });
     }
   }
