@@ -36,6 +36,7 @@ export function ImageActions({ id, withAnswers, imgEntry, slideKey, fittingResul
         setImage(ansKey, { ...imgData });
       }
     }
+    e.target.value = "";
     scheduleSave();
     onRerender();
   }
