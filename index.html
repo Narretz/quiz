@@ -628,6 +628,10 @@
               html += `<div style="position:absolute;left:${px(pad)};top:${px(pad)};font-size:${numFs}px;font-weight:bold">${num}</div>`;
             }
 
+            if (withAnswers) {
+              html += `<svg style="position:absolute;top:0;left:0;z-index:1" width="30" height="30" viewBox="0 0 30 30"><polygon points="0,0 27,0 0,27" fill="${SLIDE_STYLE.answer.backgroundColor}"/><text x="4" y="12" fill="${SLIDE_STYLE.answer.color}" font-size="10" font-weight="bold">A</text></svg>`;
+            }
+
             html += imgHtml;
 
             if (id) {
