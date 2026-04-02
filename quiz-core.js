@@ -208,7 +208,8 @@ export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}) {
     }
 
     const { q, num, withAnswers, id } = desc;
-    const imgEntry = id && images[id];
+    const slideKey = id ? `${id}:${withAnswers ? 1 : 0}` : null;
+    const imgEntry = slideKey && images[slideKey];
 
     // No text — image fills the slide
     if (!q && imgEntry) {

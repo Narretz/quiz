@@ -42,21 +42,27 @@
     .slide .img-actions {
       position: absolute; top: 4px; right: 4px;
       display: none; gap: 3px; z-index: 2;
+      font-size: 12px;
     }
     .slide:hover .img-actions { display: flex; }
     .slide .img-actions button {
-      padding: 2px 6px; font-size: 12px; border-radius: 3px;
+      padding: 2px 6px;
+      border-radius: 3px;
       background: rgba(0,0,0,0.55); color: #fff; border: none; cursor: pointer;
     }
     .slide .img-actions button:hover { background: rgba(0,0,0,0.8); }
     .slide .img-actions input[type="file"] { display: none; }
     .slide .img-actions label.override-label {
       display: flex; align-items: center; gap: 2px;
-      font-size: 9px; color: #fff; white-space: nowrap;
+      color: #fff; white-space: nowrap;
+      border-radius: 3px;
+      background: rgba(0,0,0,0.55); border: none;
+      font-size: inherit;
     }
     .slide .img-actions input[type="number"] {
-      width: 3rem; padding: 1px 3px; font-size: 9px; border-radius: 3px;
+      width: 3rem; padding: 1px 3px; border-radius: 3px;
       border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.55); color: #fff;
+      font-size: inherit;
     }
     .section-label {
       width: 100%; font-size: 0.75rem; color: #999; text-transform: uppercase;
@@ -113,7 +119,7 @@
     fontSizeInput.addEventListener("input", onStyleChange);
     lineSpacingInput.addEventListener("input", onStyleChange);
 
-    // Image store: slide ID -> { data, width, height }
+    // Image store: "slideId:0/1" -> { data, width, height, unlinked? }
     const slideImages = {};
 
     function esc(text) {
@@ -148,7 +154,8 @@
 
       const id = slideDiv.dataset.slideId;
       const isAnswer = slideDiv.dataset.answers === "1";
-      const imgEntry = slideImages[id];
+      const slideKey = `${id}:${isAnswer ? 1 : 0}`;
+      const imgEntry = slideImages[slideKey];
       const { pad, height: H } = SLIDE_STYLE;
 
       // Bottom limit: answer bar, image, or slide edge
@@ -389,7 +396,8 @@
             div.innerHTML = titleHtml;
           } else {
             const { q, num, withAnswers, id } = desc;
-            const imgEntry = id && slideImages[id];
+            const slideKey = id ? `${id}:${withAnswers ? 1 : 0}` : null;
+            const imgEntry = slideKey && slideImages[slideKey];
             const { pad } = SLIDE_STYLE;
             const fullW = SLIDE_STYLE.width - 2 * pad;
             div.className = "slide";
@@ -451,9 +459,19 @@
                 html += `<label class="override-label"><input type="number" class="slide-fs-input" data-key="${key}" step="0.5" title="Font size (pt)">pt</label>`;
                 html += `<label class="override-label"><input type="number" class="slide-ls-input" data-key="${key}" step="1" title="Line spacing %">%</label>`;
               }
-              html += `<label><button class="add-img-btn" type="button">+img</button><input type="file" accept="image/*" data-slide-id="${id}"></label>`;
-              if (slideImages[id]) {
-                html += `<button class="rm-img-btn" data-slide-id="${id}">x</button>`;
+              if (withAnswers && !imgEntry && slideImages[`${id}:0`]) {
+                html += `<button class="relink-btn" data-slide-key="${key}" data-id="${id}">relink img from question</button>`;
+              }
+              if (withAnswers && imgEntry && slideImages[`${id}:0`]?.data === imgEntry.data) {
+                html += `<button class="unlink-btn" data-slide-key="${key}" data-id="${id}">unlink img from question</button>`;
+              }
+              html += `<label><button class="add-img-btn" type="button">+img</button><input type="file" accept="image/*" data-slide-key="${key}" data-id="${id}" data-answers="${withAnswers ? 1 : 0}"></label>`;
+              if (imgEntry) {
+                html += `<button class="rm-img-btn" data-slide-key="${key}" data-id="${id}" data-answers="${withAnswers ? 1 : 0}">remove img</button>`;
+              }
+              // Question slide: notify that image was also added to answer
+              if (!withAnswers && imgEntry && slideImages[`${id}:1`]?.data === imgEntry.data) {
+                html += `<button class="unlink-btn" data-slide-key="${id}:1" data-id="${id}">remove img from answer</button>`;
               }
               html += `</div>`;
             }
@@ -467,8 +485,8 @@
       // Run text fitting pass on slides with images
       for (const k of Object.keys(slideOverrides)) delete slideOverrides[k];
       previewEl.querySelectorAll(".slide[data-slide-id]").forEach((slideDiv) => {
-        if (!slideImages[slideDiv.dataset.slideId]) return;
         const key = `${slideDiv.dataset.slideId}:${slideDiv.dataset.answers}`;
+        if (!slideImages[key]) return;
         const manual = manualOverrides[key];
         const result = manual
           ? fitSlideText(slideDiv, manual.fontSize, manual.lineSpacing)
@@ -501,7 +519,22 @@
           if (!file) return;
           const dataUrl = await readFileAsDataURL(file);
           const dims = await loadImageDimensions(dataUrl);
-          slideImages[input.dataset.slideId] = { data: dataUrl, ...dims };
+          const imgData = { data: dataUrl, ...dims };
+          const key = input.dataset.slideKey;
+          const id = input.dataset.id;
+          const isAnswer = input.dataset.answers === "1";
+          if (isAnswer) {
+            slideImages[key] = imgData;
+          } else {
+            const oldQ = slideImages[key];
+            slideImages[key] = imgData;
+            // Copy to answer if it was empty or had the same image as the old question
+            const ansKey = `${id}:1`;
+            const ansImg = slideImages[ansKey];
+            if (!ansImg || ansImg.data === oldQ?.data) {
+              slideImages[ansKey] = { ...imgData };
+            }
+          }
           renderPreview(quiz);
         });
       });
@@ -509,7 +542,43 @@
       // Wire up remove buttons
       previewEl.querySelectorAll(".rm-img-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
-          delete slideImages[btn.dataset.slideId];
+          const key = btn.dataset.slideKey;
+          const id = btn.dataset.id;
+          const isAnswer = btn.dataset.answers === "1";
+          const ansKey = `${id}:1`;
+          const qKey = `${id}:0`;
+          const linked = slideImages[qKey] && slideImages[ansKey]
+            && slideImages[qKey].data === slideImages[ansKey].data;
+          if (linked) {
+            // Same image on both — remove both
+            delete slideImages[qKey];
+            delete slideImages[ansKey];
+          } else {
+            // Independent images — only remove the one clicked
+            delete slideImages[key];
+          }
+          renderPreview(quiz);
+        });
+      });
+
+      // Wire up unlink buttons
+      previewEl.querySelectorAll(".unlink-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          delete slideImages[btn.dataset.slideKey];
+          renderPreview(quiz);
+        });
+      });
+
+      // Wire up relink buttons
+      previewEl.querySelectorAll(".relink-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.id;
+          const qImg = slideImages[`${id}:0`];
+          if (qImg) {
+            slideImages[`${id}:1`] = { ...qImg };
+          } else {
+            delete slideImages[`${id}:1`];
+          }
           renderPreview(quiz);
         });
       });
