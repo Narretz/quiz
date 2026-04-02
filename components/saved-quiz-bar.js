@@ -12,9 +12,9 @@ export function SavedQuizBar({ onLoad }) {
 
   const sorted = [...list].sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
 
-  return sorted.map((entry) => html`
+  return html`<div class="saved-quizzes">${sorted.map((entry) => html`
     <span class="sq-item ${entry.id === activeId ? "active" : ""}" key=${entry.id}>
       <span class="sq-label" onClick=${() => onLoad(entry.id)}>${entry.id}</span>
     </span>
-  `);
+  `)}</div>`;
 }

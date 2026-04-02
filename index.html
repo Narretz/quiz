@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quiz XLSX to PPTX</title>
-  <script type="importmap">
-  {
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz XLSX to PPTX</title>
+    <script type="importmap">
+        {
     "imports": {
       "preact": "https://esm.sh/preact@10.25.4",
       "preact/hooks": "https://esm.sh/preact@10.25.4/hooks",
@@ -14,91 +15,15 @@
     }
   }
   </script>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #333; padding: 2rem; }
-    h1 { margin-bottom: 1rem; }
-    .controls { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .saved-quizzes { margin-bottom: 1rem; font-size: 0.85rem; }
-    .saved-quizzes:empty { display: none; }
-    .saved-quizzes .sq-item {
-      display: inline-flex; align-items: center; gap: 0.4rem;
-      padding: 0.3rem 0.6rem; margin: 0.2rem; border-radius: 4px;
-      background: #fff; border: 1px solid #ddd;
-    }
-    .saved-quizzes .sq-item.active { border-color: #2563eb; border-width: 3px; background: #eff4ff; }
-    .saved-quizzes .sq-label { cursor: pointer; }
-    .saved-quizzes .sq-label:hover { text-decoration: underline; }
-    .saved-quizzes .sq-delete {
-      background: none; border: none; color: #999; cursor: pointer;
-      font-size: 0.85rem; padding: 0 0.2rem; line-height: 1;
-    }
-    .saved-quizzes .sq-delete:hover { color: #e00; }
-    button, label.upload-btn {
-      padding: 0.5rem 1.2rem; border: none; border-radius: 4px; cursor: pointer;
-      font-size: 0.9rem; background: #2563eb; color: #fff;
-    }
-    button:disabled { opacity: 0.4; cursor: default; }
-    button:hover:not(:disabled), label.upload-btn:hover { background: #1d4ed8; }
-    label.upload-btn { display: inline-block; }
-    label.upload-btn input { display: none; }
-    .status { font-size: 0.85rem; color: #666; }
-    .toc { display: flex; gap: 0.3rem; flex-wrap: wrap; font-size: 0.8rem; }
-    .toc:empty { display: none; }
-    .toc a {
-      color: #2563eb; text-decoration: none; padding: 0.2rem 0.5rem;
-      border-radius: 3px; white-space: nowrap;
-    }
-    .toc a:hover { background: #e0e7ff; }
-    .toc .toc-sep { color: #ccc; align-self: center; }
-    .style-controls { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; font-size: 0.85rem; }
-    .style-controls label { display: flex; align-items: center; gap: 0.3rem; }
-    .style-controls input[type="number"] { width: 4rem; padding: 0.25rem 0.4rem; border: 1px solid #ccc; border-radius: 3px; font-size: 0.85rem; }
-    .preview { display: flex; flex-wrap: wrap; gap: 1rem; }
-    .slide {
-      width: 576px; height: 324px; border: 1px solid #ccc;
-      border-radius: 4px; position: relative; overflow: hidden;
-      line-height: 1.3; flex-shrink: 0;
-    }
-    .slide.title-slide {
-      display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
-    }
-    .slide .title-text { font-weight: bold; }
-    .slide .img-actions {
-      position: absolute; top: 4px; right: 4px;
-      display: none; gap: 3px; z-index: 2;
-      font-size: 12px;
-    }
-    .slide:hover .img-actions { display: flex; }
-    .slide .img-actions button {
-      padding: 2px 6px;
-      border-radius: 3px;
-      background: rgba(0,0,0,0.55); color: #fff; border: none; cursor: pointer;
-    }
-    .slide .img-actions button:hover { background: rgba(0,0,0,0.8); }
-    .slide .img-actions input[type="file"] { display: none; }
-    .slide .img-actions label.override-label {
-      display: flex; align-items: center; gap: 2px;
-      color: #fff; white-space: nowrap;
-      border-radius: 3px;
-      background: rgba(0,0,0,0.55); border: none;
-      font-size: inherit;
-    }
-    .slide .img-actions input[type="number"] {
-      width: 3rem; padding: 1px 3px; border-radius: 3px;
-      border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.55); color: #fff;
-      font-size: inherit;
-    }
-    .section-label {
-      width: 100%; font-size: 0.75rem; color: #999; text-transform: uppercase;
-      letter-spacing: 0.05em; margin-top: 0.5rem;
-    }
-  </style>
+    <link rel="stylesheet" href="style.css">
+    </link>
 </head>
+
 <body>
-  <div id="app"></div>
-  <script src="https://cdn.jsdelivr.net/npm/officeparser@6.0.7/dist/officeparser.browser.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
-  <script type="module" src="./app.js"></script>
+    <div id="app"></div>
+    <script src="https://cdn.jsdelivr.net/npm/officeparser@6.0.7/dist/officeparser.browser.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
+    <script type="module" src="./app.js"></script>
 </body>
+
 </html>

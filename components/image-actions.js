@@ -85,30 +85,32 @@ export function ImageActions({ id, withAnswers, imgEntry, slideKey, fittingResul
   return html`
     <div class="img-actions">
       <button onClick=${nav}>${withAnswers ? "\u2191 question" : "\u2193 answer"}</button>
-      ${imgEntry && html`
-        <label class="override-label">
-          <input type="number" class="slide-fs-input" step="0.5" value=${displayFs}
-                 onChange=${onOverrideChange} title="Font size (pt)" />pt
+        <div class="img-actions__right">
+        ${imgEntry && html`
+          <label class="override-label">
+            <input type="number" class="slide-fs-input" step="0.5" value=${displayFs}
+                   onChange=${onOverrideChange} title="Font size (pt)" />pt
+          </label>
+          <label class="override-label">
+            <input type="number" class="slide-ls-input" step="1" value=${displayLs}
+                   onChange=${onOverrideChange} title="Line spacing %" />%
+          </label>
+        `}
+        <label>
+          <button type="button" onClick=${(e) => { e.preventDefault(); e.target.parentElement.querySelector("input").click(); }}>+img</button>
+          <input type="file" accept="image/*" onChange=${addImg} style="display:none" />
         </label>
-        <label class="override-label">
-          <input type="number" class="slide-ls-input" step="1" value=${displayLs}
-                 onChange=${onOverrideChange} title="Line spacing %" />%
-        </label>
-      `}
-      ${withAnswers && !imgEntry && images[qKey] && html`
-        <button onClick=${relink}>relink img from question</button>
-      `}
-      ${isLinked && html`
-        <button onClick=${unlink}>unlink img from question</button>
-      `}
-      <label>
-        <button type="button" onClick=${(e) => { e.preventDefault(); e.target.parentElement.querySelector("input").click(); }}>+img</button>
-        <input type="file" accept="image/*" onChange=${addImg} style="display:none" />
-      </label>
-      ${imgEntry && html`<button onClick=${removeImg}>remove img</button>`}
-      ${!withAnswers && imgEntry && images[ansKey]?.data === imgEntry.data && html`
-        <button onClick=${() => { removeImage(ansKey); scheduleSave(); onRerender(); }}>remove img from answer</button>
-      `}
+        ${imgEntry && html`<button onClick=${removeImg}>remove img</button>`}
+        ${withAnswers && !imgEntry && images[qKey] && html`
+          <button onClick=${relink}>relink img from question</button>
+        `}
+        ${isLinked && html`
+          <button onClick=${unlink}>unlink img from question</button>
+        `}
+        ${!withAnswers && imgEntry && images[ansKey]?.data === imgEntry.data && html`
+          <button onClick=${() => { removeImage(ansKey); scheduleSave(); onRerender(); }}>remove img from answer</button>
+        `}
+      </div>
     </div>
   `;
 }
