@@ -7,11 +7,58 @@
 export const SLIDE_STYLE = {
   width: 10,       // inches (LAYOUT_16x9)
   height: 5.625,   // inches
+  pad: 0.2,        // gap between elements (inches)
   title:    { fontSize: 40 },
-  num:      { fontSize: 24 },
-  question: { fontSize: 16 },
+  num:      { fontSize: 23 },
+  question: { fontSize: 19 },
   answer:   { fontSize: 20 },
 };
+
+/**
+ * Compute image position and text widths based on image aspect ratio.
+ * Images entry: { data, width, height }.
+ * Returns { mode, img: {x,y,w,h}, deW, enW, answerW } in inches.
+ */
+export function computeImageLayout(aspectRatio) {
+  const { width: W, height: H, pad } = SLIDE_STYLE;
+  const fullW = W - 2 * pad;
+
+  function fit(boxW, boxH, ar) {
+    return ar > boxW / boxH
+      ? { w: boxW, h: boxW / ar }
+      : { w: boxH * ar, h: boxH };
+  }
+
+  if (aspectRatio <= 1) {
+    // Portrait: right 30%, full height
+    const { w, h } = fit(W * 0.3, H - 2 * pad, aspectRatio);
+    const imgX = W - pad - w;
+    const textW = imgX - 2 * pad;
+    return {
+      mode: "portrait",
+      img: { x: imgX, y: (H - h) / 2, w, h },
+      deW: textW, enW: textW, answerW: textW,
+    };
+  }
+  if (aspectRatio <= 2) {
+    // Landscape: bottom-right, 60% width, 50% height
+    const { w, h } = fit(W * 0.6, H * 0.5, aspectRatio);
+    const imgX = W - pad - w;
+    const narrowW = imgX - 2 * pad;
+    return {
+      mode: "landscape",
+      img: { x: imgX, y: H - pad - h, w, h },
+      deW: fullW, enW: narrowW, answerW: narrowW,
+    };
+  }
+  // Ultra-wide (>2:1): bottom, full width, 30% height
+  const { w, h } = fit(fullW, H * 0.3, aspectRatio);
+  return {
+    mode: "ultrawide",
+    img: { x: (W - w) / 2, y: H - pad - h, w, h },
+    deW: fullW, enW: fullW, answerW: fullW,
+  };
+}
 
 export function astToQuiz(ast) {
   const sheet =
@@ -124,11 +171,13 @@ export function buildSlideDescriptors(quiz) {
 /**
  * @param {object} quiz
  * @param {function} PptxGenJS - constructor
- * @param {Record<string, string>} [images] - map of slide ID to base64 data URI
+ * @param {Record<string, {data:string, width:number, height:number}>} [images]
  */
 export function buildPptx(quiz, PptxGenJS, images = {}) {
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
+  const { pad } = SLIDE_STYLE;
+  const fullW = SLIDE_STYLE.width - 2 * pad;
   const descriptors = buildSlideDescriptors(quiz);
 
   for (const desc of descriptors) {
@@ -143,22 +192,38 @@ export function buildPptx(quiz, PptxGenJS, images = {}) {
     }
 
     const { q, num, withAnswers, id } = desc;
-    const hasImage = id && images[id];
-    const textW = hasImage ? 4.8 : 9;
+    const imgEntry = id && images[id];
+    let deW = fullW, enW = fullW, answerW = fullW;
 
-    slide.addText(String(num), {
-      x: 0.3, y: 0.2, w: 0.8, h: 0.5, fontSize: SLIDE_STYLE.num.fontSize, bold: true,
-    });
+    if (imgEntry) {
+      const layout = computeImageLayout(imgEntry.width / imgEntry.height);
+      deW = layout.deW;
+      enW = layout.enW;
+      answerW = layout.answerW;
+      slide.addImage({
+        data: imgEntry.data,
+        x: layout.img.x, y: layout.img.y,
+        w: layout.img.w, h: layout.img.h,
+        sizing: { type: "contain", w: layout.img.w, h: layout.img.h },
+      });
+    }
 
     if (q) {
-      slide.addText(q.text.de, {
-        x: 0.5, y: 1, w: textW, h: 1.75, fontSize: SLIDE_STYLE.question.fontSize, valign: "top",
+      slide.addText([
+        { text: `${num}  `, options: { fontSize: SLIDE_STYLE.num.fontSize, bold: true } },
+        { text: q.text.de, options: { fontSize: SLIDE_STYLE.question.fontSize } },
+      ], {
+        x: pad, y: pad, w: deW, h: 2.2, valign: "top",
       });
       if (q.text.en) {
         slide.addText(q.text.en, {
-          x: 0.5, y: 2.75, w: textW, h: 1.75, fontSize: SLIDE_STYLE.question.fontSize, valign: "top",
+          x: pad, y: 2.5, w: enW, h: 2, fontSize: SLIDE_STYLE.question.fontSize, valign: "top",
         });
       }
+    } else {
+      slide.addText(String(num), {
+        x: pad, y: pad, w: 0.8, h: 0.5, fontSize: SLIDE_STYLE.num.fontSize, bold: true,
+      });
     }
 
     if (withAnswers && q) {
@@ -167,16 +232,8 @@ export function buildPptx(quiz, PptxGenJS, images = {}) {
           ? q.answers.de
           : `${q.answers.de} / ${q.answers.en}`;
       slide.addText(answer, {
-        x: 0.5, y: 4.8, w: 9, h: 0.7,
+        x: pad, y: 4.8, w: answerW, h: 0.7,
         fontSize: SLIDE_STYLE.answer.fontSize, bold: true, align: "center",
-      });
-    }
-
-    if (hasImage) {
-      slide.addImage({
-        data: images[id],
-        x: 5.5, y: 0.5, w: 4, h: 3,
-        sizing: { type: "contain", w: 4, h: 3 },
       });
     }
   }
