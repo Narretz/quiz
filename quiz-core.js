@@ -8,6 +8,7 @@ export const SLIDE_STYLE = {
   width: 10,       // inches (LAYOUT_16x9)
   height: 5.625,   // inches
   pad: 0.2,        // gap between elements (inches)
+  backgroundColor: "#FFFFFF",
   title:    { fontSize: 40 },
   num:      { fontSize: 23 },
   question: { fontSize: 20, lineSpacing: 110 },
@@ -190,12 +191,15 @@ export function buildSlideDescriptors(quiz) {
 export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}) {
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
-  const { pad, height: H } = SLIDE_STYLE;
-  const fullW = SLIDE_STYLE.width - 2 * pad;
+  const { pad, height: H, backgroundColor } = SLIDE_STYLE;
+  const W = SLIDE_STYLE.width;
+  const fullW = W - 2 * pad;
   const descriptors = buildSlideDescriptors(quiz);
+  const bgColor = backgroundColor.replace("#", "");
 
   for (const desc of descriptors) {
     const slide = pptx.addSlide();
+    slide.background = { color: bgColor };
 
     if (desc.type === "title") {
       slide.addText(desc.text, {
@@ -292,8 +296,8 @@ export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}) {
       slide.addText(answer, {
         x: 0, y: 4.8, w: SLIDE_STYLE.width, h: 0.7,
         fontSize: SLIDE_STYLE.answer.fontSize, bold: true, align: "center",
-        color: SLIDE_STYLE.answer.color,
-        fill: { color: SLIDE_STYLE.answer.backgroundColor },
+        color: SLIDE_STYLE.answer.color.replace("#", ""),
+        fill: { color: SLIDE_STYLE.answer.backgroundColor.replace("#", "") },
       });
     }
   }

@@ -46,7 +46,7 @@
     .style-controls input[type="number"] { width: 4rem; padding: 0.25rem 0.4rem; border: 1px solid #ccc; border-radius: 3px; font-size: 0.85rem; }
     .preview { display: flex; flex-wrap: wrap; gap: 1rem; }
     .slide {
-      width: 576px; height: 324px; background: #fff; border: 1px solid #ccc;
+      width: 576px; height: 324px; border: 1px solid #ccc;
       border-radius: 4px; position: relative; overflow: hidden;
       line-height: 1.3; flex-shrink: 0;
     }
@@ -103,6 +103,7 @@
   <div class="style-controls">
     <label>Font size <input type="number" id="fontSizeInput" min="8" max="48" step="1"></label>
     <label>Line spacing % <input type="number" id="lineSpacingInput" min="80" max="200" step="5"></label>
+    <label>Background <input type="color" id="bgColorInput"></label>
   </div>
   <div class="preview" id="preview"></div>
 
@@ -123,6 +124,7 @@
     const previewEl = document.getElementById("preview");
     const fontSizeInput = document.getElementById("fontSizeInput");
     const lineSpacingInput = document.getElementById("lineSpacingInput");
+    const bgColorInput = document.getElementById("bgColorInput");
     const savedQuizzesEl = document.getElementById("savedQuizzes");
     let currentQuiz = null;
     let currentQuizId = null;
@@ -188,7 +190,7 @@
           quiz: currentQuiz,
           images: { ...slideImages },
           manualOverrides: { ...manualOverrides },
-          style: { fontSize: SLIDE_STYLE.question.fontSize, lineSpacing: SLIDE_STYLE.question.lineSpacing },
+          style: { fontSize: SLIDE_STYLE.question.fontSize, lineSpacing: SLIDE_STYLE.question.lineSpacing, backgroundColor: SLIDE_STYLE.backgroundColor },
           savedAt: Date.now(),
         });
         renderSavedList();
@@ -210,8 +212,10 @@
       if (saved.style) {
         SLIDE_STYLE.question.fontSize = saved.style.fontSize;
         SLIDE_STYLE.question.lineSpacing = saved.style.lineSpacing;
+        SLIDE_STYLE.backgroundColor = saved.style.backgroundColor || "#FFFFFF";
         fontSizeInput.value = saved.style.fontSize;
         lineSpacingInput.value = saved.style.lineSpacing;
+        bgColorInput.value = SLIDE_STYLE.backgroundColor;
       }
       downloadBtn.disabled = false;
       statusEl.textContent = `${currentQuiz.rounds.length} rounds, ${currentQuiz.date}`;
@@ -268,15 +272,18 @@
     // Initialise inputs from current SLIDE_STYLE values
     fontSizeInput.value = SLIDE_STYLE.question.fontSize;
     lineSpacingInput.value = SLIDE_STYLE.question.lineSpacing;
+    bgColorInput.value = SLIDE_STYLE.backgroundColor;
 
     function onStyleChange() {
       SLIDE_STYLE.question.fontSize = Number(fontSizeInput.value);
       SLIDE_STYLE.question.lineSpacing = Number(lineSpacingInput.value);
+      SLIDE_STYLE.backgroundColor = bgColorInput.value;
       if (currentQuiz) renderPreview(currentQuiz);
       scheduleSave();
     }
     fontSizeInput.addEventListener("input", onStyleChange);
     lineSpacingInput.addEventListener("input", onStyleChange);
+    bgColorInput.addEventListener("input", onStyleChange);
 
     // Image store: "slideId:0/1" -> { data, width, height, unlinked? }
     const slideImages = {};
@@ -554,6 +561,7 @@
 
           if (desc.type === "title") {
             div.className = "slide title-slide";
+            div.style.backgroundColor = SLIDE_STYLE.backgroundColor;
             // Assign anchor ID to title slides (skip "Answers" divider slides)
             if (tocIdx < tocEntries.length && !desc.text.startsWith("Antworten")) {
               div.id = tocEntries[tocIdx].anchor;
@@ -571,6 +579,7 @@
             const { pad } = SLIDE_STYLE;
             const fullW = SLIDE_STYLE.width - 2 * pad;
             div.className = "slide";
+            div.style.backgroundColor = SLIDE_STYLE.backgroundColor;
             if (id) {
               div.dataset.slideId = id;
               div.dataset.answers = withAnswers ? "1" : "0";
@@ -611,7 +620,7 @@
                 html += `</div>`;
               }
               if (withAnswers) {
-                html += `<div style="position:absolute;left:0;bottom:0;width:100%;font-size:${SLIDE_STYLE.answer.fontSize * PT_SCALE}px;font-weight:bold;text-align:center;background:#CC0000;color:#fff;padding:4px 0;z-index:1">`;
+                html += `<div style="position:absolute;left:0;bottom:0;width:100%;font-size:${SLIDE_STYLE.answer.fontSize * PT_SCALE}px;font-weight:bold;text-align:center;background:${SLIDE_STYLE.answer.backgroundColor};color:${SLIDE_STYLE.answer.color};padding:4px 0;z-index:1">`;
                 html += esc(formatAnswer(q));
                 html += `</div>`;
               }
