@@ -2,7 +2,7 @@ import { h } from "preact";
 import htm from "htm";
 import { SLIDE_STYLE } from "../quiz-core.js";
 import { readFileAsDataURL, loadImageDimensions } from "../lib/utils.js";
-import { slideImages, setImage, removeImage, setManualOverride, scheduleSave, debug } from "../lib/state.js";
+import { slideImages, setImage, removeImage, setManualOverride, slideAudio, setAudio, removeAudio, scheduleSave, debug } from "../lib/state.js";
 
 const html = htm.bind(h);
 
@@ -79,6 +79,24 @@ export function ImageActions({ id, withAnswers, imgEntry, slideKey, fittingResul
     onRerender();
   }
 
+  const audioEntry = slideAudio.value[slideKey];
+
+  async function addAudioFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const dataUrl = await readFileAsDataURL(file);
+    setAudio(slideKey, { data: dataUrl, name: file.name });
+    e.target.value = "";
+    scheduleSave();
+    onRerender();
+  }
+
+  function removeAudioFile() {
+    removeAudio(slideKey);
+    scheduleSave();
+    onRerender();
+  }
+
   const effective = fittingResult;
   const displayFs = effective?.fontSize ?? SLIDE_STYLE.question.fontSize;
   const displayLs = effective?.lineSpacing ?? SLIDE_STYLE.question.lineSpacing;
@@ -111,6 +129,11 @@ export function ImageActions({ id, withAnswers, imgEntry, slideKey, fittingResul
         ${!withAnswers && imgEntry && images[ansKey]?.data === imgEntry.data && html`
           <button onClick=${() => { removeImage(ansKey); scheduleSave(); onRerender(); }}>remove img from answer</button>
         `}
+        <label>
+          <button type="button" onClick=${(e) => { e.preventDefault(); e.target.parentElement.querySelector("input").click(); }}>+audio</button>
+          <input type="file" accept="audio/*" onChange=${addAudioFile} style="display:none" />
+        </label>
+        ${audioEntry && html`<button onClick=${removeAudioFile}>remove audio</button>`}
       </div>
     </div>
   `;

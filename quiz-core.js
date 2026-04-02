@@ -187,8 +187,9 @@ export function buildSlideDescriptors(quiz) {
  * @param {function} PptxGenJS - constructor
  * @param {Record<string, {data:string, width:number, height:number}>} [images]
  * @param {Record<string, {fontSize:number, lineSpacing:number, enY:number}>} [overrides]
+ * @param {Record<string, {data:string, name:string}>} [audio]
  */
-export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}) {
+export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}, audio = {}) {
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
   const { pad, height: H, backgroundColor } = SLIDE_STYLE;
@@ -298,6 +299,16 @@ export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}) {
         fontSize: SLIDE_STYLE.answer.fontSize, bold: true, align: "center",
         color: SLIDE_STYLE.answer.color.replace("#", ""),
         fill: { color: SLIDE_STYLE.answer.backgroundColor.replace("#", "") },
+      });
+    }
+
+    // Embed audio if present
+    const audioEntry = slideKey && audio[slideKey];
+    if (audioEntry) {
+      slide.addMedia({
+        type: "audio",
+        data: audioEntry.data,
+        x: 0.2, y: H - 0.5, w: 0.3, h: 0.3,
       });
     }
   }

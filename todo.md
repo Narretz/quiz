@@ -8,7 +8,7 @@ feature parity for full quiz
 - add images to intro/break slides
 - unlink text from answer slides
 - add/edit text to answer slides
-- add audio files to slides
+- add audio files to slides ✅
 - edit text
 - create quiz from scratch
 

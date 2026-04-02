@@ -2,7 +2,7 @@ import { h, render } from "preact";
 import { effect } from "@preact/signals";
 import htm from "htm";
 import {
-  currentQuiz, currentQuizId, slideImages, manualOverrides,
+  currentQuiz, currentQuizId, slideImages, slideAudio, manualOverrides,
   slideStyle, savedList, status, debug, refreshSavedList, uploadQuiz, loadSavedQuiz,
 } from "./lib/state.js";
 import { SavedQuizBar } from "./components/saved-quiz-bar.js";
@@ -15,7 +15,7 @@ const html = htm.bind(h);
 
 function App() {
   // Touch all signals so App re-renders when any change
-  currentQuiz.value; currentQuizId.value; slideImages.value;
+  currentQuiz.value; currentQuizId.value; slideImages.value; slideAudio.value;
   manualOverrides.value; slideStyle.value; savedList.value; status.value;
 
   async function onUpload(e) {
@@ -54,7 +54,7 @@ render(html`<${App} />`, document.getElementById("app"));
 
 // Re-render on signal changes
 effect(() => {
-  currentQuiz.value; currentQuizId.value; slideImages.value;
+  currentQuiz.value; currentQuizId.value; slideImages.value; slideAudio.value;
   manualOverrides.value; slideStyle.value; savedList.value; status.value;
   render(html`<${App} />`, document.getElementById("app"));
 });

@@ -1,9 +1,9 @@
 import { h } from "preact";
-import { useRef, useLayoutEffect, useState } from "preact/hooks";
+import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { SLIDE_STYLE, computeImageLayout, formatAnswer } from "../quiz-core.js";
-import { PT_SCALE, PX, px, esc } from "../lib/utils.js";
-import { slideImages, manualOverrides, slideStyle } from "../lib/state.js";
+import { PT_SCALE, px, esc } from "../lib/utils.js";
+import { slideImages, slideAudio, manualOverrides, slideStyle } from "../lib/state.js";
 import { fitSlideText } from "../lib/fitting.js";
 import { ImageActions } from "./image-actions.js";
 
@@ -82,6 +82,12 @@ export function QuestionSlide({ desc, onRerender }) {
         </svg>
       `}
       ${imgStyle && html`<img src=${imgEntry.data} style=${imgStyle} />`}
+      ${slideKey && slideAudio.value[slideKey] && html`
+        <div class="slide-audio" style="background:${bg}e0">
+          <audio controls preload="none" src=${slideAudio.value[slideKey].data} />
+          <span class="slide-audio__name">${slideAudio.value[slideKey].name}</span>
+        </div>
+      `}
       ${id && html`<${ImageActions} id=${id} withAnswers=${withAnswers} imgEntry=${imgEntry}
                      slideKey=${slideKey} fittingResult=${fittingResultRef.current} onRerender=${onRerender} />`}
     </div>

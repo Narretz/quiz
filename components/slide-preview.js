@@ -3,7 +3,7 @@ import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { buildSlideDescriptors, SLIDE_STYLE } from "../quiz-core.js";
 import { slugify } from "../lib/utils.js";
-import { currentQuiz, slideImages, slideOverrides } from "../lib/state.js";
+import { currentQuiz, slideImages, slideAudio, slideOverrides } from "../lib/state.js";
 import { TitleSlide } from "./title-slide.js";
 import { QuestionSlide } from "./question-slide.js";
 
@@ -58,6 +58,7 @@ export function SlidePreview() {
 
   // Touch signals so component re-renders when they change
   slideImages.value;
+  slideAudio.value;
 
   const { descriptors, sections, tocEntries } = buildSections(quiz);
   const roundNames = new Set(quiz.rounds.map(r => r.name));
