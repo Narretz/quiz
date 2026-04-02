@@ -99,6 +99,8 @@
     const lineSpacingInput = document.getElementById("lineSpacingInput");
     let currentQuiz = null;
 
+    // Reset state on load (Firefox restores form element states across reloads)
+    downloadBtn.disabled = true;
     // Initialise inputs from current SLIDE_STYLE values
     fontSizeInput.value = SLIDE_STYLE.question.fontSize;
     lineSpacingInput.value = SLIDE_STYLE.question.lineSpacing;
