@@ -18,6 +18,14 @@
     label.upload-btn { display: inline-block; }
     label.upload-btn input { display: none; }
     .status { font-size: 0.85rem; color: #666; }
+    .toc { display: flex; gap: 0.3rem; flex-wrap: wrap; font-size: 0.8rem; }
+    .toc:empty { display: none; }
+    .toc a {
+      color: #2563eb; text-decoration: none; padding: 0.2rem 0.5rem;
+      border-radius: 3px; white-space: nowrap;
+    }
+    .toc a:hover { background: #e0e7ff; }
+    .toc .toc-sep { color: #ccc; align-self: center; }
     .style-controls { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; font-size: 0.85rem; }
     .style-controls label { display: flex; align-items: center; gap: 0.3rem; }
     .style-controls input[type="number"] { width: 4rem; padding: 0.25rem 0.4rem; border: 1px solid #ccc; border-radius: 3px; font-size: 0.85rem; }
@@ -65,6 +73,7 @@
     </label>
     <button id="downloadBtn" disabled>Download .pptx</button>
     <span class="status" id="status"></span>
+    <nav id="toc" class="toc"></nav>
   </div>
   <div class="style-controls">
     <label>Font size <input type="number" id="fontSizeInput" min="8" max="48" step="1"></label>
@@ -281,9 +290,18 @@
       return { fontSize: lastFs, lineSpacing: minLs, enY };
     }
 
+    function slugify(text) {
+      return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    }
+
     function renderPreview(quiz) {
       previewEl.innerHTML = "";
       const descriptors = buildSlideDescriptors(quiz);
+
+      // Build TOC entries and section structure from quiz rounds
+      const tocEl = document.getElementById("toc");
+      tocEl.innerHTML = "";
+      const tocEntries = []; // { label, anchor }
 
       // Group into sections for labels
       const sections = [
@@ -295,26 +313,57 @@
         quiz.rounds.slice(5),
       ];
 
+      tocEntries.push({ label: "Intro", anchor: "intro" });
+
       let idx = 1; // skip date
       for (let s = 0; s < roundSlices.length; s++) {
         const sec = { label: `Section ${s + 1}`, indices: [] };
         const rounds = roundSlices[s];
         // Questions pass
         for (const r of rounds) {
+          tocEntries.push({ label: r.name, anchor: slugify(r.name) });
           sec.indices.push(idx++); // round title
           const count = r.questions.length === 0 ? 10 : r.questions.length;
           for (let i = 0; i < count; i++) sec.indices.push(idx++);
         }
+        tocEntries.push({ label: `Break ${s + 1}`, anchor: `break-${s + 1}` });
         sec.indices.push(idx++); // Break
         sec.indices.push(idx++); // Answers
         // Answers pass
         for (const r of rounds) {
+          tocEntries.push({ label: `${r.name} Answers`, anchor: slugify(r.name) + "-answers" });
           sec.indices.push(idx++); // round title
           const count = r.questions.length === 0 ? 10 : r.questions.length;
           for (let i = 0; i < count; i++) sec.indices.push(idx++);
         }
         sections.push(sec);
       }
+
+      // Render TOC
+      tocEntries.forEach((e, i) => {
+        if (i > 0) {
+          const sep = document.createElement("span");
+          sep.className = "toc-sep";
+          sep.textContent = "|";
+          tocEl.appendChild(sep);
+        }
+        const a = document.createElement("a");
+        a.href = `#${e.anchor}`;
+        a.textContent = e.label;
+        a.addEventListener("click", (ev) => {
+          ev.preventDefault();
+          const target = document.getElementById(e.anchor);
+          if (target) {
+            target.scrollIntoView({ behavior: "smooth", block: "start" });
+            history.replaceState(null, "", `#${e.anchor}`);
+          }
+        });
+        tocEl.appendChild(a);
+      });
+
+      // Track which title slides get anchors
+      let tocIdx = 0;
+      // First entry is "Intro" for the date slide (index 0)
 
       let descIdx = 0;
       for (const sec of sections) {
@@ -332,6 +381,11 @@
 
           if (desc.type === "title") {
             div.className = "slide title-slide";
+            // Assign anchor ID to title slides (skip "Answers" divider slides)
+            if (tocIdx < tocEntries.length && desc.text !== "Answers") {
+              div.id = tocEntries[tocIdx].anchor;
+              tocIdx++;
+            }
             div.innerHTML = `<span class="title-text" style="font-size:${SLIDE_STYLE.title.fontSize * PT_SCALE}px">${esc(desc.text)}</span>`;
           } else {
             const { q, num, withAnswers, id } = desc;
@@ -483,6 +537,13 @@
           renderPreview(quiz);
         });
       });
+
+      // Scroll to hash anchor only on first render
+      if (location.hash && !renderPreview._hasRendered) {
+        const target = document.getElementById(location.hash.slice(1));
+        if (target) target.scrollIntoView({ block: "start" });
+      }
+      renderPreview._hasRendered = true;
     }
 
     // --- Event handlers ---
