@@ -4,6 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Quiz XLSX to PPTX</title>
+  <script type="importmap">
+  {
+    "imports": {
+      "preact": "https://esm.sh/preact@10.25.4",
+      "preact/hooks": "https://esm.sh/preact@10.25.4/hooks",
+      "@preact/signals": "https://esm.sh/@preact/signals@2.0.2",
+      "htm": "https://esm.sh/htm@3.1.1"
+    }
+  }
+  </script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #333; padding: 2rem; }
@@ -101,163 +111,113 @@
     <button id="deleteQuizBtn" style="display:none;margin-left:auto;background:#dc2626" >Delete quiz</button>
     <nav id="toc" class="toc"></nav>
   </div>
-  <div class="style-controls">
-    <label>Font size <input type="number" id="fontSizeInput" min="8" max="48" step="1"></label>
-    <label>Line spacing % <input type="number" id="lineSpacingInput" min="80" max="200" step="5"></label>
-    <label>Background <input type="color" id="bgColorInput"></label>
-  </div>
+  <div class="style-controls" id="styleControlsMount"></div>
   <div class="preview" id="preview"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/officeparser@6.0.7/dist/officeparser.browser.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
   <script type="module">
+    import { h, render } from "preact";
+    import htm from "htm";
     import { astToQuiz, buildPptx, buildSlideDescriptors, SLIDE_STYLE, computeImageLayout, fit, formatAnswer } from "./quiz-core.js";
-    import { dbPut, dbGet, dbDelete, dbList } from "./lib/db.js";
+    import { dbGet, dbDelete } from "./lib/db.js";
     import { PREVIEW_WIDTH, PT_SCALE, PX, px, esc, readFileAsDataURL, loadImageDimensions, slugify } from "./lib/utils.js";
     import { fitSlideText } from "./lib/fitting.js";
+    import {
+      currentQuiz, currentQuizId, slideImages, manualOverrides, slideOverrides,
+      slideStyle, savedList, status, scheduleSave, refreshSavedList,
+      setImage, removeImage, clearImages, setManualOverride, clearManualOverrides,
+    } from "./lib/state.js";
+    import { SavedQuizBar } from "./components/saved-quiz-bar.js";
+    import { StyleControls } from "./components/style-controls.js";
+    import { TOC } from "./components/toc.js";
+
+    const html = htm.bind(h);
 
     const fileInput = document.getElementById("fileInput");
     const downloadBtn = document.getElementById("downloadBtn");
     const deleteQuizBtn = document.getElementById("deleteQuizBtn");
-    const statusEl = document.getElementById("status");
     const previewEl = document.getElementById("preview");
-    const fontSizeInput = document.getElementById("fontSizeInput");
-    const lineSpacingInput = document.getElementById("lineSpacingInput");
-    const bgColorInput = document.getElementById("bgColorInput");
-    const savedQuizzesEl = document.getElementById("savedQuizzes");
-    let currentQuiz = null;
-    let currentQuizId = null;
 
-    // --- Save / load / list ---
-    let persistRequested = false;
-    let saveTimeout = null;
-    function scheduleSave() {
-      if (!currentQuiz || !currentQuizId) return;
-      clearTimeout(saveTimeout);
-      saveTimeout = setTimeout(async () => {
-        if (!persistRequested) {
-          persistRequested = true;
-          navigator.storage?.persist?.();
-        }
-        await dbPut({
-          id: currentQuizId,
-          quiz: currentQuiz,
-          images: { ...slideImages },
-          manualOverrides: { ...manualOverrides },
-          style: { fontSize: SLIDE_STYLE.question.fontSize, lineSpacing: SLIDE_STYLE.question.lineSpacing, backgroundColor: SLIDE_STYLE.backgroundColor },
-          savedAt: Date.now(),
-        });
-        renderSavedList();
-      }, 300);
+    // Reset state on load (Firefox restores form element states across reloads)
+    downloadBtn.disabled = true;
+    const statusEl = document.getElementById("status");
+    import("@preact/signals").then(({ effect }) => {
+      effect(() => { statusEl.textContent = status.value; });
+    });
+
+    // --- Mount Preact components ---
+    function renderComponents() {
+      render(html`<${SavedQuizBar} onLoad=${loadSavedQuiz} />`, document.getElementById("savedQuizzes"));
+      render(html`<${StyleControls} onStyleChange=${() => {
+        if (currentQuiz.value) renderPreview(currentQuiz.value);
+      }} />`, document.getElementById("styleControlsMount"));
+      render(html`<${TOC} />`, document.getElementById("toc"));
     }
+    renderComponents();
+    // Re-render components when signals change
+    import("@preact/signals").then(({ effect }) => {
+      effect(() => {
+        // Touch signals to subscribe
+        savedList.value; currentQuizId.value; currentQuiz.value; slideStyle.value;
+        renderComponents();
+      });
+    });
 
+    refreshSavedList();
+
+    // --- Save / load / delete ---
     async function loadSavedQuiz(id) {
       const saved = await dbGet(id);
       if (!saved) return;
-      currentQuiz = saved.quiz;
-      currentQuizId = id;
-      // Restore images
-      for (const k of Object.keys(slideImages)) delete slideImages[k];
-      Object.assign(slideImages, saved.images || {});
-      // Restore manual overrides
-      for (const k of Object.keys(manualOverrides)) delete manualOverrides[k];
-      Object.assign(manualOverrides, saved.manualOverrides || {});
-      // Restore style
+      currentQuiz.value = saved.quiz;
+      currentQuizId.value = id;
+      slideImages.value = saved.images || {};
+      manualOverrides.value = saved.manualOverrides || {};
       if (saved.style) {
-        SLIDE_STYLE.question.fontSize = saved.style.fontSize;
-        SLIDE_STYLE.question.lineSpacing = saved.style.lineSpacing;
-        SLIDE_STYLE.backgroundColor = saved.style.backgroundColor || "#FFFFFF";
-        fontSizeInput.value = saved.style.fontSize;
-        lineSpacingInput.value = saved.style.lineSpacing;
-        bgColorInput.value = SLIDE_STYLE.backgroundColor;
+        slideStyle.value = {
+          fontSize: saved.style.fontSize,
+          lineSpacing: saved.style.lineSpacing,
+          backgroundColor: saved.style.backgroundColor || "#FFFFFF",
+        };
       }
       downloadBtn.disabled = false;
-      statusEl.textContent = `${currentQuiz.rounds.length} rounds, ${currentQuiz.date}`;
-      renderPreview(currentQuiz);
+      status.value = `${saved.quiz.rounds.length} rounds, ${saved.quiz.date}`;
+      renderPreview(saved.quiz);
       updateDeleteBtn();
-      renderSavedList();
     }
 
     deleteQuizBtn.addEventListener("click", () => {
-      if (currentQuizId) deleteSavedQuiz(currentQuizId);
+      if (currentQuizId.value) deleteSavedQuiz(currentQuizId.value);
     });
 
     function updateDeleteBtn() {
-      deleteQuizBtn.style.display = currentQuizId ? "" : "none";
+      deleteQuizBtn.style.display = currentQuizId.value ? "" : "none";
     }
 
     async function deleteSavedQuiz(id) {
       if (!confirm(`Delete saved quiz "${id}"?`)) return;
       await dbDelete(id);
-      if (currentQuizId === id) {
-        currentQuiz = null;
-        currentQuizId = null;
-        for (const k of Object.keys(slideImages)) delete slideImages[k];
-        for (const k of Object.keys(manualOverrides)) delete manualOverrides[k];
+      if (currentQuizId.value === id) {
+        currentQuiz.value = null;
+        currentQuizId.value = null;
+        slideImages.value = {};
+        manualOverrides.value = {};
         previewEl.innerHTML = "";
-        document.getElementById("toc").innerHTML = "";
         downloadBtn.disabled = true;
-        statusEl.textContent = "";
+        status.value = "";
       }
       updateDeleteBtn();
-      renderSavedList();
+      refreshSavedList();
     }
-
-    async function renderSavedList() {
-      const list = await dbList();
-      savedQuizzesEl.innerHTML = "";
-      if (list.length === 0) return;
-      for (const entry of list.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))) {
-        const isActive = entry.id === currentQuizId;
-        const item = document.createElement("span");
-        item.className = "sq-item" + (isActive ? " active" : "");
-        const label = document.createElement("span");
-        label.className = "sq-label";
-        label.textContent = entry.id;
-        label.addEventListener("click", () => loadSavedQuiz(entry.id));
-        item.appendChild(label);
-        savedQuizzesEl.appendChild(item);
-      }
-    }
-    renderSavedList();
-
-    // Reset state on load (Firefox restores form element states across reloads)
-    downloadBtn.disabled = true;
-    // Initialise inputs from current SLIDE_STYLE values
-    fontSizeInput.value = SLIDE_STYLE.question.fontSize;
-    lineSpacingInput.value = SLIDE_STYLE.question.lineSpacing;
-    bgColorInput.value = SLIDE_STYLE.backgroundColor;
-
-    function onStyleChange() {
-      SLIDE_STYLE.question.fontSize = Number(fontSizeInput.value);
-      SLIDE_STYLE.question.lineSpacing = Number(lineSpacingInput.value);
-      SLIDE_STYLE.backgroundColor = bgColorInput.value;
-      if (currentQuiz) renderPreview(currentQuiz);
-      scheduleSave();
-    }
-    fontSizeInput.addEventListener("input", onStyleChange);
-    lineSpacingInput.addEventListener("input", onStyleChange);
-    bgColorInput.addEventListener("input", onStyleChange);
-
-    // Image store: "slideId:0/1" -> { data, width, height, unlinked? }
-    const slideImages = {};
-
-
-    // Per-slide overrides computed by the fitting pass: "id:0/1" -> {fontSize, lineSpacing, enY}
-    const slideOverrides = {};
-    // Manual per-slide overrides set via inputs: "id:0/1" -> {fontSize, lineSpacing}
-    const manualOverrides = {};
 
     function renderPreview(quiz) {
       previewEl.innerHTML = "";
       const descriptors = buildSlideDescriptors(quiz);
+      const images = slideImages.value;
+      const overrides = manualOverrides.value;
 
-      // Build TOC entries and section structure from quiz rounds
-      const tocEl = document.getElementById("toc");
-      tocEl.innerHTML = "";
-      const tocEntries = []; // { label, anchor }
-
-      // Group into sections for labels
+      // Build section structure from quiz rounds
       const sections = [
         { label: "", indices: [0] },  // date
       ];
@@ -267,59 +227,34 @@
         quiz.rounds.slice(5),
       ];
 
-      tocEntries.push({ label: "Intro", anchor: "intro" });
+      // Build tocEntries for anchor assignment (TOC rendering is handled by Preact component)
+      const tocEntries = [{ label: "Intro", anchor: "intro" }];
 
       let idx = 1; // skip date
       for (let s = 0; s < roundSlices.length; s++) {
         const sec = { label: `Section ${s + 1}`, indices: [] };
         const rounds = roundSlices[s];
-        // Questions pass
         for (const r of rounds) {
           tocEntries.push({ label: r.name, anchor: slugify(r.name) });
-          sec.indices.push(idx++); // round title
+          sec.indices.push(idx++);
           const count = r.questions.length === 0 ? 10 : r.questions.length;
           for (let i = 0; i < count; i++) sec.indices.push(idx++);
         }
         sec.indices.push(idx++); // Antworten
-        // Answers pass
         for (const r of rounds) {
           tocEntries.push({ label: `${r.name} Answers`, anchor: slugify(r.name) + "-answers" });
-          sec.indices.push(idx++); // round title
+          sec.indices.push(idx++);
           const count = r.questions.length === 0 ? 10 : r.questions.length;
           for (let i = 0; i < count; i++) sec.indices.push(idx++);
         }
         if (s < roundSlices.length - 1) {
           tocEntries.push({ label: `Break ${s + 1}`, anchor: `break-${s + 1}` });
-          sec.indices.push(idx++); // Pause
+          sec.indices.push(idx++);
         }
         sections.push(sec);
       }
 
-      // Render TOC
-      tocEntries.forEach((e, i) => {
-        if (i > 0) {
-          const sep = document.createElement("span");
-          sep.className = "toc-sep";
-          sep.textContent = "|";
-          tocEl.appendChild(sep);
-        }
-        const a = document.createElement("a");
-        a.href = `#${e.anchor}`;
-        a.textContent = e.label;
-        a.addEventListener("click", (ev) => {
-          ev.preventDefault();
-          const target = document.getElementById(e.anchor);
-          if (target) {
-            target.scrollIntoView({ behavior: "smooth", block: "start" });
-            history.replaceState(null, "", `#${e.anchor}`);
-          }
-        });
-        tocEl.appendChild(a);
-      });
-
-      // Track which title slides get anchors
       let tocIdx = 0;
-      // First entry is "Intro" for the date slide (index 0)
 
       const roundNames = new Set(quiz.rounds.map(r => r.name));
 
@@ -360,7 +295,7 @@
           } else {
             const { q, num, withAnswers, id } = desc;
             const slideKey = id ? `${id}:${withAnswers ? 1 : 0}` : null;
-            const imgEntry = slideKey && slideImages[slideKey];
+            const imgEntry = slideKey && images[slideKey];
             const { pad } = SLIDE_STYLE;
             const fullW = SLIDE_STYLE.width - 2 * pad;
             div.className = "slide";
@@ -427,10 +362,10 @@
                 html += `<label class="override-label"><input type="number" class="slide-fs-input" data-key="${key}" step="0.5" title="Font size (pt)">pt</label>`;
                 html += `<label class="override-label"><input type="number" class="slide-ls-input" data-key="${key}" step="1" title="Line spacing %">%</label>`;
               }
-              if (withAnswers && !imgEntry && slideImages[`${id}:0`]) {
+              if (withAnswers && !imgEntry && images[`${id}:0`]) {
                 html += `<button class="relink-btn" data-slide-key="${key}" data-id="${id}">relink img from question</button>`;
               }
-              if (withAnswers && imgEntry && slideImages[`${id}:0`]?.data === imgEntry.data) {
+              if (withAnswers && imgEntry && images[`${id}:0`]?.data === imgEntry.data) {
                 html += `<button class="unlink-btn" data-slide-key="${key}" data-id="${id}">unlink img from question</button>`;
               }
               html += `<label><button class="add-img-btn" type="button">+img</button><input type="file" accept="image/*" data-slide-key="${key}" data-id="${id}" data-answers="${withAnswers ? 1 : 0}"></label>`;
@@ -438,7 +373,7 @@
                 html += `<button class="rm-img-btn" data-slide-key="${key}" data-id="${id}" data-answers="${withAnswers ? 1 : 0}">remove img</button>`;
               }
               // Question slide: notify that image was also added to answer
-              if (!withAnswers && imgEntry && slideImages[`${id}:1`]?.data === imgEntry.data) {
+              if (!withAnswers && imgEntry && images[`${id}:1`]?.data === imgEntry.data) {
                 html += `<button class="unlink-btn" data-slide-key="${id}:1" data-id="${id}">remove img from answer</button>`;
               }
               html += `</div>`;
@@ -451,24 +386,25 @@
       }
 
       // Run text fitting pass on slides with images
-      for (const k of Object.keys(slideOverrides)) delete slideOverrides[k];
+      const computedOverrides = {};
       previewEl.querySelectorAll(".slide[data-slide-id]").forEach((slideDiv) => {
         const key = `${slideDiv.dataset.slideId}:${slideDiv.dataset.answers}`;
-        if (!slideImages[key]) return;
-        const manual = manualOverrides[key];
+        if (!images[key]) return;
+        const manual = overrides[key];
         const result = manual
-          ? fitSlideText(slideDiv, slideImages, manual.fontSize, manual.lineSpacing)
-          : fitSlideText(slideDiv, slideImages);
-        if (result) slideOverrides[key] = result;
+          ? fitSlideText(slideDiv, images, manual.fontSize, manual.lineSpacing)
+          : fitSlideText(slideDiv, images);
+        if (result) computedOverrides[key] = result;
       });
+      slideOverrides.value = computedOverrides;
 
       // Populate per-slide override inputs with effective values
       previewEl.querySelectorAll(".slide-fs-input").forEach((input) => {
-        const o = slideOverrides[input.dataset.key];
+        const o = computedOverrides[input.dataset.key];
         input.value = o?.fontSize ?? SLIDE_STYLE.question.fontSize;
       });
       previewEl.querySelectorAll(".slide-ls-input").forEach((input) => {
-        const o = slideOverrides[input.dataset.key];
+        const o = computedOverrides[input.dataset.key];
         input.value = o?.lineSpacing ?? SLIDE_STYLE.question.lineSpacing;
       });
 
@@ -491,16 +427,16 @@
           const key = input.dataset.slideKey;
           const id = input.dataset.id;
           const isAnswer = input.dataset.answers === "1";
+          const imgs = slideImages.value;
           if (isAnswer) {
-            slideImages[key] = imgData;
+            setImage(key, imgData);
           } else {
-            const oldQ = slideImages[key];
-            slideImages[key] = imgData;
-            // Copy to answer if it was empty or had the same image as the old question
+            const oldQ = imgs[key];
             const ansKey = `${id}:1`;
-            const ansImg = slideImages[ansKey];
+            const ansImg = imgs[ansKey];
+            setImage(key, imgData);
             if (!ansImg || ansImg.data === oldQ?.data) {
-              slideImages[ansKey] = { ...imgData };
+              setImage(ansKey, { ...imgData });
             }
           }
           renderPreview(quiz);
@@ -513,16 +449,15 @@
         btn.addEventListener("click", () => {
           const key = btn.dataset.slideKey;
           const id = btn.dataset.id;
-          const isAnswer = btn.dataset.answers === "1";
           const ansKey = `${id}:1`;
           const qKey = `${id}:0`;
-          const linked = slideImages[qKey] && slideImages[ansKey]
-            && slideImages[qKey].data === slideImages[ansKey].data;
+          const imgs = slideImages.value;
+          const linked = imgs[qKey] && imgs[ansKey] && imgs[qKey].data === imgs[ansKey].data;
           if (linked) {
-            delete slideImages[qKey];
-            delete slideImages[ansKey];
+            removeImage(qKey);
+            removeImage(ansKey);
           } else {
-            delete slideImages[key];
+            removeImage(key);
           }
           renderPreview(quiz);
           scheduleSave();
@@ -532,7 +467,7 @@
       // Wire up unlink buttons
       previewEl.querySelectorAll(".unlink-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
-          delete slideImages[btn.dataset.slideKey];
+          removeImage(btn.dataset.slideKey);
           renderPreview(quiz);
           scheduleSave();
         });
@@ -542,11 +477,11 @@
       previewEl.querySelectorAll(".relink-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
           const id = btn.dataset.id;
-          const qImg = slideImages[`${id}:0`];
+          const qImg = slideImages.value[`${id}:0`];
           if (qImg) {
-            slideImages[`${id}:1`] = { ...qImg };
+            setImage(`${id}:1`, { ...qImg });
           } else {
-            delete slideImages[`${id}:1`];
+            removeImage(`${id}:1`);
           }
           renderPreview(quiz);
           scheduleSave();
@@ -569,10 +504,10 @@
           const key = input.dataset.key;
           const fsInput = previewEl.querySelector(`.slide-fs-input[data-key="${key}"]`);
           const lsInput = previewEl.querySelector(`.slide-ls-input[data-key="${key}"]`);
-          manualOverrides[key] = {
+          setManualOverride(key, {
             fontSize: Number(fsInput.value),
             lineSpacing: Number(lsInput.value),
-          };
+          });
           renderPreview(quiz);
           scheduleSave();
         });
@@ -591,44 +526,43 @@
     fileInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      statusEl.textContent = "Parsing...";
+      status.value = "Parsing...";
       downloadBtn.disabled = true;
       try {
         const buffer = await file.arrayBuffer();
         const ast = await officeParser.OfficeParser.parseOffice(buffer);
-        currentQuiz = astToQuiz(ast);
+        const quiz = astToQuiz(ast);
         // Pick a unique ID based on quiz date
-        let id = currentQuiz.date || `quiz-${Date.now()}`;
+        let id = quiz.date || `quiz-${Date.now()}`;
         if (await dbGet(id)) {
           let n = 2;
           while (await dbGet(`${id} (${n})`)) n++;
           id = `${id} (${n})`;
         }
-        currentQuizId = id;
-        // Clear images and manual overrides from previous upload
-        for (const k of Object.keys(slideImages)) delete slideImages[k];
-        for (const k of Object.keys(manualOverrides)) delete manualOverrides[k];
-        renderPreview(currentQuiz);
+        currentQuiz.value = quiz;
+        currentQuizId.value = id;
+        clearImages();
+        clearManualOverrides();
+        renderPreview(quiz);
         downloadBtn.disabled = false;
-        statusEl.textContent =
-          `${currentQuiz.rounds.length} rounds, ${currentQuiz.date}`;
+        status.value = `${quiz.rounds.length} rounds, ${quiz.date}`;
         updateDeleteBtn();
         scheduleSave();
       } catch (err) {
-        statusEl.textContent = "Error: " + err.message;
+        status.value = "Error: " + err.message;
         console.error(err);
       }
     });
 
     downloadBtn.addEventListener("click", async () => {
-      if (!currentQuiz) return;
-      statusEl.textContent = "Generating PPTX...";
+      if (!currentQuiz.value) return;
+      status.value = "Generating PPTX...";
       try {
-        const pptx = buildPptx(currentQuiz, PptxGenJS, slideImages, slideOverrides);
-        await pptx.writeFile({ fileName: `quiz-${currentQuiz.date}.pptx` });
-        statusEl.textContent = "Downloaded!";
+        const pptx = buildPptx(currentQuiz.value, PptxGenJS, slideImages.value, slideOverrides.value);
+        await pptx.writeFile({ fileName: `quiz-${currentQuiz.value.date}.pptx` });
+        status.value = "Downloaded!";
       } catch (err) {
-        statusEl.textContent = "Error: " + err.message;
+        status.value = "Error: " + err.message;
         console.error(err);
       }
     });
