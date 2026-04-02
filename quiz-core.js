@@ -14,6 +14,13 @@ export const SLIDE_STYLE = {
   answer:   { fontSize: 20 },
 };
 
+export function formatAnswer(q) {
+  return q.answers.de === q.answers.en
+    ? q.answers.de
+    : `${q.answers.de} ⬧ ${q.answers.en}`;
+}
+
+
 /**
  * Compute image position and text widths based on image aspect ratio.
  * Images entry: { data, width, height }.
@@ -270,10 +277,7 @@ export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}) {
     }
 
     if (withAnswers && q) {
-      const answer =
-        q.answers.de === q.answers.en
-          ? q.answers.de
-          : `${q.answers.de} / ${q.answers.en}`;
+      const answer = formatAnswer(q);
       slide.addText(answer, {
         x: 0, y: 4.8, w: SLIDE_STYLE.width, h: 0.7,
         fontSize: SLIDE_STYLE.answer.fontSize, bold: true, align: "center",

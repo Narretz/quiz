@@ -84,7 +84,7 @@
   <script src="https://cdn.jsdelivr.net/npm/officeparser@6.0.7/dist/officeparser.browser.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
   <script type="module">
-    import { astToQuiz, buildPptx, buildSlideDescriptors, SLIDE_STYLE, computeImageLayout, fit } from "./quiz-core.js";
+    import { astToQuiz, buildPptx, buildSlideDescriptors, SLIDE_STYLE, computeImageLayout, fit, formatAnswer } from "./quiz-core.js";
 
     const PREVIEW_WIDTH = 576; // px — must match CSS .slide width
     const PT_SCALE = PREVIEW_WIDTH / (SLIDE_STYLE.width * 72); // pt → px
@@ -116,12 +116,6 @@
 
     function esc(text) {
       return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-
-    function formatAnswer(q) {
-      return q.answers.de === q.answers.en
-        ? q.answers.de
-        : `${q.answers.de} / ${q.answers.en}`;
     }
 
     function readFileAsDataURL(file) {
