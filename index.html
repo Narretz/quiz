@@ -75,7 +75,7 @@
   <script src="https://cdn.jsdelivr.net/npm/officeparser@6.0.7/dist/officeparser.browser.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
   <script type="module">
-    import { astToQuiz, buildPptx, buildSlideDescriptors, SLIDE_STYLE, computeImageLayout } from "./quiz-core.js";
+    import { astToQuiz, buildPptx, buildSlideDescriptors, SLIDE_STYLE, computeImageLayout, fit } from "./quiz-core.js";
 
     const PREVIEW_WIDTH = 576; // px — must match CSS .slide width
     const PT_SCALE = PREVIEW_WIDTH / (SLIDE_STYLE.width * 72); // pt → px
@@ -160,6 +160,57 @@
       const baseFs = SLIDE_STYLE.question.fontSize;
       const baseLs = SLIDE_STYLE.question.lineSpacing;
       const minLs = baseLs - 10;
+      const { width: W } = SLIDE_STYLE;
+      const fullW = W - 2 * pad;
+
+      // Compact layout: if text is short, move landscape image below text for more space
+      if (!forceFs && imgEntry && enEl) {
+        const ar = imgEntry.width / imgEntry.height;
+        const layout = computeImageLayout(ar);
+        if (layout.mode === "landscape") {
+          // Measure at full width with default font settings
+          const fsPx = baseFs * PT_SCALE;
+          deEl.style.fontSize = fsPx + "px";
+          deEl.style.lineHeight = String(baseLs / 100);
+          deEl.style.width = px(fullW);
+          enEl.style.fontSize = fsPx + "px";
+          enEl.style.lineHeight = String(baseLs / 100);
+          enEl.style.width = px(fullW);
+
+          const deH = deEl.scrollHeight / PX;
+          const enH = enEl.scrollHeight / PX;
+
+          if (deH + enH <= H * 0.4) {
+            const enY = pad + deH + pad;
+            enEl.style.top = Math.round(enY * PX) + "px";
+            const textBottom = enY + enH + pad;
+            const imgBoxW = fullW;
+            const imgBoxH = (isAnswer ? 4.8 : H - pad) - textBottom;
+            const { w: imgW, h: imgH } = fit(imgBoxW, imgBoxH, ar);
+            const imgX = (W - imgW) / 2;
+            const imgY = textBottom;
+
+            // Update image element in DOM
+            const imgEl = slideDiv.querySelector("img");
+            if (imgEl) {
+              imgEl.style.left = px(imgX);
+              imgEl.style.top = px(imgY);
+              imgEl.style.width = px(imgW);
+              imgEl.style.height = px(imgH);
+            }
+
+            return {
+              fontSize: baseFs, lineSpacing: baseLs, enY,
+              deW: fullW, enW: fullW,
+              imgLayout: { x: imgX, y: imgY, w: imgW, h: imgH },
+            };
+          }
+
+          // Not compact — restore original widths
+          deEl.style.width = px(layout.deW);
+          enEl.style.width = px(layout.enW);
+        }
+      }
 
       // Try a specific fontSize + lineSpacing, reposition EN, return result or null
       function tryFit(fs, ls) {

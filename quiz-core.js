@@ -20,7 +20,7 @@ export const SLIDE_STYLE = {
  * Returns { mode, img: {x,y,w,h}, deW, enW, answerW } in inches.
  */
 /** Contain-fit: largest size maintaining aspect ratio within a box. */
-function fit(boxW, boxH, ar) {
+export function fit(boxW, boxH, ar) {
   return ar > boxW / boxH
     ? { w: boxW, h: boxW / ar }
     : { w: boxH * ar, h: boxH };
@@ -213,12 +213,23 @@ export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}) {
     }
 
     let deW = fullW, enW = fullW;
+    const override = overrides[`${id}:${withAnswers ? 1 : 0}`];
 
     // Bottom limit for text
     let bottomLimit = H - pad;
     if (withAnswers) bottomLimit = 4.8;
 
-    if (imgEntry) {
+    if (imgEntry && override?.imgLayout) {
+      // Compact layout from browser fitting pass
+      deW = override.deW ?? fullW;
+      enW = override.enW ?? fullW;
+      const il = override.imgLayout;
+      slide.addImage({
+        data: imgEntry.data,
+        x: il.x, y: il.y, w: il.w, h: il.h,
+        sizing: { type: "contain", w: il.w, h: il.h },
+      });
+    } else if (imgEntry) {
       const layout = computeImageLayout(imgEntry.width / imgEntry.height);
       deW = layout.deW;
       enW = layout.enW;
@@ -232,8 +243,6 @@ export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}) {
         sizing: { type: "contain", w: layout.img.w, h: layout.img.h },
       });
     }
-
-    const override = overrides[`${id}:${withAnswers ? 1 : 0}`];
     const qFontSize = override?.fontSize ?? SLIDE_STYLE.question.fontSize;
     const qLineSpacing = override?.lineSpacing ?? SLIDE_STYLE.question.lineSpacing;
     const enY = override?.enY ?? 2.5;
