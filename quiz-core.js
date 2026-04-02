@@ -10,7 +10,7 @@ export const SLIDE_STYLE = {
   pad: 0.2,        // gap between elements (inches)
   title:    { fontSize: 40 },
   num:      { fontSize: 23 },
-  question: { fontSize: 19 },
+  question: { fontSize: 19, lineSpacing: 110 },
   answer:   { fontSize: 20 },
 };
 
@@ -208,16 +208,18 @@ export function buildPptx(quiz, PptxGenJS, images = {}) {
       });
     }
 
+    const lineSpacing = SLIDE_STYLE.question.lineSpacing;
     if (q) {
       slide.addText([
         { text: `${num}  `, options: { fontSize: SLIDE_STYLE.num.fontSize, bold: true } },
         { text: q.text.de, options: { fontSize: SLIDE_STYLE.question.fontSize } },
       ], {
-        x: pad, y: pad, w: deW, h: 2.2, valign: "top",
+        x: pad, y: pad, w: deW, h: 2.2, valign: "top", lineSpacingMultiple: lineSpacing / 100,
       });
       if (q.text.en) {
         slide.addText(q.text.en, {
           x: pad, y: 2.5, w: enW, h: 2, fontSize: SLIDE_STYLE.question.fontSize, valign: "top",
+          lineSpacingMultiple: lineSpacing / 100,
         });
       }
     } else {
@@ -232,8 +234,10 @@ export function buildPptx(quiz, PptxGenJS, images = {}) {
           ? q.answers.de
           : `${q.answers.de} / ${q.answers.en}`;
       slide.addText(answer, {
-        x: pad, y: 4.8, w: answerW, h: 0.7,
+        x: 0, y: 4.8, w: SLIDE_STYLE.width, h: 0.7,
         fontSize: SLIDE_STYLE.answer.fontSize, bold: true, align: "center",
+        color: "FFFFFF",
+        fill: { color: "CC0000" },
       });
     }
   }

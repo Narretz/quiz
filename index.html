@@ -18,6 +18,9 @@
     label.upload-btn { display: inline-block; }
     label.upload-btn input { display: none; }
     .status { font-size: 0.85rem; color: #666; }
+    .style-controls { display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; font-size: 0.85rem; }
+    .style-controls label { display: flex; align-items: center; gap: 0.3rem; }
+    .style-controls input[type="number"] { width: 4rem; padding: 0.25rem 0.4rem; border: 1px solid #ccc; border-radius: 3px; font-size: 0.85rem; }
     .preview { display: flex; flex-wrap: wrap; gap: 1rem; }
     .slide {
       width: 576px; height: 324px; background: #fff; border: 1px solid #ccc;
@@ -34,7 +37,7 @@
     }
     .slide:hover .img-actions { display: flex; }
     .slide .img-actions button {
-      padding: 2px 6px; font-size: 9px; border-radius: 3px;
+      padding: 2px 6px; font-size: 12px; border-radius: 3px;
       background: rgba(0,0,0,0.55); color: #fff; border: none; cursor: pointer;
     }
     .slide .img-actions button:hover { background: rgba(0,0,0,0.8); }
@@ -55,6 +58,10 @@
     <button id="downloadBtn" disabled>Download .pptx</button>
     <span class="status" id="status"></span>
   </div>
+  <div class="style-controls">
+    <label>Font size <input type="number" id="fontSizeInput" min="8" max="48" step="1"></label>
+    <label>Line spacing % <input type="number" id="lineSpacingInput" min="80" max="200" step="5"></label>
+  </div>
   <div class="preview" id="preview"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/officeparser@6.0.7/dist/officeparser.browser.js"></script>
@@ -71,7 +78,21 @@
     const downloadBtn = document.getElementById("downloadBtn");
     const statusEl = document.getElementById("status");
     const previewEl = document.getElementById("preview");
+    const fontSizeInput = document.getElementById("fontSizeInput");
+    const lineSpacingInput = document.getElementById("lineSpacingInput");
     let currentQuiz = null;
+
+    // Initialise inputs from current SLIDE_STYLE values
+    fontSizeInput.value = SLIDE_STYLE.question.fontSize;
+    lineSpacingInput.value = SLIDE_STYLE.question.lineSpacing;
+
+    function onStyleChange() {
+      SLIDE_STYLE.question.fontSize = Number(fontSizeInput.value);
+      SLIDE_STYLE.question.lineSpacing = Number(lineSpacingInput.value);
+      if (currentQuiz) renderPreview(currentQuiz);
+    }
+    fontSizeInput.addEventListener("input", onStyleChange);
+    lineSpacingInput.addEventListener("input", onStyleChange);
 
     // Image store: slide ID -> { data, width, height }
     const slideImages = {};
@@ -160,6 +181,10 @@
             const { pad } = SLIDE_STYLE;
             const fullW = SLIDE_STYLE.width - 2 * pad;
             div.className = "slide";
+            if (id) {
+              div.dataset.slideId = id;
+              div.dataset.answers = withAnswers ? "1" : "0";
+            }
 
             let deW = fullW, enW = fullW, answerW = fullW;
             let imgHtml = "";
@@ -174,20 +199,21 @@
             }
 
             const qFs = SLIDE_STYLE.question.fontSize * PT_SCALE;
+            const qLh = SLIDE_STYLE.question.lineSpacing / 100;
             const numFs = SLIDE_STYLE.num.fontSize * PT_SCALE;
             let html = "";
 
             if (q) {
-              html += `<div style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${qFs}px">`;
+              html += `<div style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${qFs}px;line-height:${qLh}">`;
               html += `<span style="font-size:${numFs}px;font-weight:bold">${num}</span> ${esc(q.text.de)}`;
               html += `</div>`;
               if (q.text.en) {
-                html += `<div style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${qFs}px">`;
+                html += `<div style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${qFs}px;line-height:${qLh}">`;
                 html += esc(q.text.en);
                 html += `</div>`;
               }
               if (withAnswers) {
-                html += `<div style="position:absolute;left:${px(pad)};top:${px(4.8)};width:${px(answerW)};font-size:${SLIDE_STYLE.answer.fontSize * PT_SCALE}px;font-weight:bold;text-align:center">`;
+                html += `<div style="position:absolute;left:0;bottom:0;width:100%;font-size:${SLIDE_STYLE.answer.fontSize * PT_SCALE}px;font-weight:bold;text-align:center;background:#CC0000;color:#fff;padding:4px 0;z-index:1">`;
                 html += esc(formatAnswer(q));
                 html += `</div>`;
               }
@@ -199,6 +225,7 @@
 
             if (id) {
               html += `<div class="img-actions">`;
+              html += `<button class="nav-btn" data-nav-id="${id}" data-nav-target="${withAnswers ? "0" : "1"}">${withAnswers ? "\u2191 question" : "\u2193 answer"}</button>`;
               html += `<label><button class="add-img-btn" type="button">+img</button><input type="file" accept="image/*" data-slide-id="${id}"></label>`;
               if (slideImages[id]) {
                 html += `<button class="rm-img-btn" data-slide-id="${id}">x</button>`;
@@ -237,6 +264,16 @@
         btn.addEventListener("click", () => {
           delete slideImages[btn.dataset.slideId];
           renderPreview(quiz);
+        });
+      });
+
+      // Wire up nav buttons (go to answer / go to question)
+      previewEl.querySelectorAll(".nav-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const target = previewEl.querySelector(
+            `.slide[data-slide-id="${btn.dataset.navId}"][data-answers="${btn.dataset.navTarget}"]`
+          );
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
         });
       });
     }
