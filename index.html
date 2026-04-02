@@ -337,8 +337,10 @@
           const count = r.questions.length === 0 ? 10 : r.questions.length;
           for (let i = 0; i < count; i++) sec.indices.push(idx++);
         }
-        tocEntries.push({ label: `Break ${s + 1}`, anchor: `break-${s + 1}` });
-        sec.indices.push(idx++); // Pause
+        if (s < roundSlices.length - 1) {
+          tocEntries.push({ label: `Break ${s + 1}`, anchor: `break-${s + 1}` });
+          sec.indices.push(idx++); // Pause
+        }
         sections.push(sec);
       }
 

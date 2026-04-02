@@ -148,32 +148,36 @@ export function buildSlideDescriptors(quiz) {
     slides.push({ type: "title", text, subtitle: subtitle || null, id: null });
   }
 
-  function addQuestions(rounds, withAnswers) {
-    for (const round of rounds) {
+  function addQuestions(rounds, roundOffset, withAnswers) {
+    for (let r = 0; r < rounds.length; r++) {
+      const round = rounds[r];
       addTitle(round.name);
       const questions = round.questions;
       const count = questions.length === 0 ? 10 : questions.length;
       for (let i = 0; i < count; i++) {
         const q = questions[i];
-        // ID ties question and answer slides together for image sharing
-        const id = `${round.name}:${i}`;
+        // Stable ID based on array indices, not round name
+        const id = `r${roundOffset + r}q${i}`;
         const s = { type: "question", id, num: i + 1, q, withAnswers };
         slides.push(s);
       }
     }
   }
 
-  function addSection(rounds) {
-    addQuestions(rounds, false);
+  function addSection(rounds, roundOffset, lastRound) {
+    addQuestions(rounds, roundOffset, false);
     addTitle("Antworten ⬧ Answers", "Bitte tauscht eure Papiere mit einem anderen Team aus.\nPlease swap your papers with another team.");
-    addQuestions(rounds, true);
-    addTitle("Pause ⬧ Break", "Wir sehen uns in 10 Minuten.\nSee you in 10 minutes.");
+    addQuestions(rounds, roundOffset, true);
+
+    if (!lastRound) {
+      addTitle("Pause ⬧ Break", "Wir sehen uns in 10 Minuten.\nSee you in 10 minutes.");
+    }
   }
 
   addTitle(quiz.date);
-  addSection(quiz.rounds.slice(0, 2));
-  addSection(quiz.rounds.slice(2, 5));
-  addSection(quiz.rounds.slice(5));
+  addSection(quiz.rounds.slice(0, 2), 0);
+  addSection(quiz.rounds.slice(2, 5), 2);
+  addSection(quiz.rounds.slice(5), 5, true);
   return slides;
 }
 
