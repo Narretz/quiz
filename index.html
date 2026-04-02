@@ -112,11 +112,9 @@
   <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
   <script type="module">
     import { astToQuiz, buildPptx, buildSlideDescriptors, SLIDE_STYLE, computeImageLayout, fit, formatAnswer } from "./quiz-core.js";
-
-    const PREVIEW_WIDTH = 576; // px — must match CSS .slide width
-    const PT_SCALE = PREVIEW_WIDTH / (SLIDE_STYLE.width * 72); // pt → px
-    const PX = PREVIEW_WIDTH / SLIDE_STYLE.width; // inches → preview px
-    const px = (v) => Math.round(v * PX) + "px";
+    import { dbPut, dbGet, dbDelete, dbList } from "./lib/db.js";
+    import { PREVIEW_WIDTH, PT_SCALE, PX, px, esc, readFileAsDataURL, loadImageDimensions, slugify } from "./lib/utils.js";
+    import { fitSlideText } from "./lib/fitting.js";
 
     const fileInput = document.getElementById("fileInput");
     const downloadBtn = document.getElementById("downloadBtn");
@@ -129,51 +127,6 @@
     const savedQuizzesEl = document.getElementById("savedQuizzes");
     let currentQuiz = null;
     let currentQuizId = null;
-
-    // --- IndexedDB helpers ---
-    const DB_NAME = "quiz-app", STORE = "quizzes";
-    function openDB() {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onupgradeneeded = () => req.result.createObjectStore(STORE, { keyPath: "id" });
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
-    }
-    async function dbPut(data) {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE, "readwrite");
-        tx.objectStore(STORE).put(data);
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error);
-      });
-    }
-    async function dbGet(id) {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const req = db.transaction(STORE, "readonly").objectStore(STORE).get(id);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
-    }
-    async function dbDelete(id) {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE, "readwrite");
-        tx.objectStore(STORE).delete(id);
-        tx.oncomplete = resolve;
-        tx.onerror = () => reject(tx.error);
-      });
-    }
-    async function dbList() {
-      const db = await openDB();
-      return new Promise((resolve, reject) => {
-        const req = db.transaction(STORE, "readonly").objectStore(STORE).getAll();
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
-    }
 
     // --- Save / load / list ---
     let persistRequested = false;
@@ -289,180 +242,11 @@
     // Image store: "slideId:0/1" -> { data, width, height, unlinked? }
     const slideImages = {};
 
-    function esc(text) {
-      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    }
-
-    function readFileAsDataURL(file) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.readAsDataURL(file);
-      });
-    }
-
-    function loadImageDimensions(dataUrl) {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-        img.src = dataUrl;
-      });
-    }
 
     // Per-slide overrides computed by the fitting pass: "id:0/1" -> {fontSize, lineSpacing, enY}
     const slideOverrides = {};
     // Manual per-slide overrides set via inputs: "id:0/1" -> {fontSize, lineSpacing}
     const manualOverrides = {};
-
-    function fitSlideText(slideDiv, forceFs, forceLs) {
-      const deEl = slideDiv.querySelector('[data-role="de"]');
-      const enEl = slideDiv.querySelector('[data-role="en"]');
-      if (!deEl) return null;
-
-      const id = slideDiv.dataset.slideId;
-      const isAnswer = slideDiv.dataset.answers === "1";
-      const slideKey = `${id}:${isAnswer ? 1 : 0}`;
-      const imgEntry = slideImages[slideKey];
-      const { pad, height: H } = SLIDE_STYLE;
-
-      // Bottom limit: answer bar, image, or slide edge
-      let bottomLimit = H - pad;
-      if (isAnswer) bottomLimit = 4.8;
-      if (imgEntry) {
-        const ar = imgEntry.width / imgEntry.height;
-        const layout = computeImageLayout(ar);
-        if (layout.mode === "ultrawide") {
-          bottomLimit = Math.min(bottomLimit, layout.img.y - pad);
-        }
-      }
-
-      const baseFs = SLIDE_STYLE.question.fontSize;
-      const baseLs = SLIDE_STYLE.question.lineSpacing;
-      const minLs = baseLs - 10;
-      const { width: W } = SLIDE_STYLE;
-      const fullW = W - 2 * pad;
-
-      // Compact layout: if text is short, move landscape image below text for more space
-      if (!forceFs && imgEntry && enEl) {
-        const ar = imgEntry.width / imgEntry.height;
-        const layout = computeImageLayout(ar);
-        if (layout.mode === "landscape") {
-          // Measure at full width with default font settings
-          const fsPx = baseFs * PT_SCALE;
-          deEl.style.fontSize = fsPx + "px";
-          deEl.style.lineHeight = String(baseLs / 100);
-          deEl.style.width = px(fullW);
-          enEl.style.fontSize = fsPx + "px";
-          enEl.style.lineHeight = String(baseLs / 100);
-          enEl.style.width = px(fullW);
-
-          const deH = deEl.scrollHeight / PX;
-          const enH = enEl.scrollHeight / PX;
-
-          if (deH + enH <= H * 0.4) {
-            const enY = pad + deH + pad;
-            enEl.style.top = Math.round(enY * PX) + "px";
-            const textBottom = enY + enH + pad;
-            const imgBoxW = fullW;
-            const imgBoxH = (isAnswer ? 4.8 : H - pad) - textBottom;
-            const { w: imgW, h: imgH } = fit(imgBoxW, imgBoxH, ar);
-            const imgX = (W - imgW) / 2;
-            const imgY = textBottom;
-
-            // Update image element in DOM
-            const imgEl = slideDiv.querySelector("img");
-            if (imgEl) {
-              imgEl.style.left = px(imgX);
-              imgEl.style.top = px(imgY);
-              imgEl.style.width = px(imgW);
-              imgEl.style.height = px(imgH);
-            }
-
-            return {
-              fontSize: baseFs, lineSpacing: baseLs, enY,
-              deW: fullW, enW: fullW,
-              imgLayout: { x: imgX, y: imgY, w: imgW, h: imgH },
-            };
-          }
-
-          // Not compact — restore original widths
-          deEl.style.width = px(layout.deW);
-          enEl.style.width = px(layout.enW);
-        }
-      }
-
-      // Try a specific fontSize + lineSpacing, reposition EN, return result or null
-      function tryFit(fs, ls) {
-        const fsPx = fs * PT_SCALE;
-        const lh = ls / 100;
-        deEl.style.fontSize = fsPx + "px";
-        deEl.style.lineHeight = String(lh);
-        if (enEl) {
-          enEl.style.fontSize = fsPx + "px";
-          enEl.style.lineHeight = String(lh);
-        }
-
-        const deBottom = pad + deEl.scrollHeight / PX;
-
-        if (!enEl) {
-          return deBottom <= bottomLimit ? { fontSize: fs, lineSpacing: ls, enY: 2.5 } : null;
-        }
-
-        // 1a: push EN down if DE overlaps default position
-        let enY = Math.max(2.5, deBottom + pad);
-        enEl.style.top = Math.round(enY * PX) + "px";
-        if (enY + enEl.scrollHeight / PX <= bottomLimit) {
-          return { fontSize: fs, lineSpacing: ls, enY };
-        }
-
-        // 1b: try moving EN up (keep pad gap from DE)
-        enY = deBottom + pad;
-        enEl.style.top = Math.round(enY * PX) + "px";
-        if (enY + enEl.scrollHeight / PX <= bottomLimit) {
-          return { fontSize: fs, lineSpacing: ls, enY };
-        }
-
-        return null;
-      }
-
-      // Manual override: apply forced values, compute enY
-      if (forceFs != null) {
-        const result = tryFit(forceFs, forceLs);
-        if (result) return result;
-        // Doesn't fit — still apply and return best-effort enY
-        tryFit(forceFs, forceLs);
-        const enY = pad + deEl.scrollHeight / PX + pad;
-        if (enEl) enEl.style.top = Math.round(enY * PX) + "px";
-        return { fontSize: forceFs, lineSpacing: forceLs, enY };
-      }
-
-      // For each font size (half-point steps), binary-search the highest line spacing that fits
-      for (const fs of [baseFs, baseFs - 0.5, baseFs - 1, baseFs - 1.5, baseFs - 2]) {
-        let lo = minLs, hi = baseLs, best = null;
-        while (lo <= hi) {
-          const mid = Math.round((lo + hi) / 2);
-          const result = tryFit(fs, mid);
-          if (result) {
-            best = result;
-            lo = mid + 1; // try higher spacing
-          } else {
-            hi = mid - 1;
-          }
-        }
-        if (best) return best;
-      }
-
-      // Give up — apply smallest settings, return best effort
-      const lastFs = Math.max(8, baseFs - 2);
-      tryFit(lastFs, minLs);
-      const enY = pad + deEl.scrollHeight / PX + pad;
-      if (enEl) enEl.style.top = Math.round(enY * PX) + "px";
-      return { fontSize: lastFs, lineSpacing: minLs, enY };
-    }
-
-    function slugify(text) {
-      return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-    }
 
     function renderPreview(quiz) {
       previewEl.innerHTML = "";
@@ -673,8 +457,8 @@
         if (!slideImages[key]) return;
         const manual = manualOverrides[key];
         const result = manual
-          ? fitSlideText(slideDiv, manual.fontSize, manual.lineSpacing)
-          : fitSlideText(slideDiv);
+          ? fitSlideText(slideDiv, slideImages, manual.fontSize, manual.lineSpacing)
+          : fitSlideText(slideDiv, slideImages);
         if (result) slideOverrides[key] = result;
       });
 
