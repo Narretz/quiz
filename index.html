@@ -368,6 +368,8 @@
       let tocIdx = 0;
       // First entry is "Intro" for the date slide (index 0)
 
+      const roundNames = new Set(quiz.rounds.map(r => r.name));
+
       let descIdx = 0;
       for (const sec of sections) {
         if (sec.label) {
@@ -381,6 +383,13 @@
           const desc = descriptors[i];
           if (!desc) continue;
           const div = document.createElement("div");
+
+          if (desc.type === "title" && roundNames.has(desc.text)) {
+            // Force round titles onto a new flex line
+            const br = document.createElement("div");
+            br.style.cssText = "flex-basis:100%;height:0";
+            previewEl.appendChild(br);
+          }
 
           if (desc.type === "title") {
             div.className = "slide title-slide";
