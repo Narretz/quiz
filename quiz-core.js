@@ -3,6 +3,16 @@
  * Used by both CLI (parse-quiz.js, generate-pptx.js) and browser (index.html).
  */
 
+/** Slide dimensions and font sizes — single source of truth for PPTX and preview. */
+export const SLIDE_STYLE = {
+  width: 10,       // inches (LAYOUT_16x9)
+  height: 5.625,   // inches
+  title:    { fontSize: 40 },
+  num:      { fontSize: 24 },
+  question: { fontSize: 16 },
+  answer:   { fontSize: 20 },
+};
+
 export function astToQuiz(ast) {
   const sheet =
     ast.content.find((s) => s.metadata.sheetName === "Tabelle1") ??
@@ -71,63 +81,105 @@ export function astToQuiz(ast) {
   return { date, rounds };
 }
 
-export function buildPptx(quiz, PptxGenJS) {
-  const pptx = new PptxGenJS();
-  pptx.layout = "LAYOUT_16x9";
+/**
+ * Returns a flat list of slide descriptors with stable IDs.
+ * Used by both the preview and the PPTX builder.
+ */
+export function buildSlideDescriptors(quiz) {
+  const slides = [];
 
-  function addTitleSlide(text) {
-    pptx.addSlide().addText(text, {
-      x: 0, y: 0, w: "100%", h: "100%",
-      fontSize: 40, bold: true, align: "center", valign: "middle",
-    });
+  function addTitle(text) {
+    slides.push({ type: "title", text, id: null });
   }
 
-  function addQuestionSlides(rounds, withAnswers) {
+  function addQuestions(rounds, withAnswers) {
     for (const round of rounds) {
-      addTitleSlide(round.name);
+      addTitle(round.name);
       const questions = round.questions;
       const count = questions.length === 0 ? 10 : questions.length;
       for (let i = 0; i < count; i++) {
-        const slide = pptx.addSlide();
         const q = questions[i];
-        slide.addText(String(i + 1), {
-          x: 0.3, y: 0.2, w: 0.8, h: 0.5, fontSize: 24, bold: true,
-        });
-        if (q) {
-          slide.addText(q.text.de, {
-            x: 0.5, y: 1, w: 9, h: 1.75, fontSize: 16, valign: "top",
-          });
-          if (q.text.en) {
-            slide.addText(q.text.en, {
-              x: 0.5, y: 2.75, w: 9, h: 1.75, fontSize: 16, valign: "top",
-            });
-          }
-        }
-        if (withAnswers && q) {
-          const answer =
-            q.answers.de === q.answers.en
-              ? q.answers.de
-              : `${q.answers.de} / ${q.answers.en}`;
-          slide.addText(answer, {
-            x: 0.5, y: 4.8, w: 9, h: 0.7,
-            fontSize: 20, bold: true, align: "center",
-          });
-        }
+        // ID ties question and answer slides together for image sharing
+        const id = `${round.name}:${i}`;
+        const s = { type: "question", id, num: i + 1, q, withAnswers };
+        slides.push(s);
       }
     }
   }
 
   function addSection(rounds) {
-    addQuestionSlides(rounds, false);
-    addTitleSlide("Break");
-    addTitleSlide("Answers");
-    addQuestionSlides(rounds, true);
+    addQuestions(rounds, false);
+    addTitle("Break");
+    addTitle("Answers");
+    addQuestions(rounds, true);
   }
 
-  addTitleSlide(quiz.date);
+  addTitle(quiz.date);
   addSection(quiz.rounds.slice(0, 2));
   addSection(quiz.rounds.slice(2, 5));
   addSection(quiz.rounds.slice(5));
+  return slides;
+}
+
+/**
+ * @param {object} quiz
+ * @param {function} PptxGenJS - constructor
+ * @param {Record<string, string>} [images] - map of slide ID to base64 data URI
+ */
+export function buildPptx(quiz, PptxGenJS, images = {}) {
+  const pptx = new PptxGenJS();
+  pptx.layout = "LAYOUT_16x9";
+  const descriptors = buildSlideDescriptors(quiz);
+
+  for (const desc of descriptors) {
+    const slide = pptx.addSlide();
+
+    if (desc.type === "title") {
+      slide.addText(desc.text, {
+        x: 0, y: 0, w: "100%", h: "100%",
+        fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "middle",
+      });
+      continue;
+    }
+
+    const { q, num, withAnswers, id } = desc;
+    const hasImage = id && images[id];
+    const textW = hasImage ? 4.8 : 9;
+
+    slide.addText(String(num), {
+      x: 0.3, y: 0.2, w: 0.8, h: 0.5, fontSize: SLIDE_STYLE.num.fontSize, bold: true,
+    });
+
+    if (q) {
+      slide.addText(q.text.de, {
+        x: 0.5, y: 1, w: textW, h: 1.75, fontSize: SLIDE_STYLE.question.fontSize, valign: "top",
+      });
+      if (q.text.en) {
+        slide.addText(q.text.en, {
+          x: 0.5, y: 2.75, w: textW, h: 1.75, fontSize: SLIDE_STYLE.question.fontSize, valign: "top",
+        });
+      }
+    }
+
+    if (withAnswers && q) {
+      const answer =
+        q.answers.de === q.answers.en
+          ? q.answers.de
+          : `${q.answers.de} / ${q.answers.en}`;
+      slide.addText(answer, {
+        x: 0.5, y: 4.8, w: 9, h: 0.7,
+        fontSize: SLIDE_STYLE.answer.fontSize, bold: true, align: "center",
+      });
+    }
+
+    if (hasImage) {
+      slide.addImage({
+        data: images[id],
+        x: 5.5, y: 0.5, w: 4, h: 3,
+        sizing: { type: "contain", w: 4, h: 3 },
+      });
+    }
+  }
 
   return pptx;
 }

@@ -9,32 +9,50 @@
     body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #333; padding: 2rem; }
     h1 { margin-bottom: 1rem; }
     .controls { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    button, label.upload {
+    button, label.upload-btn {
       padding: 0.5rem 1.2rem; border: none; border-radius: 4px; cursor: pointer;
       font-size: 0.9rem; background: #2563eb; color: #fff;
     }
     button:disabled { opacity: 0.4; cursor: default; }
-    button:hover:not(:disabled), label.upload:hover { background: #1d4ed8; }
-    label.upload { display: inline-block; }
-    label.upload input { display: none; }
+    button:hover:not(:disabled), label.upload-btn:hover { background: #1d4ed8; }
+    label.upload-btn { display: inline-block; }
+    label.upload-btn input { display: none; }
     .status { font-size: 0.85rem; color: #666; }
     .preview { display: flex; flex-wrap: wrap; gap: 1rem; }
     .slide {
-      width: 320px; height: 180px; background: #fff; border: 1px solid #ccc;
-      border-radius: 4px; padding: 12px; position: relative; overflow: hidden;
+      width: 576px; height: 324px; background: #fff; border: 1px solid #ccc;
+      border-radius: 4px; padding: 12px; position: relative;
       font-size: 7px; line-height: 1.3; flex-shrink: 0;
     }
     .slide.title-slide {
       display: flex; align-items: center; justify-content: center; text-align: center;
     }
-    .slide .title-text { font-size: 16px; font-weight: bold; }
-    .slide .q-num { font-size: 10px; font-weight: bold; position: absolute; top: 4px; left: 6px; }
+    .slide .title-text { font-weight: bold; }
+    .slide .q-num { font-weight: bold; position: absolute; top: 4px; left: 6px; }
     .slide .q-de, .slide .q-en { margin-top: 2px; }
-    .slide .q-de { margin-top: 14px; }
+    .slide .q-de { margin-top: 24px; }
     .slide .answer {
-      position: absolute; bottom: 6px; left: 12px; right: 12px;
-      text-align: center; font-weight: bold; font-size: 8px;
+      margin-top: 6px; padding-top: 4px;
+      text-align: center; font-weight: bold;
+      border-top: 1px solid #eee; clear: both;
     }
+    .slide.has-img .q-de,
+    .slide.has-img .q-en { width: calc(55% - 10px); }
+    .slide .slide-img {
+      position: absolute; right: 4px; top: 4px; width: 45%; max-height: 80%;
+      object-fit: contain; border-radius: 2px;
+    }
+    .slide .img-actions {
+      position: absolute; top: 4px; right: 4px;
+      display: none; gap: 3px; z-index: 2;
+    }
+    .slide:hover .img-actions { display: flex; }
+    .slide .img-actions button {
+      padding: 2px 6px; font-size: 9px; border-radius: 3px;
+      background: rgba(0,0,0,0.55); color: #fff; border: none; cursor: pointer;
+    }
+    .slide .img-actions button:hover { background: rgba(0,0,0,0.8); }
+    .slide .img-actions input { display: none; }
     .section-label {
       width: 100%; font-size: 0.75rem; color: #999; text-transform: uppercase;
       letter-spacing: 0.05em; margin-top: 0.5rem;
@@ -44,7 +62,7 @@
 <body>
   <h1>Quiz XLSX to PPTX</h1>
   <div class="controls">
-    <label class="upload">
+    <label class="upload-btn">
       Upload .xlsx
       <input type="file" id="fileInput" accept=".xlsx">
     </label>
@@ -56,7 +74,10 @@
   <script src="https://cdn.jsdelivr.net/npm/officeparser@6.0.7/dist/officeparser.browser.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.bundle.js"></script>
   <script type="module">
-    import { astToQuiz, buildPptx } from "./quiz-core.js";
+    import { astToQuiz, buildPptx, buildSlideDescriptors, SLIDE_STYLE } from "./quiz-core.js";
+
+    const PREVIEW_WIDTH = 576; // px — must match CSS .slide width
+    const PT_SCALE = PREVIEW_WIDTH / (SLIDE_STYLE.width * 72); // pt → px
 
     const fileInput = document.getElementById("fileInput");
     const downloadBtn = document.getElementById("downloadBtn");
@@ -64,11 +85,8 @@
     const previewEl = document.getElementById("preview");
     let currentQuiz = null;
 
-    // --- Preview rendering ---
-
-    function truncate(text, max) {
-      return text.length > max ? text.slice(0, max) + "..." : text;
-    }
+    // Image store: slide ID -> base64 data URI
+    const slideImages = {};
 
     function esc(text) {
       return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -80,69 +98,124 @@
         : `${q.answers.de} / ${q.answers.en}`;
     }
 
-    function renderPreview(quiz) {
-      previewEl.innerHTML = "";
-      const slides = buildSlideData(quiz);
-      for (const s of slides) {
-        if (s.type === "label") {
-          const div = document.createElement("div");
-          div.className = "section-label";
-          div.textContent = s.text;
-          previewEl.appendChild(div);
-          continue;
-        }
-        const div = document.createElement("div");
-        div.className = "slide" + (s.type === "title" ? " title-slide" : "");
-        if (s.type === "title") {
-          div.innerHTML = `<span class="title-text">${esc(s.text)}</span>`;
-        } else {
-          let html = `<span class="q-num">${s.num}</span>`;
-          if (s.de) html += `<div class="q-de">${esc(truncate(s.de, 200))}</div>`;
-          if (s.en) html += `<div class="q-en">${esc(truncate(s.en, 200))}</div>`;
-          if (s.answer) html += `<div class="answer">${esc(s.answer)}</div>`;
-          div.innerHTML = html;
-        }
-        previewEl.appendChild(div);
-      }
+    function readFileAsDataURL(file) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
     }
 
-    function buildSlideData(quiz) {
-      const slides = [];
+    function renderPreview(quiz) {
+      previewEl.innerHTML = "";
+      const descriptors = buildSlideDescriptors(quiz);
 
-      function addTitle(text) { slides.push({ type: "title", text }); }
+      // Group into sections for labels
+      const sections = [
+        { label: "", indices: [0] },  // date
+      ];
+      const roundSlices = [
+        quiz.rounds.slice(0, 2),
+        quiz.rounds.slice(2, 5),
+        quiz.rounds.slice(5),
+      ];
 
-      function addQuestions(rounds, withAnswers) {
-        for (const round of rounds) {
-          addTitle(round.name);
-          const questions = round.questions;
-          const count = questions.length === 0 ? 10 : questions.length;
-          for (let i = 0; i < count; i++) {
-            const q = questions[i];
-            const s = { type: "question", num: i + 1, de: "", en: "", answer: null };
+      let idx = 1; // skip date
+      for (let s = 0; s < roundSlices.length; s++) {
+        const sec = { label: `Section ${s + 1}`, indices: [] };
+        const rounds = roundSlices[s];
+        // Questions pass
+        for (const r of rounds) {
+          sec.indices.push(idx++); // round title
+          const count = r.questions.length === 0 ? 10 : r.questions.length;
+          for (let i = 0; i < count; i++) sec.indices.push(idx++);
+        }
+        sec.indices.push(idx++); // Break
+        sec.indices.push(idx++); // Answers
+        // Answers pass
+        for (const r of rounds) {
+          sec.indices.push(idx++); // round title
+          const count = r.questions.length === 0 ? 10 : r.questions.length;
+          for (let i = 0; i < count; i++) sec.indices.push(idx++);
+        }
+        sections.push(sec);
+      }
+
+      let descIdx = 0;
+      for (const sec of sections) {
+        if (sec.label) {
+          const labelDiv = document.createElement("div");
+          labelDiv.className = "section-label";
+          labelDiv.textContent = sec.label;
+          previewEl.appendChild(labelDiv);
+        }
+
+        for (const i of sec.indices) {
+          const desc = descriptors[i];
+          if (!desc) continue;
+          const div = document.createElement("div");
+
+          if (desc.type === "title") {
+            div.className = "slide title-slide";
+            div.innerHTML = `<span class="title-text" style="font-size:${SLIDE_STYLE.title.fontSize * PT_SCALE}px">${esc(desc.text)}</span>`;
+          } else {
+            const { q, num, withAnswers, id } = desc;
+            const hasImg = id && slideImages[id];
+            div.className = "slide" + (hasImg ? " has-img" : "");
+            const qFs = `font-size:${SLIDE_STYLE.question.fontSize * PT_SCALE}px`;
+            let html = `<span class="q-num" style="font-size:${SLIDE_STYLE.num.fontSize * PT_SCALE}px">${num}</span>`;
             if (q) {
-              s.de = q.text.de;
-              s.en = q.text.en;
-              if (withAnswers) s.answer = formatAnswer(q);
+              html += `<div class="q-de" style="${qFs}">${esc(q.text.de)}</div>`;
+              if (q.text.en) html += `<div class="q-en" style="${qFs}">${esc(q.text.en)}</div>`;
+              if (withAnswers) html += `<div class="answer" style="font-size:${SLIDE_STYLE.answer.fontSize * PT_SCALE}px">${esc(formatAnswer(q))}</div>`;
             }
-            slides.push(s);
+
+            if (hasImg) {
+              html += `<img class="slide-img" src="${slideImages[id]}">`;
+            }
+
+            // Hover actions (only on question slides with an ID)
+            if (id) {
+              html += `<div class="img-actions">`;
+              html += `<label><button class="add-img-btn" type="button">+img</button><input type="file" accept="image/*" data-slide-id="${id}"></label>`;
+              if (slideImages[id]) {
+                html += `<button class="rm-img-btn" data-slide-id="${id}">x</button>`;
+              }
+              html += `</div>`;
+            }
+
+            div.innerHTML = html;
           }
+          previewEl.appendChild(div);
         }
       }
 
-      function addSection(rounds, label) {
-        slides.push({ type: "label", text: label });
-        addQuestions(rounds, false);
-        addTitle("Break");
-        addTitle("Answers");
-        addQuestions(rounds, true);
-      }
+      // Wire up image add buttons (trigger hidden file input)
+      previewEl.querySelectorAll(".add-img-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          btn.parentElement.querySelector("input").click();
+        });
+      });
 
-      slides.push({ type: "label", text: "" });
-      addTitle(quiz.date);
-      addSection(quiz.rounds.slice(0, 2), "Section 1");
-      addSection(quiz.rounds.slice(2, 5), "Section 2");
-      addSection(quiz.rounds.slice(5), "Section 3");
-      return slides;
+      // Wire up file inputs
+      previewEl.querySelectorAll('.img-actions input[type="file"]').forEach((input) => {
+        input.addEventListener("change", async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const dataUrl = await readFileAsDataURL(file);
+          slideImages[input.dataset.slideId] = dataUrl;
+          renderPreview(quiz);
+        });
+      });
+
+      // Wire up remove buttons
+      previewEl.querySelectorAll(".rm-img-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          delete slideImages[btn.dataset.slideId];
+          renderPreview(quiz);
+        });
+      });
     }
 
     // --- Event handlers ---
@@ -156,6 +229,8 @@
         const buffer = await file.arrayBuffer();
         const ast = await officeParser.OfficeParser.parseOffice(buffer);
         currentQuiz = astToQuiz(ast);
+        // Clear images from previous upload
+        for (const k of Object.keys(slideImages)) delete slideImages[k];
         renderPreview(currentQuiz);
         downloadBtn.disabled = false;
         statusEl.textContent =
@@ -170,7 +245,7 @@
       if (!currentQuiz) return;
       statusEl.textContent = "Generating PPTX...";
       try {
-        const pptx = buildPptx(currentQuiz, PptxGenJS);
+        const pptx = buildPptx(currentQuiz, PptxGenJS, slideImages);
         await pptx.writeFile({ fileName: `quiz-${currentQuiz.date}.pptx` });
         statusEl.textContent = "Downloaded!";
       } catch (err) {
