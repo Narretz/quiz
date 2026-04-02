@@ -41,7 +41,15 @@
       background: rgba(0,0,0,0.55); color: #fff; border: none; cursor: pointer;
     }
     .slide .img-actions button:hover { background: rgba(0,0,0,0.8); }
-    .slide .img-actions input { display: none; }
+    .slide .img-actions input[type="file"] { display: none; }
+    .slide .img-actions label.override-label {
+      display: flex; align-items: center; gap: 2px;
+      font-size: 9px; color: #fff; white-space: nowrap;
+    }
+    .slide .img-actions input[type="number"] {
+      width: 3rem; padding: 1px 3px; font-size: 9px; border-radius: 3px;
+      border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.55); color: #fff;
+    }
     .section-label {
       width: 100%; font-size: 0.75rem; color: #999; text-transform: uppercase;
       letter-spacing: 0.05em; margin-top: 0.5rem;
@@ -123,6 +131,105 @@
       });
     }
 
+    // Per-slide overrides computed by the fitting pass: "id:0/1" -> {fontSize, lineSpacing, enY}
+    const slideOverrides = {};
+    // Manual per-slide overrides set via inputs: "id:0/1" -> {fontSize, lineSpacing}
+    const manualOverrides = {};
+
+    function fitSlideText(slideDiv, forceFs, forceLs) {
+      const deEl = slideDiv.querySelector('[data-role="de"]');
+      const enEl = slideDiv.querySelector('[data-role="en"]');
+      if (!deEl) return null;
+
+      const id = slideDiv.dataset.slideId;
+      const isAnswer = slideDiv.dataset.answers === "1";
+      const imgEntry = slideImages[id];
+      const { pad, height: H } = SLIDE_STYLE;
+
+      // Bottom limit: answer bar, image, or slide edge
+      let bottomLimit = H - pad;
+      if (isAnswer) bottomLimit = 4.8;
+      if (imgEntry) {
+        const ar = imgEntry.width / imgEntry.height;
+        const layout = computeImageLayout(ar);
+        if (layout.mode === "ultrawide") {
+          bottomLimit = Math.min(bottomLimit, layout.img.y - pad);
+        }
+      }
+
+      const baseFs = SLIDE_STYLE.question.fontSize;
+      const baseLs = SLIDE_STYLE.question.lineSpacing;
+      const minLs = baseLs - 10;
+
+      // Try a specific fontSize + lineSpacing, reposition EN, return result or null
+      function tryFit(fs, ls) {
+        const fsPx = fs * PT_SCALE;
+        const lh = ls / 100;
+        deEl.style.fontSize = fsPx + "px";
+        deEl.style.lineHeight = String(lh);
+        if (enEl) {
+          enEl.style.fontSize = fsPx + "px";
+          enEl.style.lineHeight = String(lh);
+        }
+
+        const deBottom = pad + deEl.scrollHeight / PX;
+
+        if (!enEl) {
+          return deBottom <= bottomLimit ? { fontSize: fs, lineSpacing: ls, enY: 2.5 } : null;
+        }
+
+        // 1a: push EN down if DE overlaps default position
+        let enY = Math.max(2.5, deBottom + pad);
+        enEl.style.top = Math.round(enY * PX) + "px";
+        if (enY + enEl.scrollHeight / PX <= bottomLimit) {
+          return { fontSize: fs, lineSpacing: ls, enY };
+        }
+
+        // 1b: try moving EN up (keep pad gap from DE)
+        enY = deBottom + pad;
+        enEl.style.top = Math.round(enY * PX) + "px";
+        if (enY + enEl.scrollHeight / PX <= bottomLimit) {
+          return { fontSize: fs, lineSpacing: ls, enY };
+        }
+
+        return null;
+      }
+
+      // Manual override: apply forced values, compute enY
+      if (forceFs != null) {
+        const result = tryFit(forceFs, forceLs);
+        if (result) return result;
+        // Doesn't fit — still apply and return best-effort enY
+        tryFit(forceFs, forceLs);
+        const enY = pad + deEl.scrollHeight / PX + pad;
+        if (enEl) enEl.style.top = Math.round(enY * PX) + "px";
+        return { fontSize: forceFs, lineSpacing: forceLs, enY };
+      }
+
+      // For each font size (half-point steps), binary-search the highest line spacing that fits
+      for (const fs of [baseFs, baseFs - 0.5, baseFs - 1, baseFs - 1.5, baseFs - 2]) {
+        let lo = minLs, hi = baseLs, best = null;
+        while (lo <= hi) {
+          const mid = Math.round((lo + hi) / 2);
+          const result = tryFit(fs, mid);
+          if (result) {
+            best = result;
+            lo = mid + 1; // try higher spacing
+          } else {
+            hi = mid - 1;
+          }
+        }
+        if (best) return best;
+      }
+
+      // Give up — apply smallest settings, return best effort
+      const lastFs = Math.max(8, baseFs - 2);
+      tryFit(lastFs, minLs);
+      const enY = pad + deEl.scrollHeight / PX + pad;
+      if (enEl) enEl.style.top = Math.round(enY * PX) + "px";
+      return { fontSize: lastFs, lineSpacing: minLs, enY };
+    }
+
     function renderPreview(quiz) {
       previewEl.innerHTML = "";
       const descriptors = buildSlideDescriptors(quiz);
@@ -189,7 +296,15 @@
             let deW = fullW, enW = fullW, answerW = fullW;
             let imgHtml = "";
 
-            if (imgEntry) {
+            if (imgEntry && !q) {
+              // No text — image fills the slide
+              const ar = imgEntry.width / imgEntry.height;
+              const W = SLIDE_STYLE.width, H = SLIDE_STYLE.height;
+              const boxW = W - 2 * pad, boxH = H - 2 * pad;
+              const fitW = ar > boxW / boxH ? boxW : boxH * ar;
+              const fitH = ar > boxW / boxH ? boxW / ar : boxH;
+              imgHtml = `<img src="${imgEntry.data}" style="position:absolute;left:${px((W - fitW) / 2)};top:${px((H - fitH) / 2)};width:${px(fitW)};height:${px(fitH)};object-fit:contain">`;
+            } else if (imgEntry) {
               const layout = computeImageLayout(imgEntry.width / imgEntry.height);
               deW = layout.deW;
               enW = layout.enW;
@@ -204,11 +319,11 @@
             let html = "";
 
             if (q) {
-              html += `<div style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${qFs}px;line-height:${qLh}">`;
+              html += `<div data-role="de" style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${qFs}px;line-height:${qLh}">`;
               html += `<span style="font-size:${numFs}px;font-weight:bold">${num}</span> ${esc(q.text.de)}`;
               html += `</div>`;
               if (q.text.en) {
-                html += `<div style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${qFs}px;line-height:${qLh}">`;
+                html += `<div data-role="en" style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${qFs}px;line-height:${qLh}">`;
                 html += esc(q.text.en);
                 html += `</div>`;
               }
@@ -224,8 +339,13 @@
             html += imgHtml;
 
             if (id) {
+              const key = `${id}:${withAnswers ? 1 : 0}`;
               html += `<div class="img-actions">`;
               html += `<button class="nav-btn" data-nav-id="${id}" data-nav-target="${withAnswers ? "0" : "1"}">${withAnswers ? "\u2191 question" : "\u2193 answer"}</button>`;
+              if (imgEntry) {
+                html += `<label class="override-label"><input type="number" class="slide-fs-input" data-key="${key}" step="0.5" title="Font size (pt)">pt</label>`;
+                html += `<label class="override-label"><input type="number" class="slide-ls-input" data-key="${key}" step="1" title="Line spacing %">%</label>`;
+              }
               html += `<label><button class="add-img-btn" type="button">+img</button><input type="file" accept="image/*" data-slide-id="${id}"></label>`;
               if (slideImages[id]) {
                 html += `<button class="rm-img-btn" data-slide-id="${id}">x</button>`;
@@ -238,6 +358,28 @@
           previewEl.appendChild(div);
         }
       }
+
+      // Run text fitting pass on slides with images
+      for (const k of Object.keys(slideOverrides)) delete slideOverrides[k];
+      previewEl.querySelectorAll(".slide[data-slide-id]").forEach((slideDiv) => {
+        if (!slideImages[slideDiv.dataset.slideId]) return;
+        const key = `${slideDiv.dataset.slideId}:${slideDiv.dataset.answers}`;
+        const manual = manualOverrides[key];
+        const result = manual
+          ? fitSlideText(slideDiv, manual.fontSize, manual.lineSpacing)
+          : fitSlideText(slideDiv);
+        if (result) slideOverrides[key] = result;
+      });
+
+      // Populate per-slide override inputs with effective values
+      previewEl.querySelectorAll(".slide-fs-input").forEach((input) => {
+        const o = slideOverrides[input.dataset.key];
+        input.value = o?.fontSize ?? SLIDE_STYLE.question.fontSize;
+      });
+      previewEl.querySelectorAll(".slide-ls-input").forEach((input) => {
+        const o = slideOverrides[input.dataset.key];
+        input.value = o?.lineSpacing ?? SLIDE_STYLE.question.lineSpacing;
+      });
 
       // Wire up image add buttons (trigger hidden file input)
       previewEl.querySelectorAll(".add-img-btn").forEach((btn) => {
@@ -276,6 +418,20 @@
           if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
         });
       });
+
+      // Wire up per-slide override inputs
+      previewEl.querySelectorAll(".slide-fs-input, .slide-ls-input").forEach((input) => {
+        input.addEventListener("change", () => {
+          const key = input.dataset.key;
+          const fsInput = previewEl.querySelector(`.slide-fs-input[data-key="${key}"]`);
+          const lsInput = previewEl.querySelector(`.slide-ls-input[data-key="${key}"]`);
+          manualOverrides[key] = {
+            fontSize: Number(fsInput.value),
+            lineSpacing: Number(lsInput.value),
+          };
+          renderPreview(quiz);
+        });
+      });
     }
 
     // --- Event handlers ---
@@ -305,7 +461,7 @@
       if (!currentQuiz) return;
       statusEl.textContent = "Generating PPTX...";
       try {
-        const pptx = buildPptx(currentQuiz, PptxGenJS, slideImages);
+        const pptx = buildPptx(currentQuiz, PptxGenJS, slideImages, slideOverrides);
         await pptx.writeFile({ fileName: `quiz-${currentQuiz.date}.pptx` });
         statusEl.textContent = "Downloaded!";
       } catch (err) {

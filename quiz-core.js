@@ -10,7 +10,7 @@ export const SLIDE_STYLE = {
   pad: 0.2,        // gap between elements (inches)
   title:    { fontSize: 40 },
   num:      { fontSize: 23 },
-  question: { fontSize: 19, lineSpacing: 110 },
+  question: { fontSize: 20, lineSpacing: 110 },
   answer:   { fontSize: 20 },
 };
 
@@ -19,17 +19,18 @@ export const SLIDE_STYLE = {
  * Images entry: { data, width, height }.
  * Returns { mode, img: {x,y,w,h}, deW, enW, answerW } in inches.
  */
+/** Contain-fit: largest size maintaining aspect ratio within a box. */
+function fit(boxW, boxH, ar) {
+  return ar > boxW / boxH
+    ? { w: boxW, h: boxW / ar }
+    : { w: boxH * ar, h: boxH };
+}
+
 export function computeImageLayout(aspectRatio) {
   const { width: W, height: H, pad } = SLIDE_STYLE;
   const fullW = W - 2 * pad;
 
-  function fit(boxW, boxH, ar) {
-    return ar > boxW / boxH
-      ? { w: boxW, h: boxW / ar }
-      : { w: boxH * ar, h: boxH };
-  }
-
-  if (aspectRatio <= 1) {
+  if (aspectRatio < 1) {
     // Portrait: right 30%, full height
     const { w, h } = fit(W * 0.3, H - 2 * pad, aspectRatio);
     const imgX = W - pad - w;
@@ -41,8 +42,9 @@ export function computeImageLayout(aspectRatio) {
     };
   }
   if (aspectRatio <= 2) {
-    // Landscape: bottom-right, 60% width, 50% height
-    const { w, h } = fit(W * 0.6, H * 0.5, aspectRatio);
+    // Square/Landscape: bottom-right, 60% width, 50% height (60% for square)
+    const boxH = aspectRatio === 1 ? H * 0.6 : H * 0.5;
+    const { w, h } = fit(W * 0.6, boxH, aspectRatio);
     const imgX = W - pad - w;
     const narrowW = imgX - 2 * pad;
     return {
@@ -172,11 +174,12 @@ export function buildSlideDescriptors(quiz) {
  * @param {object} quiz
  * @param {function} PptxGenJS - constructor
  * @param {Record<string, {data:string, width:number, height:number}>} [images]
+ * @param {Record<string, {fontSize:number, lineSpacing:number, enY:number}>} [overrides]
  */
-export function buildPptx(quiz, PptxGenJS, images = {}) {
+export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}) {
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
-  const { pad } = SLIDE_STYLE;
+  const { pad, height: H } = SLIDE_STYLE;
   const fullW = SLIDE_STYLE.width - 2 * pad;
   const descriptors = buildSlideDescriptors(quiz);
 
@@ -193,13 +196,35 @@ export function buildPptx(quiz, PptxGenJS, images = {}) {
 
     const { q, num, withAnswers, id } = desc;
     const imgEntry = id && images[id];
-    let deW = fullW, enW = fullW, answerW = fullW;
+
+    // No text — image fills the slide
+    if (!q && imgEntry) {
+      const ar = imgEntry.width / imgEntry.height;
+      const { w, h } = fit(W - 2 * pad, H - 2 * pad, ar);
+      slide.addImage({
+        data: imgEntry.data,
+        x: (W - w) / 2, y: (H - h) / 2, w, h,
+        sizing: { type: "contain", w, h },
+      });
+      slide.addText(String(num), {
+        x: pad, y: pad, w: 0.8, h: 0.5, fontSize: SLIDE_STYLE.num.fontSize, bold: true,
+      });
+      continue;
+    }
+
+    let deW = fullW, enW = fullW;
+
+    // Bottom limit for text
+    let bottomLimit = H - pad;
+    if (withAnswers) bottomLimit = 4.8;
 
     if (imgEntry) {
       const layout = computeImageLayout(imgEntry.width / imgEntry.height);
       deW = layout.deW;
       enW = layout.enW;
-      answerW = layout.answerW;
+      if (layout.mode === "ultrawide") {
+        bottomLimit = Math.min(bottomLimit, layout.img.y - pad);
+      }
       slide.addImage({
         data: imgEntry.data,
         x: layout.img.x, y: layout.img.y,
@@ -208,18 +233,25 @@ export function buildPptx(quiz, PptxGenJS, images = {}) {
       });
     }
 
-    const lineSpacing = SLIDE_STYLE.question.lineSpacing;
+    const override = overrides[`${id}:${withAnswers ? 1 : 0}`];
+    const qFontSize = override?.fontSize ?? SLIDE_STYLE.question.fontSize;
+    const qLineSpacing = override?.lineSpacing ?? SLIDE_STYLE.question.lineSpacing;
+    const enY = override?.enY ?? 2.5;
+    const deH = enY - pad;
+    const enH = bottomLimit - enY;
+
     if (q) {
       slide.addText([
         { text: `${num}  `, options: { fontSize: SLIDE_STYLE.num.fontSize, bold: true } },
-        { text: q.text.de, options: { fontSize: SLIDE_STYLE.question.fontSize } },
+        { text: q.text.de, options: { fontSize: qFontSize } },
       ], {
-        x: pad, y: pad, w: deW, h: 2.2, valign: "top", lineSpacingMultiple: lineSpacing / 100,
+        x: pad, y: pad, w: deW, h: deH, valign: "top",
+        lineSpacingMultiple: qLineSpacing / 100,
       });
       if (q.text.en) {
         slide.addText(q.text.en, {
-          x: pad, y: 2.5, w: enW, h: 2, fontSize: SLIDE_STYLE.question.fontSize, valign: "top",
-          lineSpacingMultiple: lineSpacing / 100,
+          x: pad, y: enY, w: enW, h: enH, fontSize: qFontSize, valign: "top",
+          lineSpacingMultiple: qLineSpacing / 100,
         });
       }
     } else {
