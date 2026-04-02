@@ -2,7 +2,7 @@ import { h } from "preact";
 import htm from "htm";
 import { SLIDE_STYLE } from "../quiz-core.js";
 import { readFileAsDataURL, loadImageDimensions } from "../lib/utils.js";
-import { slideImages, setImage, removeImage, setManualOverride, scheduleSave } from "../lib/state.js";
+import { slideImages, setImage, removeImage, setManualOverride, scheduleSave, debug } from "../lib/state.js";
 
 const html = htm.bind(h);
 
@@ -87,7 +87,7 @@ export function ImageActions({ id, withAnswers, imgEntry, slideKey, fittingResul
     <div class="img-actions">
       <button onClick=${nav}>${withAnswers ? "\u2191 question" : "\u2193 answer"}</button>
         <div class="img-actions__right">
-        ${imgEntry && html`
+        ${debug && imgEntry && html`
           <label class="override-label">
             <input type="number" class="slide-fs-input" step="0.5" value=${displayFs}
                    onChange=${onOverrideChange} title="Font size (pt)" />pt

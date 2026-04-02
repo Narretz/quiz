@@ -4,7 +4,7 @@ import { effect } from "@preact/signals";
 import htm from "htm";
 import {
   currentQuiz, currentQuizId, slideImages, manualOverrides,
-  slideStyle, savedList, status, refreshSavedList, uploadQuiz, loadSavedQuiz,
+  slideStyle, savedList, status, debug, refreshSavedList, uploadQuiz, loadSavedQuiz,
 } from "./lib/state.js";
 import { SavedQuizBar } from "./components/saved-quiz-bar.js";
 import { Controls } from "./components/controls.js";
@@ -42,7 +42,7 @@ function App() {
     </div>
     <${Controls} />
     <nav class="toc"><${TOC} /></nav>
-    <div class="style-controls"><${StyleControls} /></div>
+    ${debug && html`<div class="style-controls"><${StyleControls} /></div>`}
     <${SlidePreview} />
   `;
 }
