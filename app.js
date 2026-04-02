@@ -1,5 +1,4 @@
 import { h, render } from "preact";
-import { useEffect } from "preact/hooks";
 import { effect } from "@preact/signals";
 import htm from "htm";
 import {
@@ -32,7 +31,7 @@ function App() {
 
   return html`
     <h1>Quiz XLSX to PPTX</h1>
-    <p class="howto">How does it work? Upload an .xlsx file. A quiz presentation will be created. You can add images to slides. Adding an image to a question will automatically add it to the answer, but you can also add individual images to questions/answers only. Your changes will be saved locally in this browser and can be restored when you come back. You can also download the presentation with all images included.</p>
+    <p class="howto">How does it work? Upload an .xlsx file. A quiz presentation will be created. You can add images to slides. Adding an image to a question will automatically add it to the answer, but you can also add separate images to questions/answers. Your changes will be saved locally in this browser and can be restored when you come back. You can also download the presentation with all images included.</p>
     <div class="controls">
       <label class="upload-btn">
         Upload .xlsx
