@@ -9,6 +9,21 @@
     body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #333; padding: 2rem; }
     h1 { margin-bottom: 1rem; }
     .controls { display: flex; gap: 1rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .saved-quizzes { margin-bottom: 1rem; font-size: 0.85rem; }
+    .saved-quizzes:empty { display: none; }
+    .saved-quizzes .sq-item {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.3rem 0.6rem; margin: 0.2rem; border-radius: 4px;
+      background: #fff; border: 1px solid #ddd;
+    }
+    .saved-quizzes .sq-item.active { border-color: #2563eb; border-width: 3px; background: #eff4ff; }
+    .saved-quizzes .sq-label { cursor: pointer; }
+    .saved-quizzes .sq-label:hover { text-decoration: underline; }
+    .saved-quizzes .sq-delete {
+      background: none; border: none; color: #999; cursor: pointer;
+      font-size: 0.85rem; padding: 0 0.2rem; line-height: 1;
+    }
+    .saved-quizzes .sq-delete:hover { color: #e00; }
     button, label.upload-btn {
       padding: 0.5rem 1.2rem; border: none; border-radius: 4px; cursor: pointer;
       font-size: 0.9rem; background: #2563eb; color: #fff;
@@ -77,8 +92,12 @@
       Upload .xlsx
       <input type="file" id="fileInput" accept=".xlsx">
     </label>
+    Stored quizzes:<div id="savedQuizzes" class="saved-quizzes"></div>
+  </div>
+  <div class="controls">
     <button id="downloadBtn" disabled>Download .pptx</button>
     <span class="status" id="status"></span>
+    <button id="deleteQuizBtn" style="display:none;margin-left:auto;background:#dc2626" >Delete quiz</button>
     <nav id="toc" class="toc"></nav>
   </div>
   <div class="style-controls">
@@ -99,11 +118,150 @@
 
     const fileInput = document.getElementById("fileInput");
     const downloadBtn = document.getElementById("downloadBtn");
+    const deleteQuizBtn = document.getElementById("deleteQuizBtn");
     const statusEl = document.getElementById("status");
     const previewEl = document.getElementById("preview");
     const fontSizeInput = document.getElementById("fontSizeInput");
     const lineSpacingInput = document.getElementById("lineSpacingInput");
+    const savedQuizzesEl = document.getElementById("savedQuizzes");
     let currentQuiz = null;
+    let currentQuizId = null;
+
+    // --- IndexedDB helpers ---
+    const DB_NAME = "quiz-app", STORE = "quizzes";
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(STORE, { keyPath: "id" });
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    async function dbPut(data) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        tx.objectStore(STORE).put(data);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+    async function dbGet(id) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const req = db.transaction(STORE, "readonly").objectStore(STORE).get(id);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    async function dbDelete(id) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE, "readwrite");
+        tx.objectStore(STORE).delete(id);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+    async function dbList() {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const req = db.transaction(STORE, "readonly").objectStore(STORE).getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    // --- Save / load / list ---
+    let persistRequested = false;
+    let saveTimeout = null;
+    function scheduleSave() {
+      if (!currentQuiz || !currentQuizId) return;
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(async () => {
+        if (!persistRequested) {
+          persistRequested = true;
+          navigator.storage?.persist?.();
+        }
+        await dbPut({
+          id: currentQuizId,
+          quiz: currentQuiz,
+          images: { ...slideImages },
+          manualOverrides: { ...manualOverrides },
+          style: { fontSize: SLIDE_STYLE.question.fontSize, lineSpacing: SLIDE_STYLE.question.lineSpacing },
+          savedAt: Date.now(),
+        });
+        renderSavedList();
+      }, 300);
+    }
+
+    async function loadSavedQuiz(id) {
+      const saved = await dbGet(id);
+      if (!saved) return;
+      currentQuiz = saved.quiz;
+      currentQuizId = id;
+      // Restore images
+      for (const k of Object.keys(slideImages)) delete slideImages[k];
+      Object.assign(slideImages, saved.images || {});
+      // Restore manual overrides
+      for (const k of Object.keys(manualOverrides)) delete manualOverrides[k];
+      Object.assign(manualOverrides, saved.manualOverrides || {});
+      // Restore style
+      if (saved.style) {
+        SLIDE_STYLE.question.fontSize = saved.style.fontSize;
+        SLIDE_STYLE.question.lineSpacing = saved.style.lineSpacing;
+        fontSizeInput.value = saved.style.fontSize;
+        lineSpacingInput.value = saved.style.lineSpacing;
+      }
+      downloadBtn.disabled = false;
+      statusEl.textContent = `${currentQuiz.rounds.length} rounds, ${currentQuiz.date}`;
+      renderPreview(currentQuiz);
+      updateDeleteBtn();
+      renderSavedList();
+    }
+
+    deleteQuizBtn.addEventListener("click", () => {
+      if (currentQuizId) deleteSavedQuiz(currentQuizId);
+    });
+
+    function updateDeleteBtn() {
+      deleteQuizBtn.style.display = currentQuizId ? "" : "none";
+    }
+
+    async function deleteSavedQuiz(id) {
+      if (!confirm(`Delete saved quiz "${id}"?`)) return;
+      await dbDelete(id);
+      if (currentQuizId === id) {
+        currentQuiz = null;
+        currentQuizId = null;
+        for (const k of Object.keys(slideImages)) delete slideImages[k];
+        for (const k of Object.keys(manualOverrides)) delete manualOverrides[k];
+        previewEl.innerHTML = "";
+        document.getElementById("toc").innerHTML = "";
+        downloadBtn.disabled = true;
+        statusEl.textContent = "";
+      }
+      updateDeleteBtn();
+      renderSavedList();
+    }
+
+    async function renderSavedList() {
+      const list = await dbList();
+      savedQuizzesEl.innerHTML = "";
+      if (list.length === 0) return;
+      for (const entry of list.sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))) {
+        const isActive = entry.id === currentQuizId;
+        const item = document.createElement("span");
+        item.className = "sq-item" + (isActive ? " active" : "");
+        const label = document.createElement("span");
+        label.className = "sq-label";
+        label.textContent = entry.id;
+        label.addEventListener("click", () => loadSavedQuiz(entry.id));
+        item.appendChild(label);
+        savedQuizzesEl.appendChild(item);
+      }
+    }
+    renderSavedList();
 
     // Reset state on load (Firefox restores form element states across reloads)
     downloadBtn.disabled = true;
@@ -115,6 +273,7 @@
       SLIDE_STYLE.question.fontSize = Number(fontSizeInput.value);
       SLIDE_STYLE.question.lineSpacing = Number(lineSpacingInput.value);
       if (currentQuiz) renderPreview(currentQuiz);
+      scheduleSave();
     }
     fontSizeInput.addEventListener("input", onStyleChange);
     lineSpacingInput.addEventListener("input", onStyleChange);
@@ -547,6 +706,7 @@
             }
           }
           renderPreview(quiz);
+          scheduleSave();
         });
       });
 
@@ -561,14 +721,13 @@
           const linked = slideImages[qKey] && slideImages[ansKey]
             && slideImages[qKey].data === slideImages[ansKey].data;
           if (linked) {
-            // Same image on both — remove both
             delete slideImages[qKey];
             delete slideImages[ansKey];
           } else {
-            // Independent images — only remove the one clicked
             delete slideImages[key];
           }
           renderPreview(quiz);
+          scheduleSave();
         });
       });
 
@@ -577,6 +736,7 @@
         btn.addEventListener("click", () => {
           delete slideImages[btn.dataset.slideKey];
           renderPreview(quiz);
+          scheduleSave();
         });
       });
 
@@ -591,6 +751,7 @@
             delete slideImages[`${id}:1`];
           }
           renderPreview(quiz);
+          scheduleSave();
         });
       });
 
@@ -615,6 +776,7 @@
             lineSpacing: Number(lsInput.value),
           };
           renderPreview(quiz);
+          scheduleSave();
         });
       });
 
@@ -637,12 +799,23 @@
         const buffer = await file.arrayBuffer();
         const ast = await officeParser.OfficeParser.parseOffice(buffer);
         currentQuiz = astToQuiz(ast);
-        // Clear images from previous upload
+        // Pick a unique ID based on quiz date
+        let id = currentQuiz.date || `quiz-${Date.now()}`;
+        if (await dbGet(id)) {
+          let n = 2;
+          while (await dbGet(`${id} (${n})`)) n++;
+          id = `${id} (${n})`;
+        }
+        currentQuizId = id;
+        // Clear images and manual overrides from previous upload
         for (const k of Object.keys(slideImages)) delete slideImages[k];
+        for (const k of Object.keys(manualOverrides)) delete manualOverrides[k];
         renderPreview(currentQuiz);
         downloadBtn.disabled = false;
         statusEl.textContent =
           `${currentQuiz.rounds.length} rounds, ${currentQuiz.date}`;
+        updateDeleteBtn();
+        scheduleSave();
       } catch (err) {
         statusEl.textContent = "Error: " + err.message;
         console.error(err);
