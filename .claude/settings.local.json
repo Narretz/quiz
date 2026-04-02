@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__chrome-devtools__take_screenshot",
+      "mcp__chrome-devtools__evaluate_script"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "chrome-devtools"
+  ]
+}
