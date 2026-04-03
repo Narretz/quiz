@@ -3,7 +3,7 @@ import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { INTRO_SLIDES, DEFAULT_MONEY } from "../lib/intro-slides.js";
 import { SLIDE_STYLE } from "../quiz-core.js";
-import { PT_SCALE, PX, px, layoutImageBelowText } from "../lib/utils.js";
+import { PT_SCALE, px, layoutImageBelowText } from "../lib/utils.js";
 import { slideStyle, slideImages, slideAudio } from "../lib/state.js";
 import { ImageActions } from "./image-actions.js";
 

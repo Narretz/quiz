@@ -3,14 +3,15 @@ import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { SLIDE_STYLE, computeImageLayout, formatAnswer } from "../quiz-core.js";
 import { PT_SCALE, px, esc } from "../lib/utils.js";
-import { slideImages, slideAudio, manualOverrides, slideStyle, slideOverrides } from "../lib/state.js";
+import { slideImages, slideAudio, quizQuestions, manualOverrides, slideStyle, slideOverrides } from "../lib/state.js";
 import { fitSlideText } from "../lib/fitting.js";
 import { ImageActions } from "./image-actions.js";
 
 const html = htm.bind(h);
 
 export function QuestionSlide({ desc, onRerender }) {
-  const { q, num, withAnswers, id } = desc;
+  const { num, withAnswers, id, noAnswerText } = desc;
+  const q = noAnswerText ? null : (quizQuestions.value[id] || desc.q); // desc.q fallback for old saves
   const slideKey = id ? `${id}:${withAnswers ? 1 : 0}` : null;
   const imgEntry = slideKey && slideImages.value[slideKey];
   const style = slideStyle.value;

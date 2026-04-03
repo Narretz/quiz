@@ -180,11 +180,9 @@ export function buildSlideDescriptors(quiz) {
       if (!withAnswers && round.description?.de) {
         slides.push({ type: "description", text: round.description, id: `desc-r${ri}` });
       }
-      const questions = round.questions;
-      const count = questions.length === 0 ? 10 : questions.length;
+      const count = round.questions.length === 0 ? 10 : round.questions.length;
       for (let i = 0; i < count; i++) {
-        const q = (withAnswers && round.noAnswerText) ? null : questions[i];
-        slides.push({ type: "question", id: `r${ri}q${i}`, num: i + 1, q, withAnswers });
+        slides.push({ type: "question", id: `r${ri}q${i}`, num: i + 1, withAnswers, noAnswerText: !!round.noAnswerText });
       }
     }
   }
@@ -219,12 +217,12 @@ export function buildSlideDescriptors(quiz) {
     addExtra("no-phones");
     const count = jr.questions.length || 4;
     for (let i = 0; i < count; i++) {
-      slides.push({ type: "question", id: `r${jri}q${i}`, num: i + 1, q: jr.questions[i], withAnswers: false });
+      slides.push({ type: "question", id: `r${jri}q${i}`, num: i + 1, withAnswers: false });
     }
     // No Antworten divider for jackpot
     addTitle(jr.name, null, `title-r${jri}-ans`);
     for (let i = 0; i < count; i++) {
-      slides.push({ type: "question", id: `r${jri}q${i}`, num: i + 1, q: jr.questions[i], withAnswers: true });
+      slides.push({ type: "question", id: `r${jri}q${i}`, num: i + 1, withAnswers: true });
     }
     addExtra("goodbye");
   }
@@ -394,8 +392,9 @@ function renderIntroSlide(slide, data, assets, desc, images) {
  * @param {Record<string, {fontSize:number, lineSpacing:number, enY:number}>} [overrides]
  * @param {Record<string, {data:string, name:string}>} [audio]
  * @param {object} [introAssets] - { logo: base64, toucan: base64 }
+ * @param {Record<string, {text:{de:string,en:string}, answers:{de:string,en:string}}>} [questions]
  */
-export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, audio = {}, introAssets = {}) {
+export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, audio = {}, introAssets = {}, questions = {}) {
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
   const { pad, height: H, backgroundColor } = SLIDE_STYLE;
@@ -501,7 +500,8 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
       continue;
     }
 
-    const { q, num, withAnswers, id } = desc;
+    const { num, withAnswers, id, noAnswerText } = desc;
+    const q = noAnswerText ? null : (questions[id] || desc.q); // desc.q fallback for old saves
     const slideKey = id ? `${id}:${withAnswers ? 1 : 0}` : null;
     const imgEntry = slideKey && images[slideKey];
 
