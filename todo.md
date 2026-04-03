@@ -2,11 +2,12 @@ MVP
 - add intro slides ✅
 - rename bonus to jackpot
 - add description slide ✅
+- add no phones slide before jackpot
 - remove answer slide from jackpot round
 
 feature parity for full quiz
 
-- add images to intro/break slides
+- add images to intro/break slides ✅
 - add last slide
 - special case name 10
 - unlink text from answer slides
