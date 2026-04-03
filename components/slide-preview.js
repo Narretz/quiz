@@ -13,7 +13,7 @@ const html = htm.bind(h);
 
 function buildSections(quiz) {
   const descriptors = buildSlideDescriptors(quiz);
-  const sections = [{ label: "", indices: [0, 1, 2, 3, 4, 5] }]; // date + 5 intro slides
+  const sections = [{ label: "", indices: [0, 1, 2, 3, 4] }]; // 5 intro slides
   const roundSlices = [
     quiz.rounds.slice(0, 2),
     quiz.rounds.slice(2, 5),
@@ -21,7 +21,7 @@ function buildSections(quiz) {
   ];
 
   const tocEntries = [{ label: "Intro", anchor: "intro" }];
-  let idx = 1 + 5; // skip date slide + 5 intro slides
+  let idx = 5; // skip 5 intro slides
   for (let s = 0; s < roundSlices.length; s++) {
     const sec = { label: `Section ${s + 1}`, indices: [] };
     const rounds = roundSlices[s];

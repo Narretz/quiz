@@ -180,8 +180,6 @@ export function buildSlideDescriptors(quiz) {
     }
   }
 
-  addTitle(quiz.date);
-
   // Intro slides (welcome, rules, format, golden rules, begin)
   for (let i = 0; i < 5; i++) {
     slides.push({ type: "intro", introIndex: i, id: null });
@@ -208,13 +206,13 @@ function renderIntroSlide(slide, index, assets) {
   const { width: W, height: H, pad } = SLIDE_STYLE;
 
   if (data.id === "welcome") {
-    // Background logo
+    // Background logo — full slide, cover
     if (assets.logo) {
       slide.addImage({ data: assets.logo, x: 0, y: 0, w: W, h: H, sizing: { type: "contain", w: W, h: H } });
     }
     // Title
     slide.addText(data.title.text, {
-      x: 0, y: "30%", w: "100%", h: "20%",
+      x: 0, y: data.titleY, w: "100%", h: "15%",
       fontSize: data.title.fontSize, bold: true, color: resolveColor(data.title.color),
       align: "center", valign: "middle",
     });
@@ -222,24 +220,23 @@ function renderIntroSlide(slide, index, assets) {
     const subtitleRuns = data.subtitle.map((l) => ({
       text: l.text + "\n", options: { fontSize: l.fontSize, bold: l.bold, color: resolveColor(l.color) },
     }));
-    slide.addText(subtitleRuns, { x: 0, y: "55%", w: "100%", h: "30%", align: "center", valign: "top" });
-    // Toucans
-    if (assets.toucan) {
-      slide.addImage({ data: assets.toucan, x: 0.5, y: 0.3, w: 1.1, h: 1.7 });
-      slide.addImage({ data: assets.toucan, x: W - 1.6, y: 0.3, w: 1.1, h: 1.7 });
+    slide.addText(subtitleRuns, { x: 0, y: data.subtitleY, w: "100%", h: "25%", align: "center", valign: "top" });
+    // Toucans — positions from config
+    const t = data.toucan;
+    if (assets.toucan && t) {
+      slide.addImage({ data: assets.toucan, x: t.x, y: t.y, w: t.w, h: t.h });
+      slide.addImage({ data: assets.toucan, x: W - t.x - t.w, y: t.y, w: t.w, h: t.h });
     }
     return;
   }
 
   if (data.id === "rules") {
-    // Title
     slide.addText(data.title.text, {
-      x: 0, y: pad, w: "100%", h: 0.6,
+      x: 0, y: data.titleY, w: "100%", h: 0.6,
       fontSize: data.title.fontSize, bold: true, underline: true, color: resolveColor(data.title.color), align: "center",
     });
-    // DE + EN sections stacked
-    let y = 0.8;
-    for (const sec of data.sections) {
+    data.sections.forEach((sec, si) => {
+      let y = data.sectionStartY + si * data.sectionGap;
       for (const line of sec.lines) {
         const runs = line.runs.map((r) => ({
           text: replaceMoney(r.text, money),
@@ -250,23 +247,22 @@ function renderIntroSlide(slide, index, assets) {
             color: resolveColor(r.color),
           },
         }));
-        slide.addText(runs, { x: pad, y, w: W - 2 * pad, h: 0.4, align: "center" });
-        y += 0.4;
+        slide.addText(runs, { x: pad, y, w: W - 2 * pad, h: data.lineHeight, align: "center" });
+        y += data.lineHeight;
       }
-      y += 0.2; // gap between DE and EN
-    }
+    });
     return;
   }
 
   if (data.id === "format") {
-    // Title
+    const cp = data.contentPad || 0;
     slide.addText(data.title.text, {
-      x: 0, y: pad, w: "100%", h: 0.6,
-      fontSize: data.title.fontSize, underline: true, color: resolveColor(data.title.color),
+      x: 0, y: data.titleY, w: "100%", h: 0.6,
+      fontSize: data.title.fontSize, bold: !!data.title.bold, underline: true, color: resolveColor(data.title.color),
       align: "center", fontFace: data.title.fontFace,
     });
-    let y = 0.8;
-    for (const sec of data.sections) {
+    data.sections.forEach((sec, si) => {
+      let y = data.sectionStartY + si * data.sectionGap;
       for (const line of sec.lines) {
         const runs = line.runs.map((r) => ({
           text: r.text,
@@ -276,35 +272,25 @@ function renderIntroSlide(slide, index, assets) {
             color: resolveColor(r.color || data.defaultColor),
           },
         }));
-        // Prepend bullet
         runs[0].text = sec.bullet + " " + runs[0].text;
-        slide.addText(runs, { x: pad + 0.2, y, w: W - 2 * pad - 0.4, h: 0.35, valign: "top" });
-        y += 0.35;
+        slide.addText(runs, { x: pad + cp, y, w: W - 2 * pad - 2 * cp, h: data.lineHeight, valign: "top" });
+        y += data.lineHeight;
       }
-      y += 0.15; // gap between DE and EN blocks
-    }
+    });
     return;
   }
 
   if (data.id === "golden-rules") {
-    // Title
     slide.addText(data.title.text, {
-      x: 0, y: pad, w: "100%", h: 0.8,
+      x: 0, y: data.titleY, w: "100%", h: 0.8,
       fontSize: data.title.fontSize, bold: true, underline: true, color: resolveColor(data.title.color), align: "center",
     });
-    let y = 1.2;
-    for (const rule of data.rules) {
-      slide.addText(rule.de, {
-        x: 0, y, w: "100%", h: 0.6,
-        fontSize: data.ruleFontSize, color: resolveColor(data.ruleColor), align: "center",
+    data.rules.forEach((rule, ri) => {
+      slide.addText(rule, {
+        x: 0, y: data.rulesStartY + ri * data.ruleHeight, w: "100%", h: data.ruleHeight,
+        fontSize: data.ruleFontSize, color: resolveColor(data.ruleColor), align: "center", valign: "middle",
       });
-      y += 0.6;
-      slide.addText(rule.en, {
-        x: 0, y, w: "100%", h: 0.6,
-        fontSize: data.ruleFontSize, color: resolveColor(data.ruleColor), align: "center",
-      });
-      y += 0.9;
-    }
+    });
     return;
   }
 
