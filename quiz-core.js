@@ -3,7 +3,7 @@
  * Used by both CLI (parse-quiz.js, generate-pptx.js) and browser (index.html).
  */
 
-import { INTRO_SLIDES, DEFAULT_MONEY } from "./lib/intro-slides.js";
+import { INTRO_SLIDES, EXTRA_SLIDES, DEFAULT_MONEY } from "./lib/intro-slides.js";
 
 /** Slide dimensions and font sizes — single source of truth for PPTX and preview. */
 export const SLIDE_STYLE = {
@@ -137,6 +137,11 @@ export function astToQuiz(ast) {
     });
   }
 
+  // Last round is always the Jackpot round
+  if (rounds.length === 5) {
+    rounds[4].name = "Jackpot!";
+  }
+
   return { date, rounds };
 }
 
@@ -146,50 +151,69 @@ export function astToQuiz(ast) {
  */
 export function buildSlideDescriptors(quiz) {
   const slides = [];
-  let sectionIndex = 0;
+  const ANTWORTEN_TEXT = "Antworten ⬧ Answers";
+  const ANTWORTEN_SUB = "Bitte tauscht eure Papiere mit einem anderen Team aus.\nPlease swap your papers with another team.";
 
   function addTitle(text, subtitle, id) {
     slides.push({ type: "title", text, subtitle: subtitle || null, id: id || null });
   }
 
-  function addQuestions(rounds, roundOffset, withAnswers) {
+  function addRoundQuestions(rounds, roundOffset, withAnswers) {
     for (let r = 0; r < rounds.length; r++) {
       const ri = roundOffset + r;
       const round = rounds[r];
       addTitle(round.name, null, withAnswers ? `title-r${ri}-ans` : `title-r${ri}`);
-      if (!withAnswers && round.description.de) {
+      if (!withAnswers && round.description?.de) {
         slides.push({ type: "description", text: round.description, id: `desc-r${ri}` });
       }
       const questions = round.questions;
       const count = questions.length === 0 ? 10 : questions.length;
       for (let i = 0; i < count; i++) {
-        const q = questions[i];
-        const id = `r${ri}q${i}`;
-        const s = { type: "question", id, num: i + 1, q, withAnswers };
-        slides.push(s);
+        slides.push({ type: "question", id: `r${ri}q${i}`, num: i + 1, q: questions[i], withAnswers });
       }
     }
   }
 
-  function addSection(rounds, roundOffset, lastRound) {
-    const si = sectionIndex++;
-    addQuestions(rounds, roundOffset, false);
-    addTitle("Antworten ⬧ Answers", "Bitte tauscht eure Papiere mit einem anderen Team aus.\nPlease swap your papers with another team.", `antworten-s${si}`);
-    addQuestions(rounds, roundOffset, true);
-
-    if (!lastRound) {
-      addTitle("Pause ⬧ Break", "Wir sehen uns in 10 Minuten.\nSee you in 10 minutes.", `pause-s${si}`);
-    }
+  function addExtra(id) {
+    slides.push({ type: "intro", data: EXTRA_SLIDES[id], id });
   }
 
-  // Intro slides — snapshot data from INTRO_SLIDES for persistence
+  // --- 5 intro slides ---
   for (let i = 0; i < INTRO_SLIDES.length; i++) {
     slides.push({ type: "intro", introIndex: i, data: INTRO_SLIDES[i], id: `intro-${i}` });
   }
 
-  addSection(quiz.rounds.slice(0, 2), 0);
-  addSection(quiz.rounds.slice(2, 5), 2);
-  addSection(quiz.rounds.slice(5), 5, true);
+  // --- Section 1: Rounds 0-1 ---
+  addRoundQuestions(quiz.rounds.slice(0, 2), 0, false);
+  addTitle(ANTWORTEN_TEXT, ANTWORTEN_SUB, "antworten-s0");
+  addRoundQuestions(quiz.rounds.slice(0, 2), 0, true);
+  addExtra("break-1");
+
+  // --- Section 2: Rounds 2-4 ---
+  addRoundQuestions(quiz.rounds.slice(2, 5), 2, false);
+  addTitle(ANTWORTEN_TEXT, ANTWORTEN_SUB, "antworten-s1");
+  addRoundQuestions(quiz.rounds.slice(2, 5), 2, true);
+  addExtra("break-2");
+  addExtra("prizes");
+
+  // --- Jackpot section: Round 5 ---
+  const jr = quiz.rounds[5];
+  if (jr) {
+    const jri = 5;
+    addTitle(jr.name, null, `title-r${jri}`);
+    addExtra("no-phones");
+    const count = jr.questions.length || 4;
+    for (let i = 0; i < count; i++) {
+      slides.push({ type: "question", id: `r${jri}q${i}`, num: i + 1, q: jr.questions[i], withAnswers: false });
+    }
+    // No Antworten divider for jackpot
+    addTitle(jr.name, null, `title-r${jri}-ans`);
+    for (let i = 0; i < count; i++) {
+      slides.push({ type: "question", id: `r${jri}q${i}`, num: i + 1, q: jr.questions[i], withAnswers: true });
+    }
+    addExtra("goodbye");
+  }
+
   return slides;
 }
 
@@ -221,10 +245,11 @@ function renderIntroSlide(slide, data, assets, desc, images) {
   if (!data) return;
   const money = DEFAULT_MONEY;
   const { width: W, height: H, pad } = SLIDE_STYLE;
+  const style = data.style || data.id; // migration fallback for old saves
   const slideKey = desc?.id ? `${desc.id}:0` : null;
   const imgEntry = slideKey && images?.[slideKey];
 
-  if (data.id === "welcome") {
+  if (style === "welcome") {
     // Background logo — full slide, cover
     if (assets.logo) {
       slide.addImage({ data: assets.logo, x: 0, y: 0, w: W, h: H, sizing: { type: "contain", w: W, h: H } });
@@ -249,13 +274,16 @@ function renderIntroSlide(slide, data, assets, desc, images) {
     return;
   }
 
-  if (data.id === "rules") {
+  if (style === "rules") {
+    const titleY = imgEntry ? pad : data.titleY;
+    let sectionStartY = imgEntry ? pad + 0.6 : data.sectionStartY;
     slide.addText(data.title.text, {
-      x: 0, y: data.titleY, w: "100%", h: 0.6,
+      x: 0, y: titleY, w: "100%", h: 0.6,
       fontSize: data.title.fontSize, bold: true, underline: true, color: resolveColor(data.title.color), align: "center",
     });
+    let textBottom = sectionStartY;
     data.sections.forEach((sec, si) => {
-      let y = data.sectionStartY + si * data.sectionGap;
+      let y = sectionStartY + si * data.sectionGap;
       for (const line of sec.lines) {
         const runs = line.runs.map((r) => ({
           text: replaceMoney(r.text, money),
@@ -268,12 +296,16 @@ function renderIntroSlide(slide, data, assets, desc, images) {
         }));
         slide.addText(runs, { x: pad, y, w: W - 2 * pad, h: data.lineHeight, align: "center" });
         y += data.lineHeight;
+        textBottom = Math.max(textBottom, y);
       }
     });
+    if (imgEntry) {
+      addImageBelowText(slide, imgEntry, textBottom);
+    }
     return;
   }
 
-  if (data.id === "format") {
+  if (style === "format") {
     const cp = data.contentPad || 0;
     slide.addText(data.title.text, {
       x: 0, y: data.titleY, w: "100%", h: 0.6,
@@ -299,7 +331,7 @@ function renderIntroSlide(slide, data, assets, desc, images) {
     return;
   }
 
-  if (data.id === "golden-rules") {
+  if (style === "golden-rules") {
     const titleY = imgEntry ? pad : data.titleY;
     const rulesY = imgEntry ? pad + 0.6 : data.rulesStartY;
     slide.addText(data.title.text, {
@@ -319,22 +351,22 @@ function renderIntroSlide(slide, data, assets, desc, images) {
     return;
   }
 
-  if (data.id === "begin") {
+  if (style === "begin") {
     if (imgEntry) {
       // Text at top, image below
       const textH = data.lines.length * 0.5;
       const runs = data.lines.map((l) => ({
         text: l.text + "\n",
-        options: { fontSize: l.fontSize, bold: l.bold, color: resolveColor(l.color) },
+        options: { fontSize: l.fontSize, bold: !!l.bold, color: resolveColor(l.color) },
       }));
-      slide.addText(runs, { x: 0, y: pad, w: "100%", h: textH, align: "center", valign: "top" });
+      slide.addText(runs, { x: pad, y: pad, w: W - 2 * pad, h: textH, align: "center", valign: "top" });
       addImageBelowText(slide, imgEntry, pad + textH);
     } else {
       const runs = data.lines.map((l) => ({
         text: l.text + "\n",
-        options: { fontSize: l.fontSize, bold: l.bold, color: resolveColor(l.color) },
+        options: { fontSize: l.fontSize, bold: !!l.bold, color: resolveColor(l.color) },
       }));
-      slide.addText(runs, { x: 0, y: 0, w: "100%", h: "100%", align: "center", valign: "middle" });
+      slide.addText(runs, { x: pad, y: 0, w: W - 2 * pad, h: "100%", align: "center", valign: "middle" });
     }
     return;
   }

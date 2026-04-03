@@ -8,23 +8,30 @@ const html = htm.bind(h);
 function buildTocEntries(quiz) {
   if (!quiz) return [];
   const entries = [{ label: "Intro", anchor: "intro" }];
-  const roundSlices = [
-    quiz.rounds.slice(0, 2),
-    quiz.rounds.slice(2, 5),
-    quiz.rounds.slice(5),
-  ];
-  for (let s = 0; s < roundSlices.length; s++) {
-    const rounds = roundSlices[s];
-    for (const r of rounds) {
-      entries.push({ label: r.name, anchor: slugify(r.name) });
-    }
-    for (const r of rounds) {
-      entries.push({ label: `${r.name} Answers`, anchor: slugify(r.name) + "-answers" });
-    }
-    if (s < roundSlices.length - 1) {
-      entries.push({ label: `Break ${s + 1}`, anchor: `break-${s + 1}` });
-    }
+
+  // Section 1: rounds 0-1
+  for (const r of quiz.rounds.slice(0, 2)) {
+    entries.push({ label: r.name, anchor: slugify(r.name) });
   }
+  for (const r of quiz.rounds.slice(0, 2)) {
+    entries.push({ label: `${r.name} Answers`, anchor: slugify(r.name) + "-answers" });
+  }
+
+  // Section 2: rounds 2-4
+  for (const r of quiz.rounds.slice(2, 5)) {
+    entries.push({ label: r.name, anchor: slugify(r.name) });
+  }
+  for (const r of quiz.rounds.slice(2, 5)) {
+    entries.push({ label: `${r.name} Answers`, anchor: slugify(r.name) + "-answers" });
+  }
+
+  // Jackpot section: round 5
+  const jr = quiz.rounds[5];
+  if (jr) {
+    entries.push({ label: jr.name, anchor: slugify(jr.name) });
+    entries.push({ label: `${jr.name} Answers`, anchor: slugify(jr.name) + "-answers" });
+  }
+
   return entries;
 }
 

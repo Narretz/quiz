@@ -17,15 +17,16 @@ function c(color) {
   return color ? `#${color}` : SLIDE_STYLE.textColor;
 }
 
-export function IntroSlide({ introIndex, anchor, id, onRerender }) {
-  const data = INTRO_SLIDES[introIndex];
+export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
+  const data = desc?.data || INTRO_SLIDES[introIndex];
   if (!data) return null;
+  const style = data.style || data.id; // migration fallback for old saves
   const bg = slideStyle.value.backgroundColor;
   const slideKey = id ? `${id}:0` : null;
   const imgEntry = slideKey && slideImages.value[slideKey];
   const audioEntry = slideKey && slideAudio.value[slideKey];
 
-  if (data.id === "welcome") {
+  if (style === "welcome") {
     const t = data.toucan;
     return html`
       <div class="slide" id=${anchor || undefined} style="background-color:${bg};position:relative">
@@ -43,7 +44,33 @@ export function IntroSlide({ introIndex, anchor, id, onRerender }) {
     `;
   }
 
-  if (data.id === "rules") {
+  if (style === "rules") {
+    if (imgEntry) {
+      const textRef = useRef(null);
+      const imgElRef = useRef(null);
+      useLayoutEffect(() => {
+        layoutImageBelowText(textRef.current, imgElRef.current, imgEntry);
+      });
+      return html`
+        <div class="slide" style="background-color:${bg}">
+          <div ref=${textRef} style="position:absolute;left:0;top:${px(SLIDE_STYLE.pad)};width:100%;text-align:center">
+            <div style="font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
+              ${data.title.text}
+            </div>
+            ${data.sections.map((sec) => html`
+              <div style="font-size:${data.defaultFontSize * PT_SCALE}px;margin-top:8px">
+                ${sec.lines.map((line) => html`
+                  <div>${line.runs.map((r) => html`<span style="color:${c(r.color)};${r.bold ? 'font-weight:bold;' : ''}${r.underline ? 'text-decoration:underline;' : ''}${r.fontSize ? `font-size:${r.fontSize * PT_SCALE}px;` : ''}">${replaceMoney(r.text)}</span>`)}</div>
+                `)}
+              </div>
+            `)}
+          </div>
+          <img ref=${imgElRef} src=${imgEntry.data} style="position:absolute;object-fit:contain" />
+          ${mediaOverlay()}
+        </div>
+      `;
+    }
+
     return html`
       <div class="slide" style="background-color:${bg}">
         <div style="position:absolute;left:0;top:${px(data.titleY)};width:100%;text-align:center;font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
@@ -61,7 +88,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender }) {
     `;
   }
 
-  if (data.id === "format") {
+  if (style === "format") {
     const cp = data.contentPad || 0;
     return html`
       <div class="slide" style="background-color:${bg}">
@@ -80,7 +107,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender }) {
     `;
   }
 
-  if (data.id === "golden-rules") {
+  if (style === "golden-rules") {
     const { pad: p } = SLIDE_STYLE;
 
     if (imgEntry) {
@@ -120,7 +147,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender }) {
     `;
   }
 
-  if (data.id === "begin") {
+  if (style === "begin") {
     const textRef = useRef(null);
     const imgElRef = useRef(null);
 
@@ -132,9 +159,9 @@ export function IntroSlide({ introIndex, anchor, id, onRerender }) {
       const { pad: p } = SLIDE_STYLE;
       return html`
         <div class="slide" style="background-color:${bg}">
-          <div ref=${textRef} style="position:absolute;left:0;top:${px(p)};width:100%;text-align:center">
+          <div ref=${textRef} style="position:absolute;left:${px(p)};top:${px(p)};width:${px(SLIDE_STYLE.width - 2 * p)};text-align:center">
             ${data.lines.map((l) => html`
-              <div style="font-size:${l.fontSize * PT_SCALE}px;font-weight:bold;color:${c(l.color)}">${l.text}</div>
+              <div style="font-size:${l.fontSize * PT_SCALE}px;${l.bold ? 'font-weight:bold;' : ''}color:${c(l.color)}">${l.text}</div>
             `)}
           </div>
           <img ref=${imgElRef} src=${imgEntry.data} style="position:absolute;object-fit:contain" />
@@ -146,7 +173,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender }) {
     return html`
       <div class="slide title-slide" style="background-color:${bg}">
         ${data.lines.map((l) => html`
-          <div style="font-size:${l.fontSize * PT_SCALE}px;font-weight:bold;color:${c(l.color)}">${l.text}</div>
+          <div style="font-size:${l.fontSize * PT_SCALE}px;${l.bold ? 'font-weight:bold;' : ''}color:${c(l.color)};padding:0 ${px(SLIDE_STYLE.pad)}">${l.text}</div>
         `)}
         ${mediaOverlay()}
       </div>

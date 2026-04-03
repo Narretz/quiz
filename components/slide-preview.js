@@ -13,37 +13,52 @@ const html = htm.bind(h);
 
 function buildSections(quiz, descriptors) {
   const sections = [{ label: "", indices: [0, 1, 2, 3, 4] }]; // 5 intro slides
-  const roundSlices = [
-    quiz.rounds.slice(0, 2),
-    quiz.rounds.slice(2, 5),
-    quiz.rounds.slice(5),
-  ];
-
   const tocEntries = [{ label: "Intro", anchor: "intro" }];
   let idx = 5; // skip 5 intro slides
-  for (let s = 0; s < roundSlices.length; s++) {
-    const sec = { label: `Section ${s + 1}`, indices: [] };
-    const rounds = roundSlices[s];
+
+  // Helper: add a standard section (questions + antworten + answers + optional extras)
+  function addStandardSection(label, rounds, extraCount) {
+    const sec = { label, indices: [] };
+    // Questions phase
     for (const r of rounds) {
       tocEntries.push({ label: r.name, anchor: slugify(r.name) });
-      sec.indices.push(idx++); // round title
-      if (r.description?.de) sec.indices.push(idx++); // description slide
-      const count = r.questions.length === 0 ? 10 : r.questions.length;
-      for (let i = 0; i < count; i++) sec.indices.push(idx++);
+      const n = 1 + (r.description?.de ? 1 : 0) + (r.questions.length === 0 ? 10 : r.questions.length);
+      for (let j = 0; j < n; j++) sec.indices.push(idx++);
     }
-    sec.indices.push(idx++); // Antworten
+    sec.indices.push(idx++); // Antworten divider
+    // Answers phase
     for (const r of rounds) {
       tocEntries.push({ label: `${r.name} Answers`, anchor: slugify(r.name) + "-answers" });
-      sec.indices.push(idx++); // round title
-      const count = r.questions.length === 0 ? 10 : r.questions.length;
-      for (let i = 0; i < count; i++) sec.indices.push(idx++);
+      const n = 1 + (r.questions.length === 0 ? 10 : r.questions.length);
+      for (let j = 0; j < n; j++) sec.indices.push(idx++);
     }
-    if (s < roundSlices.length - 1) {
-      tocEntries.push({ label: `Break ${s + 1}`, anchor: `break-${s + 1}` });
-      sec.indices.push(idx++);
-    }
+    // Extra slides at end of section (break, jackpot-break, prizes, etc.)
+    for (let j = 0; j < (extraCount || 0); j++) sec.indices.push(idx++);
     sections.push(sec);
   }
+
+  // --- Section 1: Rounds 0-1 + break 1 ---
+  addStandardSection("Section 1", quiz.rounds.slice(0, 2), 1); // +1 for break
+
+  // --- Section 2: Rounds 2-4 + jackpot break + prizes ---
+  addStandardSection("Section 2", quiz.rounds.slice(2, 5), 2); // +2 for jackpot-break + prizes
+
+  // --- Jackpot section ---
+  const jr = quiz.rounds[5];
+  if (jr) {
+    const sec = { label: "Jackpot", indices: [] };
+    tocEntries.push({ label: jr.name, anchor: slugify(jr.name) });
+    sec.indices.push(idx++); // Jackpot title
+    sec.indices.push(idx++); // NO PHONES!
+    const qCount = jr.questions.length || 4;
+    for (let i = 0; i < qCount; i++) sec.indices.push(idx++); // questions
+    tocEntries.push({ label: `${jr.name} Answers`, anchor: slugify(jr.name) + "-answers" });
+    sec.indices.push(idx++); // answer title
+    for (let i = 0; i < qCount; i++) sec.indices.push(idx++); // answers
+    sec.indices.push(idx++); // Goodbye
+    sections.push(sec);
+  }
+
   return { descriptors, sections, tocEntries };
 }
 
@@ -115,7 +130,9 @@ export function SlidePreview() {
           anchor = tocEntries[tocIdx].anchor;
           tocIdx++;
         }
-        elements.push(html`<${IntroSlide} key=${"i-" + i} introIndex=${desc.introIndex} anchor=${anchor} id=${desc.introIndex >= 3 ? desc.id : null} onRerender=${onRerender} />`);
+        // Intro slides 0-2 have no media support (id=null); intro 3+ and extra slides do
+        const introId = desc.introIndex != null ? (desc.introIndex >= 3 ? desc.id : null) : desc.id;
+        elements.push(html`<${IntroSlide} key=${"i-" + i} introIndex=${desc.introIndex} desc=${desc} anchor=${anchor} id=${introId} onRerender=${onRerender} />`);
       } else if (desc.type === "description") {
         elements.push(html`<${DescriptionSlide} key=${"d-" + i} desc=${desc} onRerender=${onRerender} />`);
       } else {
