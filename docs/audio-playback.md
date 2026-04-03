@@ -58,3 +58,15 @@ The result: audio is silenced on slide entry, then plays on the first click/spac
 ## Google Slides
 
 Google Slides **does not support embedded audio** in imported PPTX files. Audio is silently stripped on import. Google Slides only supports audio linked from Google Drive (inserted via Insert → Audio). This is a Google Slides limitation with no workaround.
+
+## Future option: ODP export
+
+The LibreOffice autoplay issue stems from how Impress imports PPTX timing XML — it bypasses the animation tree for media shapes. Generating native ODP (OpenDocument Presentation) files instead would give us direct control over LibreOffice's animation model:
+
+- **`<presentation:event-listener>`** on the audio frame for click-to-play semantics
+- **Native Toggle Pause animations** (`<anim:par>` / `<anim:command>`) emitted directly in the XML
+- **No PPTX→ODP import quirks** since Impress would read its native format
+
+ODP is a zip of XML files (content.xml, styles.xml, meta.xml, manifest.xml, mimetype), similar in structure to PPTX. No JavaScript library exists for generating ODP, but we already post-process PPTX zips with JSZip, so building ODP from scratch is feasible for our fixed slide layout.
+
+**Trade-off:** A second export backend is significant effort. Currently parked as a future option since PowerPoint (the primary target) handles PPTX audio correctly.
