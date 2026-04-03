@@ -305,10 +305,12 @@ export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}, audio = 
     // Embed audio if present
     const audioEntry = slideKey && audio[slideKey];
     if (audioEntry) {
+      // Strip "data:" prefix and normalize MIME — pptxgenjs derives extension from subtype
+      const audioData = audioEntry.data.replace(/^data:/, "").replace(/^audio\/mpeg/, "audio/mp3");
       slide.addMedia({
         type: "audio",
-        data: audioEntry.data,
-        x: 0.2, y: H - 0.5, w: 0.3, h: 0.3,
+        data: audioData,
+        x: (W - 0.5) / 2, y: (H - 0.5) / 2, w: 0.5, h: 0.5,
       });
     }
   }

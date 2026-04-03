@@ -85,7 +85,16 @@ export function ImageActions({ id, withAnswers, imgEntry, slideKey, fittingResul
     const file = e.target.files[0];
     if (!file) return;
     const dataUrl = await readFileAsDataURL(file);
-    setAudio(slideKey, { data: dataUrl, name: file.name });
+    // Get duration in ms by loading into an audio element
+    const durationMs = await new Promise((resolve) => {
+      const audio = new Audio();
+      audio.addEventListener("loadedmetadata", () => {
+        resolve(Math.round(audio.duration * 1000));
+      });
+      audio.addEventListener("error", () => resolve(0));
+      audio.src = dataUrl;
+    });
+    setAudio(slideKey, { data: dataUrl, name: file.name, durationMs });
     e.target.value = "";
     scheduleSave();
     onRerender();
