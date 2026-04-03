@@ -1,8 +1,8 @@
 import { h } from "preact";
 import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
-import { SLIDE_STYLE, fit } from "../quiz-core.js";
-import { PT_SCALE, PX, px } from "../lib/utils.js";
+import { SLIDE_STYLE } from "../quiz-core.js";
+import { PT_SCALE, PX, px, layoutImageBelowText } from "../lib/utils.js";
 import { slideStyle, slideImages, slideAudio } from "../lib/state.js";
 import { ImageActions } from "./image-actions.js";
 
@@ -29,22 +29,8 @@ export function TitleSlide({ desc, anchor, onRerender }) {
   const textRef = useRef(null);
   const imgRef = useRef(null);
 
-  // When image present: measure text, position image below
   useLayoutEffect(() => {
-    if (!imgEntry || !textRef.current || !imgRef.current) return;
-    const { pad, width: W, height: H } = SLIDE_STYLE;
-    const textBottom = (textRef.current.offsetTop + textRef.current.offsetHeight) / PX;
-    const imgTop = textBottom + pad;
-    const boxW = W - 2 * pad;
-    const boxH = H - pad - imgTop;
-    if (boxH <= 0) return;
-    const ar = imgEntry.width / imgEntry.height;
-    const { w, h } = fit(boxW, boxH, ar);
-    const imgEl = imgRef.current;
-    imgEl.style.left = px((W - w) / 2);
-    imgEl.style.top = px(imgTop);
-    imgEl.style.width = px(w);
-    imgEl.style.height = px(h);
+    layoutImageBelowText(textRef.current, imgRef.current, imgEntry);
   });
 
   if (imgEntry) {

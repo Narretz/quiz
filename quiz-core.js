@@ -201,6 +201,22 @@ function resolveColor(c) {
   return (c || SLIDE_STYLE.textColor).replace("#", "");
 }
 
+/** Add an image below text, contain-fit to remaining slide space. */
+function addImageBelowText(slide, entry, textBottom) {
+  const { pad, width: W, height: H } = SLIDE_STYLE;
+  const imgTop = textBottom + pad;
+  const boxW = W - 2 * pad;
+  const boxH = H - pad - imgTop;
+  if (boxH <= 0) return;
+  const ar = entry.width / entry.height;
+  const { w, h } = fit(boxW, boxH, ar);
+  slide.addImage({
+    data: entry.data,
+    x: (W - w) / 2, y: imgTop, w, h,
+    sizing: { type: "contain", w, h },
+  });
+}
+
 function renderIntroSlide(slide, data, assets, desc, images) {
   if (!data) return;
   const money = DEFAULT_MONEY;
@@ -298,7 +314,7 @@ function renderIntroSlide(slide, data, assets, desc, images) {
     });
     if (imgEntry) {
       const textBottom = rulesY + data.rules.length * 0.5;
-      addCompactImage(slide, imgEntry, textBottom);
+      addImageBelowText(slide, imgEntry, textBottom);
     }
     return;
   }
@@ -312,7 +328,7 @@ function renderIntroSlide(slide, data, assets, desc, images) {
         options: { fontSize: l.fontSize, bold: l.bold, color: resolveColor(l.color) },
       }));
       slide.addText(runs, { x: 0, y: pad, w: "100%", h: textH, align: "center", valign: "top" });
-      addCompactImage(slide, imgEntry, pad + textH);
+      addImageBelowText(slide, imgEntry, pad + textH);
     } else {
       const runs = data.lines.map((l) => ({
         text: l.text + "\n",
@@ -321,20 +337,6 @@ function renderIntroSlide(slide, data, assets, desc, images) {
       slide.addText(runs, { x: 0, y: 0, w: "100%", h: "100%", align: "center", valign: "middle" });
     }
     return;
-  }
-
-  function addCompactImage(slide, entry, textBottom) {
-    const imgTop = textBottom + pad;
-    const boxW = W - 2 * pad;
-    const boxH = H - pad - imgTop;
-    if (boxH <= 0) return;
-    const ar = entry.width / entry.height;
-    const { w, h } = fit(boxW, boxH, ar);
-    slide.addImage({
-      data: entry.data,
-      x: (W - w) / 2, y: imgTop, w, h,
-      sizing: { type: "contain", w, h },
-    });
   }
 }
 
@@ -398,17 +400,7 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
             fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top",
           });
         }
-        // Image fills remaining space below text
-        const imgTop = pad + textH + pad;
-        const imgBoxW = W - 2 * pad;
-        const imgBoxH = H - pad - imgTop;
-        const ar = hasImg.width / hasImg.height;
-        const { w: imgW, h: imgH } = fit(imgBoxW, imgBoxH, ar);
-        slide.addImage({
-          data: hasImg.data,
-          x: (W - imgW) / 2, y: imgTop, w: imgW, h: imgH,
-          sizing: { type: "contain", w: imgW, h: imgH },
-        });
+        addImageBelowText(slide, hasImg, pad + textH);
       } else {
         // No image: centered
         slide.addText(desc.text, {

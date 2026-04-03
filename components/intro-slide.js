@@ -2,8 +2,8 @@ import { h } from "preact";
 import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { INTRO_SLIDES, DEFAULT_MONEY } from "../lib/intro-slides.js";
-import { SLIDE_STYLE, fit } from "../quiz-core.js";
-import { PT_SCALE, PX, px } from "../lib/utils.js";
+import { SLIDE_STYLE } from "../quiz-core.js";
+import { PT_SCALE, PX, px, layoutImageBelowText } from "../lib/utils.js";
 import { slideStyle, slideImages, slideAudio } from "../lib/state.js";
 import { ImageActions } from "./image-actions.js";
 
@@ -81,25 +81,14 @@ export function IntroSlide({ introIndex, anchor, id, onRerender }) {
   }
 
   if (data.id === "golden-rules") {
-    const { pad: p, width: W, height: H } = SLIDE_STYLE;
+    const { pad: p } = SLIDE_STYLE;
 
     if (imgEntry) {
       const textRef = useRef(null);
       const imgElRef = useRef(null);
 
       useLayoutEffect(() => {
-        if (!textRef.current || !imgElRef.current) return;
-        const textBottom = (textRef.current.offsetTop + textRef.current.offsetHeight) / PX;
-        const imgTop = textBottom + p;
-        const boxW = W - 2 * p;
-        const boxH = H - p - imgTop;
-        if (boxH <= 0) return;
-        const ar = imgEntry.width / imgEntry.height;
-        const { w, h } = fit(boxW, boxH, ar);
-        imgElRef.current.style.left = px((W - w) / 2);
-        imgElRef.current.style.top = px(imgTop);
-        imgElRef.current.style.width = px(w);
-        imgElRef.current.style.height = px(h);
+        layoutImageBelowText(textRef.current, imgElRef.current, imgEntry);
       });
 
       return html`
@@ -136,19 +125,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender }) {
     const imgElRef = useRef(null);
 
     useLayoutEffect(() => {
-      if (!imgEntry || !textRef.current || !imgElRef.current) return;
-      const { pad: p, width: W, height: H } = SLIDE_STYLE;
-      const textBottom = (textRef.current.offsetTop + textRef.current.offsetHeight) / PX;
-      const imgTop = textBottom + p;
-      const boxW = W - 2 * p;
-      const boxH = H - p - imgTop;
-      if (boxH <= 0) return;
-      const ar = imgEntry.width / imgEntry.height;
-      const { w, h } = fit(boxW, boxH, ar);
-      imgElRef.current.style.left = px((W - w) / 2);
-      imgElRef.current.style.top = px(imgTop);
-      imgElRef.current.style.width = px(w);
-      imgElRef.current.style.height = px(h);
+      layoutImageBelowText(textRef.current, imgElRef.current, imgEntry);
     });
 
     if (imgEntry) {
