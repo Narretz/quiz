@@ -501,12 +501,13 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
     }
 
     const { num, withAnswers, id, noAnswerText } = desc;
-    const q = noAnswerText ? null : (questions[id] || desc.q); // desc.q fallback for old saves
+    const q = (noAnswerText && withAnswers) ? null : (questions[id] || desc.q); // desc.q fallback for old saves
     const slideKey = id ? `${id}:${withAnswers ? 1 : 0}` : null;
     const imgEntry = slideKey && images[slideKey];
 
-    // No text — image fills the slide
-    if (!q && imgEntry) {
+    // No question text, no answer bar — image fills the slide
+    const hasQuestionText = q && (q.text.de || q.text.en);
+    if (!hasQuestionText && !withAnswers && imgEntry) {
       const ar = imgEntry.width / imgEntry.height;
       const { w, h } = fit(W - 2 * pad, H - 2 * pad, ar);
       slide.addImage({
@@ -525,31 +526,34 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
 
     // Bottom limit for text
     let bottomLimit = H - pad;
-    if (withAnswers) bottomLimit = 4.8;
+    if (withAnswers) bottomLimit = H - 0.7 - pad; // leave room for answer bar
 
-    if (imgEntry && override?.imgLayout) {
-      // Compact layout from browser fitting pass
-      deW = override.deW ?? fullW;
-      enW = override.enW ?? fullW;
-      const il = override.imgLayout;
-      slide.addImage({
-        data: imgEntry.data,
-        x: il.x, y: il.y, w: il.w, h: il.h,
-        sizing: { type: "contain", w: il.w, h: il.h },
-      });
-    } else if (imgEntry) {
-      const layout = computeImageLayout(imgEntry.width / imgEntry.height);
-      deW = layout.deW;
-      enW = layout.enW;
-      if (layout.mode === "ultrawide") {
-        bottomLimit = Math.min(bottomLimit, layout.img.y - pad);
+    // Answer slide images are positioned in the answer bar block below
+    if (imgEntry && !withAnswers) {
+      if (override?.imgLayout) {
+        // Compact layout from browser fitting pass
+        deW = override.deW ?? fullW;
+        enW = override.enW ?? fullW;
+        const il = override.imgLayout;
+        slide.addImage({
+          data: imgEntry.data,
+          x: il.x, y: il.y, w: il.w, h: il.h,
+          sizing: { type: "contain", w: il.w, h: il.h },
+        });
+      } else {
+        const layout = computeImageLayout(imgEntry.width / imgEntry.height);
+        deW = layout.deW;
+        enW = layout.enW;
+        if (layout.mode === "ultrawide") {
+          bottomLimit = Math.min(bottomLimit, layout.img.y - pad);
+        }
+        slide.addImage({
+          data: imgEntry.data,
+          x: layout.img.x, y: layout.img.y,
+          w: layout.img.w, h: layout.img.h,
+          sizing: { type: "contain", w: layout.img.w, h: layout.img.h },
+        });
       }
-      slide.addImage({
-        data: imgEntry.data,
-        x: layout.img.x, y: layout.img.y,
-        w: layout.img.w, h: layout.img.h,
-        sizing: { type: "contain", w: layout.img.w, h: layout.img.h },
-      });
     }
     const qFontSize = override?.fontSize ?? SLIDE_STYLE.question.fontSize;
     const qLineSpacing = override?.lineSpacing ?? SLIDE_STYLE.question.lineSpacing;
@@ -557,7 +561,7 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
     const deH = enY - pad;
     const enH = bottomLimit - enY;
 
-    if (q) {
+    if (hasQuestionText) {
       slide.addText([
         { text: `${num}  `, options: { fontSize: SLIDE_STYLE.num.fontSize, bold: true } },
         { text: q.text.de, options: { fontSize: qFontSize } },
@@ -577,14 +581,42 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
       });
     }
 
-    if (withAnswers && q) {
-      const answer = formatAnswer(q);
-      slide.addText(answer, {
-        x: 0, y: 4.8, w: SLIDE_STYLE.width, h: 0.7,
-        fontSize: SLIDE_STYLE.answer.fontSize, bold: true, align: "center",
-        color: SLIDE_STYLE.answer.color.replace("#", ""),
-        fill: { color: SLIDE_STYLE.answer.backgroundColor.replace("#", "") },
-      });
+    if (withAnswers) {
+      const answer = q ? formatAnswer(q) : "";
+      if (answer) {
+        const answerH = answer.length > 60 ? 1.0 : 0.7;
+        const answerY = H - answerH;
+        slide.addText(answer, {
+          x: 0, y: answerY, w: W, h: answerH,
+          fontSize: SLIDE_STYLE.answer.fontSize, bold: true, align: "center", valign: "middle",
+          color: SLIDE_STYLE.answer.color.replace("#", ""),
+          fill: { color: SLIDE_STYLE.answer.backgroundColor.replace("#", "") },
+          shrinkText: true,
+        });
+        // Image above answer bar
+        if (imgEntry) {
+          const imgTop = pad + 0.5;
+          const imgBoxH = answerY - imgTop - pad;
+          if (imgBoxH > 0) {
+            const ar = imgEntry.width / imgEntry.height;
+            const { w: iw, h: ih } = fit(fullW, imgBoxH, ar);
+            slide.addImage({
+              data: imgEntry.data,
+              x: (W - iw) / 2, y: imgTop, w: iw, h: ih,
+              sizing: { type: "contain", w: iw, h: ih },
+            });
+          }
+        }
+      } else if (imgEntry) {
+        // No answer — image fills slide (below number)
+        const ar = imgEntry.width / imgEntry.height;
+        const { w: iw, h: ih } = fit(W - 2 * pad, H - 2 * pad, ar);
+        slide.addImage({
+          data: imgEntry.data,
+          x: (W - iw) / 2, y: (H - ih) / 2, w: iw, h: ih,
+          sizing: { type: "contain", w: iw, h: ih },
+        });
+      }
     }
 
     // Embed audio if present

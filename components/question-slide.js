@@ -1,9 +1,9 @@
 import { h } from "preact";
 import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
-import { SLIDE_STYLE, computeImageLayout, formatAnswer } from "../quiz-core.js";
-import { PT_SCALE, px, esc } from "../lib/utils.js";
-import { slideImages, slideAudio, quizQuestions, manualOverrides, slideStyle, slideOverrides } from "../lib/state.js";
+import { SLIDE_STYLE, computeImageLayout, formatAnswer, fit } from "../quiz-core.js";
+import { PT_SCALE, PX, px, esc } from "../lib/utils.js";
+import { slideImages, slideAudio, quizQuestions, manualOverrides, slideStyle, slideOverrides, scheduleSave } from "../lib/state.js";
 import { fitSlideText } from "../lib/fitting.js";
 import { ImageActions } from "./image-actions.js";
 
@@ -11,7 +11,7 @@ const html = htm.bind(h);
 
 export function QuestionSlide({ desc, onRerender }) {
   const { num, withAnswers, id, noAnswerText } = desc;
-  const q = noAnswerText ? null : (quizQuestions.value[id] || desc.q); // desc.q fallback for old saves
+  const q = (noAnswerText && withAnswers) ? null : (quizQuestions.value[id] || desc.q); // desc.q fallback for old saves
   const slideKey = id ? `${id}:${withAnswers ? 1 : 0}` : null;
   const imgEntry = slideKey && slideImages.value[slideKey];
   const style = slideStyle.value;
@@ -19,30 +19,58 @@ export function QuestionSlide({ desc, onRerender }) {
   const fullW = SLIDE_STYLE.width - 2 * pad;
   const bg = style.backgroundColor;
   const slideRef = useRef(null);
+  const ansBarRef = useRef(null);
+  const ansImgRef = useRef(null);
 
   let deW = fullW, enW = fullW;
   let imgStyle = null;
+  // Answer slides with images + visible answer bar: position via useLayoutEffect
+  const hasAnswer = q && (q.answers.de || q.answers.en);
+  const answerImgLayout = withAnswers && imgEntry && hasAnswer;
 
-  if (imgEntry && !q) {
-    // No text — image fills the slide
-    const ar = imgEntry.width / imgEntry.height;
-    const W = SLIDE_STYLE.width, H = SLIDE_STYLE.height;
-    const boxW = W - 2 * pad, boxH = H - 2 * pad;
-    const fitW = ar > boxW / boxH ? boxW : boxH * ar;
-    const fitH = ar > boxW / boxH ? boxW / ar : boxH;
-    imgStyle = { position: "absolute", left: px((W - fitW) / 2), top: px((H - fitH) / 2), width: px(fitW), height: px(fitH), objectFit: "contain" };
-  } else if (imgEntry) {
-    const layout = computeImageLayout(imgEntry.width / imgEntry.height);
-    deW = layout.deW;
-    enW = layout.enW;
-    const { img } = layout;
-    imgStyle = { position: "absolute", left: px(img.x), top: px(img.y), width: px(img.w), height: px(img.h), objectFit: "contain" };
+  const hasQuestionText = q && (q.text.de || q.text.en);
+
+  if (imgEntry && !answerImgLayout) {
+    if (!hasQuestionText) {
+      // No question text — image fills the slide
+      const ar = imgEntry.width / imgEntry.height;
+      const W = SLIDE_STYLE.width, H = SLIDE_STYLE.height;
+      const boxW = W - 2 * pad, boxH = H - 2 * pad;
+      const fitW = ar > boxW / boxH ? boxW : boxH * ar;
+      const fitH = ar > boxW / boxH ? boxW / ar : boxH;
+      imgStyle = { position: "absolute", left: px((W - fitW) / 2), top: px((H - fitH) / 2), width: px(fitW), height: px(fitH), objectFit: "contain" };
+    } else {
+      const layout = computeImageLayout(imgEntry.width / imgEntry.height);
+      deW = layout.deW;
+      enW = layout.enW;
+      const { img } = layout;
+      imgStyle = { position: "absolute", left: px(img.x), top: px(img.y), width: px(img.w), height: px(img.h), objectFit: "contain" };
+    }
   }
 
   const qFs = SLIDE_STYLE.question.fontSize * PT_SCALE;
   const qLh = SLIDE_STYLE.question.lineSpacing / 100;
   const numFs = SLIDE_STYLE.num.fontSize * PT_SCALE;
   const ansFs = SLIDE_STYLE.answer.fontSize * PT_SCALE;
+
+  // Answer slide image layout: fill space between number and answer bar
+  useLayoutEffect(() => {
+    if (!answerImgLayout || !ansBarRef.current || !ansImgRef.current) return;
+    const { width: W, height: H } = SLIDE_STYLE;
+    const ansBarH = ansBarRef.current.offsetHeight / PX;
+    const imgTop = pad + 0.5; // below number
+    const imgBottom = H - ansBarH;
+    const boxW = W - 2 * pad;
+    const boxH = imgBottom - imgTop - pad;
+    if (boxH <= 0) return;
+    const ar = imgEntry.width / imgEntry.height;
+    const { w, h } = fit(boxW, boxH, ar);
+    const el = ansImgRef.current;
+    el.style.left = px((W - w) / 2);
+    el.style.top = px(imgTop);
+    el.style.width = px(w);
+    el.style.height = px(h);
+  });
 
   // Text fitting pass — runs after DOM is laid out
   useLayoutEffect(() => {
@@ -82,7 +110,7 @@ export function QuestionSlide({ desc, onRerender }) {
   return html`
     <div class="slide" ref=${slideRef} style="background-color:${bg};color:${style.textColor || '#000'}"
          data-slide-id=${id} data-answers=${withAnswers ? "1" : "0"}>
-      ${q ? html`
+      ${hasQuestionText ? html`
         <div data-role="de" style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${qFs}px;line-height:${qLh}">
           <span style="font-size:${numFs}px;font-weight:bold">${num}</span>${" "}${q.text.de}
         </div>
@@ -91,13 +119,27 @@ export function QuestionSlide({ desc, onRerender }) {
             ${q.text.en}
           </div>
         `}
-        ${withAnswers && html`
-          <div style="position:absolute;left:0;bottom:0;width:100%;font-size:${ansFs}px;font-weight:bold;text-align:center;background:${SLIDE_STYLE.answer.backgroundColor};color:${SLIDE_STYLE.answer.color};padding:4px 0;z-index:1">
-            ${formatAnswer(q)}
-          </div>
-        `}
       ` : html`
         <div style="position:absolute;left:${px(pad)};top:${px(pad)};font-size:${numFs}px;font-weight:bold">${num}</div>
+      `}
+      ${withAnswers && html`
+        <div ref=${ansBarRef} contentEditable class="answer-bar ${(q && formatAnswer(q)) ? 'answer-bar--filled' : ''}"
+             style="font-size:${ansFs}px;background:${SLIDE_STYLE.answer.backgroundColor};color:${SLIDE_STYLE.answer.color}"
+             onBlur=${(e) => {
+               const text = e.target.textContent.trim();
+               const old = q ? formatAnswer(q) : "";
+               if (text === old) return;
+               const parts = text.split("⬧").map(s => s.trim());
+               const de = parts[0] || "";
+               const en = parts[1] ?? de;
+               const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
+               quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, answers: { de, en } } };
+               scheduleSave();
+               onRerender();
+             }}
+             onKeyDown=${(e) => { if (e.key === "Enter") { e.preventDefault(); e.target.blur(); } }}>
+          ${q ? formatAnswer(q) : ""}
+        </div>
       `}
       ${withAnswers && html`
         <svg style="position:absolute;top:0;left:0;z-index:1" width="30" height="30" viewBox="0 0 30 30">
@@ -105,6 +147,7 @@ export function QuestionSlide({ desc, onRerender }) {
           <text x="4" y="12" fill=${SLIDE_STYLE.answer.color} font-size="10" font-weight="bold">A</text>
         </svg>
       `}
+      ${answerImgLayout && html`<img ref=${ansImgRef} src=${imgEntry.data} style="position:absolute;object-fit:contain" />`}
       ${imgStyle && html`<img src=${imgEntry.data} style=${imgStyle} />`}
       ${slideKey && slideAudio.value[slideKey] && html`
         <div class="slide-audio" style="background:${bg}e0">

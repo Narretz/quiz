@@ -190,6 +190,30 @@
         font-weight: bold;
     }
 
+    .answer-bar {
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        min-height: 1.5em;
+        font-weight: bold;
+        text-align: center;
+        padding: 4px 0;
+        z-index: 1;
+        cursor: text;
+        outline: none;
+        display: none;
+    }
+
+    .answer-bar--filled {
+        display: block;
+    }
+
+    .slide:hover .answer-bar,
+    .answer-bar:focus {
+        display: block;
+    }
+
     .slide .img-actions {
         position: absolute;
         top: 4px;
