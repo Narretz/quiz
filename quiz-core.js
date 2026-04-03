@@ -146,24 +146,25 @@ export function astToQuiz(ast) {
  */
 export function buildSlideDescriptors(quiz) {
   const slides = [];
+  let sectionIndex = 0;
 
-  function addTitle(text, subtitle) {
-    slides.push({ type: "title", text, subtitle: subtitle || null, id: null });
+  function addTitle(text, subtitle, id) {
+    slides.push({ type: "title", text, subtitle: subtitle || null, id: id || null });
   }
 
   function addQuestions(rounds, roundOffset, withAnswers) {
     for (let r = 0; r < rounds.length; r++) {
+      const ri = roundOffset + r;
       const round = rounds[r];
-      addTitle(round.name);
+      addTitle(round.name, null, withAnswers ? `title-r${ri}-ans` : `title-r${ri}`);
       if (!withAnswers && round.description.de) {
-        slides.push({ type: "description", text: round.description, id: null });
+        slides.push({ type: "description", text: round.description, id: `desc-r${ri}` });
       }
       const questions = round.questions;
       const count = questions.length === 0 ? 10 : questions.length;
       for (let i = 0; i < count; i++) {
         const q = questions[i];
-        // Stable ID based on array indices, not round name
-        const id = `r${roundOffset + r}q${i}`;
+        const id = `r${ri}q${i}`;
         const s = { type: "question", id, num: i + 1, q, withAnswers };
         slides.push(s);
       }
@@ -171,18 +172,19 @@ export function buildSlideDescriptors(quiz) {
   }
 
   function addSection(rounds, roundOffset, lastRound) {
+    const si = sectionIndex++;
     addQuestions(rounds, roundOffset, false);
-    addTitle("Antworten ⬧ Answers", "Bitte tauscht eure Papiere mit einem anderen Team aus.\nPlease swap your papers with another team.");
+    addTitle("Antworten ⬧ Answers", "Bitte tauscht eure Papiere mit einem anderen Team aus.\nPlease swap your papers with another team.", `antworten-s${si}`);
     addQuestions(rounds, roundOffset, true);
 
     if (!lastRound) {
-      addTitle("Pause ⬧ Break", "Wir sehen uns in 10 Minuten.\nSee you in 10 minutes.");
+      addTitle("Pause ⬧ Break", "Wir sehen uns in 10 Minuten.\nSee you in 10 minutes.", `pause-s${si}`);
     }
   }
 
-  // Intro slides (welcome, rules, format, golden rules, begin)
-  for (let i = 0; i < 5; i++) {
-    slides.push({ type: "intro", introIndex: i, id: null });
+  // Intro slides — snapshot data from INTRO_SLIDES for persistence
+  for (let i = 0; i < INTRO_SLIDES.length; i++) {
+    slides.push({ type: "intro", introIndex: i, data: INTRO_SLIDES[i], id: `intro-${i}` });
   }
 
   addSection(quiz.rounds.slice(0, 2), 0);
@@ -199,8 +201,7 @@ function resolveColor(c) {
   return (c || SLIDE_STYLE.textColor).replace("#", "");
 }
 
-function renderIntroSlide(slide, index, assets) {
-  const data = INTRO_SLIDES[index];
+function renderIntroSlide(slide, data, assets) {
   if (!data) return;
   const money = DEFAULT_MONEY;
   const { width: W, height: H, pad } = SLIDE_STYLE;
@@ -312,13 +313,12 @@ function renderIntroSlide(slide, index, assets) {
  * @param {Record<string, {data:string, name:string}>} [audio]
  * @param {object} [introAssets] - { logo: base64, toucan: base64 }
  */
-export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}, audio = {}, introAssets = {}) {
+export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, audio = {}, introAssets = {}) {
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
   const { pad, height: H, backgroundColor } = SLIDE_STYLE;
   const W = SLIDE_STYLE.width;
   const fullW = W - 2 * pad;
-  const descriptors = buildSlideDescriptors(quiz);
   const bgColor = backgroundColor.replace("#", "");
 
   for (const desc of descriptors) {
@@ -340,7 +340,7 @@ export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}, audio = 
     }
 
     if (desc.type === "intro") {
-      renderIntroSlide(slide, desc.introIndex, introAssets);
+      renderIntroSlide(slide, desc.data || INTRO_SLIDES[desc.introIndex], introAssets);
       continue;
     }
 

@@ -1,9 +1,9 @@
 import { h } from "preact";
 import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
-import { buildSlideDescriptors, SLIDE_STYLE } from "../quiz-core.js";
+import { SLIDE_STYLE } from "../quiz-core.js";
 import { slugify } from "../lib/utils.js";
-import { currentQuiz, slideImages, slideAudio, slideOverrides } from "../lib/state.js";
+import { currentQuiz, slideDescriptors, slideImages, slideAudio, slideOverrides } from "../lib/state.js";
 import { TitleSlide } from "./title-slide.js";
 import { IntroSlide } from "./intro-slide.js";
 import { DescriptionSlide } from "./description-slide.js";
@@ -11,8 +11,7 @@ import { QuestionSlide } from "./question-slide.js";
 
 const html = htm.bind(h);
 
-function buildSections(quiz) {
-  const descriptors = buildSlideDescriptors(quiz);
+function buildSections(quiz, descriptors) {
   const sections = [{ label: "", indices: [0, 1, 2, 3, 4] }]; // 5 intro slides
   const roundSlices = [
     quiz.rounds.slice(0, 2),
@@ -57,13 +56,14 @@ export function getCollectedOverrides() {
 
 export function SlidePreview() {
   const quiz = currentQuiz.value;
-  if (!quiz) return null;
+  const descs = slideDescriptors.value;
+  if (!quiz || !descs.length) return null;
 
   // Touch signals so component re-renders when they change
   slideImages.value;
   slideAudio.value;
 
-  const { descriptors, sections, tocEntries } = buildSections(quiz);
+  const { descriptors, sections, tocEntries } = buildSections(quiz, descs);
   const roundNames = new Set(quiz.rounds.map(r => r.name));
   let tocIdx = 0;
 
