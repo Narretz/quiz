@@ -21,6 +21,7 @@ function App() {
   async function onUpload(e) {
     const file = e.target.files[0];
     if (!file) return;
+    e.target.value = "";
     try {
       await uploadQuiz(file);
     } catch (err) {
