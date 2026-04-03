@@ -7,7 +7,16 @@
       "mcp__chrome-devtools__take_snapshot",
       "mcp__chrome-devtools__list_console_messages",
       "mcp__chrome-devtools__click",
-      "mcp__chrome-devtools__get_console_message"
+      "mcp__chrome-devtools__get_console_message",
+      "WebFetch(domain:gitbrent.github.io)",
+      "WebSearch",
+      "WebFetch(domain:ask.libreoffice.org)",
+      "WebFetch(domain:forum.openoffice.org)",
+      "WebFetch(domain:cgit.freedesktop.org)",
+      "WebFetch(domain:docs.libreoffice.org)",
+      "Bash(npm search:*)",
+      "Bash(npm view:*)",
+      "Bash(npm info:*)"
     ]
   },
   "enabledMcpjsonServers": [
