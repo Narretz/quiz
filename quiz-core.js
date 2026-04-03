@@ -11,6 +11,7 @@ export const SLIDE_STYLE = {
   height: 5.625,   // inches
   pad: 0.2,        // gap between elements (inches)
   backgroundColor: "#FFFFFF",
+  textColor: "#000000",
   title:    { fontSize: 40 },
   num:      { fontSize: 23 },
   question: { fontSize: 20, lineSpacing: 110 },
@@ -196,6 +197,10 @@ function replaceMoney(text, money) {
   return text.replace("{money}", String(money));
 }
 
+function resolveColor(c) {
+  return (c || SLIDE_STYLE.textColor).replace("#", "");
+}
+
 function renderIntroSlide(slide, index, assets) {
   const data = INTRO_SLIDES[index];
   if (!data) return;
@@ -210,12 +215,12 @@ function renderIntroSlide(slide, index, assets) {
     // Title
     slide.addText(data.title.text, {
       x: 0, y: "30%", w: "100%", h: "20%",
-      fontSize: data.title.fontSize, bold: true, color: data.title.color,
+      fontSize: data.title.fontSize, bold: true, color: resolveColor(data.title.color),
       align: "center", valign: "middle",
     });
     // Subtitle lines
     const subtitleRuns = data.subtitle.map((l) => ({
-      text: l.text + "\n", options: { fontSize: l.fontSize, bold: l.bold, color: l.color },
+      text: l.text + "\n", options: { fontSize: l.fontSize, bold: l.bold, color: resolveColor(l.color) },
     }));
     slide.addText(subtitleRuns, { x: 0, y: "55%", w: "100%", h: "30%", align: "center", valign: "top" });
     // Toucans
@@ -230,7 +235,7 @@ function renderIntroSlide(slide, index, assets) {
     // Title
     slide.addText(data.title.text, {
       x: 0, y: pad, w: "100%", h: 0.6,
-      fontSize: data.title.fontSize, bold: true, underline: true, color: data.title.color, align: "center",
+      fontSize: data.title.fontSize, bold: true, underline: true, color: resolveColor(data.title.color), align: "center",
     });
     // DE + EN sections stacked
     let y = 0.8;
@@ -242,7 +247,7 @@ function renderIntroSlide(slide, index, assets) {
             fontSize: r.fontSize || data.defaultFontSize,
             bold: r.bold || false,
             underline: r.underline || false,
-            color: r.color || "FFFFFF",
+            color: resolveColor(r.color),
           },
         }));
         slide.addText(runs, { x: pad, y, w: W - 2 * pad, h: 0.4, align: "center" });
@@ -257,7 +262,7 @@ function renderIntroSlide(slide, index, assets) {
     // Title
     slide.addText(data.title.text, {
       x: 0, y: pad, w: "100%", h: 0.6,
-      fontSize: data.title.fontSize, underline: true, color: data.title.color,
+      fontSize: data.title.fontSize, underline: true, color: resolveColor(data.title.color),
       align: "center", fontFace: data.title.fontFace,
     });
     let y = 0.8;
@@ -268,7 +273,7 @@ function renderIntroSlide(slide, index, assets) {
           options: {
             fontSize: r.fontSize || data.defaultFontSize,
             bold: r.bold || false,
-            color: r.color || data.defaultColor,
+            color: resolveColor(r.color || data.defaultColor),
           },
         }));
         // Prepend bullet
@@ -285,18 +290,18 @@ function renderIntroSlide(slide, index, assets) {
     // Title
     slide.addText(data.title.text, {
       x: 0, y: pad, w: "100%", h: 0.8,
-      fontSize: data.title.fontSize, bold: true, underline: true, color: data.title.color, align: "center",
+      fontSize: data.title.fontSize, bold: true, underline: true, color: resolveColor(data.title.color), align: "center",
     });
     let y = 1.2;
     for (const rule of data.rules) {
       slide.addText(rule.de, {
         x: 0, y, w: "100%", h: 0.6,
-        fontSize: data.ruleFontSize, color: data.ruleColor, align: "center",
+        fontSize: data.ruleFontSize, color: resolveColor(data.ruleColor), align: "center",
       });
       y += 0.6;
       slide.addText(rule.en, {
         x: 0, y, w: "100%", h: 0.6,
-        fontSize: data.ruleFontSize, color: data.ruleColor, align: "center",
+        fontSize: data.ruleFontSize, color: resolveColor(data.ruleColor), align: "center",
       });
       y += 0.9;
     }
@@ -306,7 +311,7 @@ function renderIntroSlide(slide, index, assets) {
   if (data.id === "begin") {
     const runs = data.lines.map((l) => ({
       text: l.text + "\n",
-      options: { fontSize: l.fontSize, bold: l.bold, color: l.color },
+      options: { fontSize: l.fontSize, bold: l.bold, color: resolveColor(l.color) },
     }));
     slide.addText(runs, { x: 0, y: 0, w: "100%", h: "100%", align: "center", valign: "middle" });
     return;
