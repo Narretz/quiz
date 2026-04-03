@@ -3,6 +3,8 @@
  * Used by both CLI (parse-quiz.js, generate-pptx.js) and browser (index.html).
  */
 
+import { INTRO_SLIDES, DEFAULT_MONEY } from "./lib/intro-slides.js";
+
 /** Slide dimensions and font sizes — single source of truth for PPTX and preview. */
 export const SLIDE_STYLE = {
   width: 10,       // inches (LAYOUT_16x9)
@@ -178,10 +180,137 @@ export function buildSlideDescriptors(quiz) {
   }
 
   addTitle(quiz.date);
+
+  // Intro slides (welcome, rules, format, golden rules, begin)
+  for (let i = 0; i < 5; i++) {
+    slides.push({ type: "intro", introIndex: i, id: null });
+  }
+
   addSection(quiz.rounds.slice(0, 2), 0);
   addSection(quiz.rounds.slice(2, 5), 2);
   addSection(quiz.rounds.slice(5), 5, true);
   return slides;
+}
+
+function replaceMoney(text, money) {
+  return text.replace("{money}", String(money));
+}
+
+function renderIntroSlide(slide, index, assets) {
+  const data = INTRO_SLIDES[index];
+  if (!data) return;
+  const money = DEFAULT_MONEY;
+  const { width: W, height: H, pad } = SLIDE_STYLE;
+
+  if (data.id === "welcome") {
+    // Background logo
+    if (assets.logo) {
+      slide.addImage({ data: assets.logo, x: 0, y: 0, w: W, h: H, sizing: { type: "contain", w: W, h: H } });
+    }
+    // Title
+    slide.addText(data.title.text, {
+      x: 0, y: "30%", w: "100%", h: "20%",
+      fontSize: data.title.fontSize, bold: true, color: data.title.color,
+      align: "center", valign: "middle",
+    });
+    // Subtitle lines
+    const subtitleRuns = data.subtitle.map((l) => ({
+      text: l.text + "\n", options: { fontSize: l.fontSize, bold: l.bold, color: l.color },
+    }));
+    slide.addText(subtitleRuns, { x: 0, y: "55%", w: "100%", h: "30%", align: "center", valign: "top" });
+    // Toucans
+    if (assets.toucan) {
+      slide.addImage({ data: assets.toucan, x: 0.5, y: 0.3, w: 1.1, h: 1.7 });
+      slide.addImage({ data: assets.toucan, x: W - 1.6, y: 0.3, w: 1.1, h: 1.7 });
+    }
+    return;
+  }
+
+  if (data.id === "rules") {
+    // Title
+    slide.addText(data.title.text, {
+      x: 0, y: pad, w: "100%", h: 0.6,
+      fontSize: data.title.fontSize, bold: true, underline: true, color: data.title.color, align: "center",
+    });
+    // DE + EN sections stacked
+    let y = 0.8;
+    for (const sec of data.sections) {
+      for (const line of sec.lines) {
+        const runs = line.runs.map((r) => ({
+          text: replaceMoney(r.text, money),
+          options: {
+            fontSize: r.fontSize || data.defaultFontSize,
+            bold: r.bold || false,
+            underline: r.underline || false,
+            color: r.color || "FFFFFF",
+          },
+        }));
+        slide.addText(runs, { x: pad, y, w: W - 2 * pad, h: 0.4, align: "center" });
+        y += 0.4;
+      }
+      y += 0.2; // gap between DE and EN
+    }
+    return;
+  }
+
+  if (data.id === "format") {
+    // Title
+    slide.addText(data.title.text, {
+      x: 0, y: pad, w: "100%", h: 0.6,
+      fontSize: data.title.fontSize, underline: true, color: data.title.color,
+      align: "center", fontFace: data.title.fontFace,
+    });
+    let y = 0.8;
+    for (const sec of data.sections) {
+      for (const line of sec.lines) {
+        const runs = line.runs.map((r) => ({
+          text: r.text,
+          options: {
+            fontSize: r.fontSize || data.defaultFontSize,
+            bold: r.bold || false,
+            color: r.color || data.defaultColor,
+          },
+        }));
+        // Prepend bullet
+        runs[0].text = sec.bullet + " " + runs[0].text;
+        slide.addText(runs, { x: pad + 0.2, y, w: W - 2 * pad - 0.4, h: 0.35, valign: "top" });
+        y += 0.35;
+      }
+      y += 0.15; // gap between DE and EN blocks
+    }
+    return;
+  }
+
+  if (data.id === "golden-rules") {
+    // Title
+    slide.addText(data.title.text, {
+      x: 0, y: pad, w: "100%", h: 0.8,
+      fontSize: data.title.fontSize, bold: true, underline: true, color: data.title.color, align: "center",
+    });
+    let y = 1.2;
+    for (const rule of data.rules) {
+      slide.addText(rule.de, {
+        x: 0, y, w: "100%", h: 0.6,
+        fontSize: data.ruleFontSize, color: data.ruleColor, align: "center",
+      });
+      y += 0.6;
+      slide.addText(rule.en, {
+        x: 0, y, w: "100%", h: 0.6,
+        fontSize: data.ruleFontSize, color: data.ruleColor, align: "center",
+      });
+      y += 0.9;
+    }
+    return;
+  }
+
+  if (data.id === "begin") {
+    const runs = data.lines.map((l) => ({
+      text: l.text + "\n",
+      options: { fontSize: l.fontSize, bold: l.bold, color: l.color },
+    }));
+    slide.addText(runs, { x: 0, y: 0, w: "100%", h: "100%", align: "center", valign: "middle" });
+    return;
+  }
 }
 
 /**
@@ -190,8 +319,9 @@ export function buildSlideDescriptors(quiz) {
  * @param {Record<string, {data:string, width:number, height:number}>} [images]
  * @param {Record<string, {fontSize:number, lineSpacing:number, enY:number}>} [overrides]
  * @param {Record<string, {data:string, name:string}>} [audio]
+ * @param {object} [introAssets] - { logo: base64, toucan: base64 }
  */
-export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}, audio = {}) {
+export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}, audio = {}, introAssets = {}) {
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
   const { pad, height: H, backgroundColor } = SLIDE_STYLE;
@@ -215,6 +345,11 @@ export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}, audio = 
           fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top",
         });
       }
+      continue;
+    }
+
+    if (desc.type === "intro") {
+      renderIntroSlide(slide, desc.introIndex, introAssets);
       continue;
     }
 

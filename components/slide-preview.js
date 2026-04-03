@@ -5,6 +5,7 @@ import { buildSlideDescriptors, SLIDE_STYLE } from "../quiz-core.js";
 import { slugify } from "../lib/utils.js";
 import { currentQuiz, slideImages, slideAudio, slideOverrides } from "../lib/state.js";
 import { TitleSlide } from "./title-slide.js";
+import { IntroSlide } from "./intro-slide.js";
 import { DescriptionSlide } from "./description-slide.js";
 import { QuestionSlide } from "./question-slide.js";
 
@@ -12,7 +13,7 @@ const html = htm.bind(h);
 
 function buildSections(quiz) {
   const descriptors = buildSlideDescriptors(quiz);
-  const sections = [{ label: "", indices: [0] }];
+  const sections = [{ label: "", indices: [0, 1, 2, 3, 4, 5] }]; // date + 5 intro slides
   const roundSlices = [
     quiz.rounds.slice(0, 2),
     quiz.rounds.slice(2, 5),
@@ -20,7 +21,7 @@ function buildSections(quiz) {
   ];
 
   const tocEntries = [{ label: "Intro", anchor: "intro" }];
-  let idx = 1;
+  let idx = 1 + 5; // skip date slide + 5 intro slides
   for (let s = 0; s < roundSlices.length; s++) {
     const sec = { label: `Section ${s + 1}`, indices: [] };
     const rounds = roundSlices[s];
@@ -108,6 +109,8 @@ export function SlidePreview() {
           tocIdx++;
         }
         elements.push(html`<${TitleSlide} key=${"t-" + i} desc=${desc} anchor=${anchor} />`);
+      } else if (desc.type === "intro") {
+        elements.push(html`<${IntroSlide} key=${"i-" + i} introIndex=${desc.introIndex} />`);
       } else if (desc.type === "description") {
         elements.push(html`<${DescriptionSlide} key=${"d-" + i} desc=${desc} />`);
       } else {
