@@ -13,9 +13,19 @@ export function TitleSlide({ desc, anchor, onRerender }) {
   const titleFs = SLIDE_STYLE.title.fontSize * PT_SCALE;
   const subtitleFs = SLIDE_STYLE.question.fontSize * PT_SCALE;
   const id = desc.id;
+
+  const titleForQuestions = id?.startsWith("title-r") && !id.endsWith("-ans");
+
   const slideKey = id ? `${id}:0` : null;
   const imgEntry = slideKey && slideImages.value[slideKey];
   const audioEntry = slideKey && slideAudio.value[slideKey];
+  // Link round question titles ↔ answer titles
+  let linkedSlideKey = null;
+  if (titleForQuestions) {
+    linkedSlideKey = `${id}-ans:0`;
+  } else if (id?.endsWith("-ans")) {
+    linkedSlideKey = `${id.replace("-ans", "")}:0`;
+  }
   const textRef = useRef(null);
   const imgRef = useRef(null);
 
@@ -41,7 +51,9 @@ export function TitleSlide({ desc, anchor, onRerender }) {
     // Image mode: text at top, image below
     const { pad } = SLIDE_STYLE;
     return html`
-      <div class="slide" id=${anchor || undefined} style="background-color:${bg}">
+      <div class="slide" id=${anchor || undefined}
+           data-slide-id="${id}"
+           style="background-color:${bg}">
         <div ref=${textRef} style="position:absolute;left:0;top:${px(pad)};width:100%;text-align:center">
           <span class="title-text" style="font-size:${titleFs}px">${desc.text}</span>
           ${desc.subtitle && html`
@@ -55,8 +67,8 @@ export function TitleSlide({ desc, anchor, onRerender }) {
             <span class="slide-audio__name">${audioEntry.name}</span>
           </div>
         `}
-        ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} imgEntry=${imgEntry}
-                       slideKey=${slideKey} fittingResult=${null} onRerender=${onRerender} />`}
+        ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} linkedSlideKey=${linkedSlideKey}
+                       imgEntry=${imgEntry} slideKey=${slideKey} fittingResult=${null} onRerender=${onRerender} />`}
       </div>
     `;
   }
@@ -64,6 +76,7 @@ export function TitleSlide({ desc, anchor, onRerender }) {
   // No image: centered layout
   return html`
     <div class="slide title-slide" id=${anchor || undefined}
+         data-slide-id="${id}"
          style="background-color:${bg}">
       <span class="title-text" style="font-size:${titleFs}px">${desc.text}</span>
       ${desc.subtitle && html`
@@ -75,8 +88,8 @@ export function TitleSlide({ desc, anchor, onRerender }) {
           <span class="slide-audio__name">${audioEntry.name}</span>
         </div>
       `}
-      ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} imgEntry=${imgEntry}
-                     slideKey=${slideKey} fittingResult=${null} onRerender=${onRerender} />`}
+      ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} linkedSlideKey=${linkedSlideKey}
+                     imgEntry=${imgEntry} slideKey=${slideKey} fittingResult=${null} onRerender=${onRerender} />`}
     </div>
   `;
 }

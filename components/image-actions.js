@@ -6,16 +6,29 @@ import { slideImages, setImage, removeImage, setManualOverride, slideAudio, setA
 
 const html = htm.bind(h);
 
-export function ImageActions({ id, withAnswers, isQuestion = true, imgEntry, slideKey, fittingResult, onRerender }) {
+export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKey, imgEntry, slideKey, fittingResult, onRerender }) {
   const images = slideImages.value;
   const qKey = `${id}:0`;
   const ansKey = `${id}:1`;
-  const isLinked = withAnswers && imgEntry && images[qKey]?.data === imgEntry.data;
+  // linkKey = the paired slide for image sharing. isSource = this slide pushes images to linkKey.
+  const linkKey = isQuestion ? (withAnswers ? qKey : ansKey) : linkedSlideKey;
+  const isRoundTitle = !isQuestion && (id?.startsWith("title-r") || id?.endsWith("-ans"));
+  const isRoundTitleForAnswers = isRoundTitle && id?.endsWith("-ans");
+  const isSource = isQuestion ? !withAnswers : (id?.startsWith("title-r") && !id?.endsWith("-ans"));
+  const isLinked = linkKey && imgEntry && images[linkKey]?.data === imgEntry.data;
 
   function nav() {
-    const target = document.querySelector(
-      `.slide[data-slide-id="${id}"][data-answers="${withAnswers ? "0" : "1"}"]`
-    );
+    let selector = null;
+
+    if (isRoundTitle) {
+      const titleId = isRoundTitleForAnswers ? id.replace('-ans', '') : `${id}-ans`;
+      selector = `.slide[data-slide-id="${titleId}"]`;
+    } else {
+      selector = `.slide[data-slide-id="${id}"][data-answers="${withAnswers ? "0" : "1"}"]`;
+    }
+
+    const target = document.querySelector(selector);
+
     if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
@@ -25,15 +38,13 @@ export function ImageActions({ id, withAnswers, isQuestion = true, imgEntry, sli
     const dataUrl = await readFileAsDataURL(file);
     const dims = await loadImageDimensions(dataUrl);
     const imgData = { data: dataUrl, ...dims };
-    const isAnswer = withAnswers;
-    if (isAnswer) {
-      setImage(slideKey, imgData);
-    } else {
-      const oldQ = images[slideKey];
-      const ansImg = images[ansKey];
-      setImage(slideKey, imgData);
-      if (!ansImg || ansImg.data === oldQ?.data) {
-        setImage(ansKey, { ...imgData });
+    const oldImg = images[slideKey];
+    setImage(slideKey, imgData);
+    // Auto-copy to linked slide only if this is the source side
+    if (isSource && linkKey) {
+      const linkedImg = images[linkKey];
+      if (!linkedImg || linkedImg.data === oldImg?.data) {
+        setImage(linkKey, { ...imgData });
       }
     }
     e.target.value = "";
@@ -42,10 +53,9 @@ export function ImageActions({ id, withAnswers, isQuestion = true, imgEntry, sli
   }
 
   function removeImg() {
-    const linked = images[qKey] && images[ansKey] && images[qKey].data === images[ansKey].data;
-    if (linked) {
-      removeImage(qKey);
-      removeImage(ansKey);
+    if (isLinked) {
+      removeImage(slideKey);
+      removeImage(linkKey);
     } else {
       removeImage(slideKey);
     }
@@ -60,9 +70,11 @@ export function ImageActions({ id, withAnswers, isQuestion = true, imgEntry, sli
   }
 
   function relink() {
-    const qImg = images[qKey];
-    if (qImg) setImage(ansKey, { ...qImg });
-    else removeImage(ansKey);
+    // For question answer slides: copy from question. For linked titles: copy from source.
+    const sourceKey = isQuestion ? qKey : (linkedSlideKey || qKey);
+    const sourceImg = images[sourceKey];
+    if (sourceImg) setImage(slideKey, { ...sourceImg });
+    else removeImage(slideKey);
     scheduleSave();
     onRerender();
   }
@@ -113,6 +125,7 @@ export function ImageActions({ id, withAnswers, isQuestion = true, imgEntry, sli
   return html`
     <div class="img-actions">
       ${isQuestion && html`<button onClick=${nav}>${withAnswers ? "\u2191 question" : "\u2193 answer"}</button>`}
+      ${isRoundTitle && html`<button onClick=${nav}>${!isSource ? "\u2191 questions" : "\u2193 answers"}</button>`}
         <div class="img-actions__right">
         ${debug && imgEntry && html`
           <label class="override-label">
@@ -129,14 +142,14 @@ export function ImageActions({ id, withAnswers, isQuestion = true, imgEntry, sli
           <input type="file" accept="image/*" onChange=${addImg} style="display:none" />
         </label>
         ${imgEntry && html`<button onClick=${removeImg}>remove img</button>`}
-        ${withAnswers && !imgEntry && images[qKey] && html`
-          <button onClick=${relink}>relink img from question</button>
+        ${!isSource && isLinked && html`
+          <button onClick=${unlink}>unlink</button>
         `}
-        ${isLinked && html`
-          <button onClick=${unlink}>unlink img from question</button>
+        ${!isSource && linkKey && !imgEntry && images[linkKey] && html`
+          <button onClick=${relink}>relink</button>
         `}
-        ${isQuestion && !withAnswers && imgEntry && images[ansKey]?.data === imgEntry.data && html`
-          <button onClick=${() => { removeImage(ansKey); scheduleSave(); onRerender(); }}>remove img from answer</button>
+        ${isSource && linkKey && imgEntry && images[linkKey]?.data === imgEntry.data && html`
+          <button onClick=${() => { removeImage(linkKey); scheduleSave(); onRerender(); }}>remove from linked</button>
         `}
         <label>
           <button type="button" onClick=${(e) => { e.preventDefault(); e.target.parentElement.querySelector("input").click(); }}>+audio</button>
