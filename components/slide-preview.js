@@ -110,7 +110,12 @@ export function SlidePreview() {
         }
         elements.push(html`<${TitleSlide} key=${"t-" + i} desc=${desc} anchor=${anchor} />`);
       } else if (desc.type === "intro") {
-        elements.push(html`<${IntroSlide} key=${"i-" + i} introIndex=${desc.introIndex} />`);
+        let anchor = null;
+        if (desc.introIndex === 0 && tocIdx < tocEntries.length) {
+          anchor = tocEntries[tocIdx].anchor;
+          tocIdx++;
+        }
+        elements.push(html`<${IntroSlide} key=${"i-" + i} introIndex=${desc.introIndex} anchor=${anchor} />`);
       } else if (desc.type === "description") {
         elements.push(html`<${DescriptionSlide} key=${"d-" + i} desc=${desc} />`);
       } else {

@@ -15,7 +15,7 @@ function c(color) {
   return color ? `#${color}` : SLIDE_STYLE.textColor;
 }
 
-export function IntroSlide({ introIndex }) {
+export function IntroSlide({ introIndex, anchor }) {
   const data = INTRO_SLIDES[introIndex];
   if (!data) return null;
   const bg = slideStyle.value.backgroundColor;
@@ -23,7 +23,7 @@ export function IntroSlide({ introIndex }) {
   if (data.id === "welcome") {
     const t = data.toucan;
     return html`
-      <div class="slide" style="background-color:${bg};position:relative">
+      <div class="slide" id=${anchor || undefined} style="background-color:${bg};position:relative">
         <img src="./lib/assets/tipperary-logo.gif" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain" />
         <img src="./lib/assets/pub-quiz-toucan.jpg" style="position:absolute;left:${px(t.x)};top:${px(t.y)};width:${px(t.w)};height:${px(t.h)};object-fit:contain" />
         <img src="./lib/assets/pub-quiz-toucan.jpg" style="position:absolute;right:${px(t.x)};top:${px(t.y)};width:${px(t.w)};height:${px(t.h)};object-fit:contain" />

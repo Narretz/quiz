@@ -1,7 +1,7 @@
 MVP
-- add intro slides
+- add intro slides ✅
 - rename bonus to jackpot
-- add description slide
+- add description slide ✅
 
 feature parity for full quiz
 
@@ -15,7 +15,7 @@ feature parity for full quiz
 
 nice to have
 
-- put override inputs into a debug menu
+- put override inputs into a debug menu ✅
 - use quiz-name+round name hashes
 - validate quiz: warn when no content, answer in question, text overlaps/is cut off
 - strip question numbers from text
