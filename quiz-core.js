@@ -140,9 +140,20 @@ export function astToQuiz(ast) {
     });
   }
 
+  // "Name 10" penultimate round: ignore answers (teams write 10 things, no single correct answer)
+  if (rounds.length >= 2) {
+    const penultimate = rounds[rounds.length - 2];
+    if (/^name\s*10$/i.test(penultimate.name)) {
+      penultimate.noAnswerText = true;
+      for (const q of penultimate.questions) {
+        q.answers = { de: "", en: "" };
+      }
+    }
+  }
+
   // Last round is always the Jackpot round
-  if (rounds.length === 5) {
-    rounds[4].name = "Jackpot!";
+  if (rounds.length > 1 && rounds.at(-1).questions.length === 4) {
+    rounds.at(-1).name = "Jackpot!";
   }
 
   return { date, rounds };
@@ -172,7 +183,8 @@ export function buildSlideDescriptors(quiz) {
       const questions = round.questions;
       const count = questions.length === 0 ? 10 : questions.length;
       for (let i = 0; i < count; i++) {
-        slides.push({ type: "question", id: `r${ri}q${i}`, num: i + 1, q: questions[i], withAnswers });
+        const q = (withAnswers && round.noAnswerText) ? null : questions[i];
+        slides.push({ type: "question", id: `r${ri}q${i}`, num: i + 1, q, withAnswers });
       }
     }
   }
