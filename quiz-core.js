@@ -18,7 +18,7 @@ export const SLIDE_STYLE = {
   title:    { fontSize: 40 },
   num:      { fontSize: 23 },
   question: { fontSize: 20, lineSpacing: 110 },
-  answer:   { fontSize: 20, color: '#FFF', backgroundColor: '#CC0000' },
+  answer:   { fontSize: 20, color: '#FFFFFF', backgroundColor: '#CC0000' },
 };
 
 export function formatAnswer(q) {
@@ -326,7 +326,8 @@ function renderIntroSlide(slide, data, assets, desc, images) {
       align: "center", fontFace: data.title.fontFace,
     });
     data.sections.forEach((sec, si) => {
-      let y = data.sectionStartY + si * data.sectionGap;
+      const y = data.sectionStartY + si * data.sectionGap;
+      const allRuns = [];
       for (const line of sec.lines) {
         const runs = line.runs.map((r) => ({
           text: r.text,
@@ -337,9 +338,10 @@ function renderIntroSlide(slide, data, assets, desc, images) {
           },
         }));
         runs[0].text = sec.bullet + " " + runs[0].text;
-        slide.addText(runs, { x: pad + cp, y, w: W - 2 * pad - 2 * cp, h: data.lineHeight, valign: "top" });
-        y += data.lineHeight;
+        allRuns.push(...runs, { text: "\n" });
       }
+      const sectionH = data.sectionGap || (H - y);
+      slide.addText(allRuns, { x: pad + cp, y, w: W - 2 * pad - 2 * cp, h: sectionH, valign: "top" });
     });
     return;
   }
@@ -397,6 +399,7 @@ function renderIntroSlide(slide, data, assets, desc, images) {
 export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, audio = {}, introAssets = {}, questions = {}) {
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
+  pptx.theme = { headFontFace: "Arial", bodyFontFace: "Arial" };
   const { pad, height: H, backgroundColor } = SLIDE_STYLE;
   const W = SLIDE_STYLE.width;
   const fullW = W - 2 * pad;
@@ -528,8 +531,9 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
     let bottomLimit = H - pad;
     if (withAnswers) bottomLimit = H - 0.7 - pad; // leave room for answer bar
 
-    // Answer slide images are positioned in the answer bar block below
-    if (imgEntry && !withAnswers) {
+    // Answer slides without question text: images handled in answer bar block below
+    // Answer slides with question text: use computeImageLayout (same as question slides)
+    if (imgEntry && (!withAnswers || hasQuestionText)) {
       if (override?.imgLayout) {
         // Compact layout from browser fitting pass
         deW = override.deW ?? fullW;
@@ -567,13 +571,11 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
         { text: q.text.de, options: { fontSize: qFontSize } },
       ], {
         x: pad, y: pad, w: deW, h: deH, valign: "top",
-        lineSpacingMultiple: qLineSpacing / 100,
-      });
+        lineSpacingMultiple: qLineSpacing / 100,      });
       if (q.text.en) {
         slide.addText(q.text.en, {
           x: pad, y: enY, w: enW, h: enH, fontSize: qFontSize, valign: "top",
-          lineSpacingMultiple: qLineSpacing / 100,
-        });
+          lineSpacingMultiple: qLineSpacing / 100,        });
       }
     } else {
       slide.addText(String(num), {
@@ -584,17 +586,17 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
     if (withAnswers) {
       const answer = q ? formatAnswer(q) : "";
       if (answer) {
-        const answerH = answer.length > 60 ? 1.0 : 0.7;
+        const answerLines = Math.ceil(answer.length / 40); // ~40 chars per line at fontSize 20
+        const answerH = Math.max(0.5, Math.min(1.5, answerLines * 0.35));
         const answerY = H - answerH;
         slide.addText(answer, {
           x: 0, y: answerY, w: W, h: answerH,
           fontSize: SLIDE_STYLE.answer.fontSize, bold: true, align: "center", valign: "middle",
           color: SLIDE_STYLE.answer.color.replace("#", ""),
           fill: { color: SLIDE_STYLE.answer.backgroundColor.replace("#", "") },
-          shrinkText: true,
-        });
-        // Image above answer bar
-        if (imgEntry) {
+                 });
+        // Image above answer bar (only when no question text — otherwise already placed)
+        if (imgEntry && !hasQuestionText) {
           const imgTop = pad + 0.5;
           const imgBoxH = answerY - imgTop - pad;
           if (imgBoxH > 0) {
@@ -607,8 +609,8 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
             });
           }
         }
-      } else if (imgEntry) {
-        // No answer — image fills slide (below number)
+      } else if (imgEntry && !hasQuestionText) {
+        // No answer, no question text — image fills slide (below number)
         const ar = imgEntry.width / imgEntry.height;
         const { w: iw, h: ih } = fit(W - 2 * pad, H - 2 * pad, ar);
         slide.addImage({

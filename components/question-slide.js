@@ -24,15 +24,14 @@ export function QuestionSlide({ desc, onRerender }) {
 
   let deW = fullW, enW = fullW;
   let imgStyle = null;
-  // Answer slides with images + visible answer bar: position via useLayoutEffect
-  const hasAnswer = q && (q.answers.de || q.answers.en);
-  const answerImgLayout = withAnswers && imgEntry && hasAnswer;
-
   const hasQuestionText = q && (q.text.de || q.text.en);
+  const hasAnswer = q && (q.answers.de || q.answers.en);
+  // No question text + answer + image on answer slide: image above answer bar (measured via ref)
+  const answerImgLayout = withAnswers && imgEntry && !hasQuestionText && hasAnswer;
 
   if (imgEntry && !answerImgLayout) {
     if (!hasQuestionText) {
-      // No question text — image fills the slide
+      // No question text, no answer bar — image fills the slide
       const ar = imgEntry.width / imgEntry.height;
       const W = SLIDE_STYLE.width, H = SLIDE_STYLE.height;
       const boxW = W - 2 * pad, boxH = H - 2 * pad;
@@ -40,6 +39,7 @@ export function QuestionSlide({ desc, onRerender }) {
       const fitH = ar > boxW / boxH ? boxW / ar : boxH;
       imgStyle = { position: "absolute", left: px((W - fitW) / 2), top: px((H - fitH) / 2), width: px(fitW), height: px(fitH), objectFit: "contain" };
     } else {
+      // Has question text — aspect-ratio based layout (same as question slides)
       const layout = computeImageLayout(imgEntry.width / imgEntry.height);
       deW = layout.deW;
       enW = layout.enW;
