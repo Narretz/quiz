@@ -11,6 +11,7 @@ const html = htm.bind(h);
 
 export function DescriptionSlide({ desc, onRerender }) {
   const bg = slideStyle.value.backgroundColor;
+  const fg = slideStyle.value.textColor || '#000';
   const { pad } = SLIDE_STYLE;
   const fullW = SLIDE_STYLE.width - 2 * pad;
   const fs = SLIDE_STYLE.question.fontSize * PT_SCALE;
@@ -63,7 +64,7 @@ export function DescriptionSlide({ desc, onRerender }) {
   });
 
   return html`
-    <div class="slide" ref=${slideRef} style="background-color:${bg}"
+    <div class="slide" ref=${slideRef} style="background-color:${bg};color:${fg}"
          data-slide-id=${id} data-answers="0">
       ${imgStyle && html`<img src=${imgEntry.data} style=${imgStyle} />`}
       <div ref=${deRef} data-role="de" style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${fs}px;line-height:${lh};white-space:pre-line">

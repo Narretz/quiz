@@ -23,5 +23,8 @@ export function StyleControls({ onStyleChange }) {
     <label>Background <input type="color"
       value=${style.backgroundColor}
       onInput=${(e) => update("backgroundColor", e.target.value)} /></label>
+    <label>Text color <input type="color"
+      value=${style.textColor}
+      onInput=${(e) => update("textColor", e.target.value)} /></label>
   `;
 }

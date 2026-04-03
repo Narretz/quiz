@@ -119,21 +119,8 @@ Append `?debug=true` to the URL to show font size/line spacing/background color 
 
 ## SLIDE_STYLE
 
-Single source of truth for all dimensions (in `quiz-core.js`):
-
-```js
-{
-  width: 10,        // inches (16:9)
-  height: 5.625,    // inches
-  pad: 0.2,         // gap between elements
-  backgroundColor: "#FFFFFF",
-  textColor: "#000000",
-  title:    { fontSize: 40 },
-  num:      { fontSize: 23 },
-  question: { fontSize: 20, lineSpacing: 110 },
-  answer:   { fontSize: 20, color: '#FFF', backgroundColor: '#CC0000' },
-}
-```
+Single source of truth for all slide styles and dimensions is in `quiz-core.js`.
+Should be applied as defaults and persisted into storage per quiz.
 
 Preview scaling: `PT_SCALE = 576 / (10 * 72)` for pt->px, `PX = 576 / 10` for inches->px.
 

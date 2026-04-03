@@ -79,7 +79,7 @@ export function QuestionSlide({ desc, onRerender }) {
   }, [imgEntry, slideKey, style.fontSize, style.lineSpacing]);
 
   return html`
-    <div class="slide" ref=${slideRef} style="background-color:${bg}"
+    <div class="slide" ref=${slideRef} style="background-color:${bg};color:${style.textColor || '#000'}"
          data-slide-id=${id} data-answers=${withAnswers ? "1" : "0"}>
       ${q ? html`
         <div data-role="de" style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${qFs}px;line-height:${qLh}">

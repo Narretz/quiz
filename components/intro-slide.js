@@ -22,6 +22,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
   if (!data) return null;
   const style = data.style || data.id; // migration fallback for old saves
   const bg = slideStyle.value.backgroundColor;
+  const fg = slideStyle.value.textColor || '#000';
   const slideKey = id ? `${id}:0` : null;
   const imgEntry = slideKey && slideImages.value[slideKey];
   const audioEntry = slideKey && slideAudio.value[slideKey];
@@ -29,7 +30,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
   if (style === "welcome") {
     const t = data.toucan;
     return html`
-      <div class="slide" id=${anchor || undefined} style="background-color:${bg};position:relative">
+      <div class="slide" id=${anchor || undefined} style="background-color:${bg};color:${fg};position:relative">
         <img src="./lib/assets/tipperary-logo.gif" style="position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain" />
         <img src="./lib/assets/pub-quiz-toucan.jpg" style="position:absolute;left:${px(t.x)};top:${px(t.y)};width:${px(t.w)};height:${px(t.h)};object-fit:contain" />
         <img src="./lib/assets/pub-quiz-toucan.jpg" style="position:absolute;right:${px(t.x)};top:${px(t.y)};width:${px(t.w)};height:${px(t.h)};object-fit:contain" />
@@ -52,7 +53,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
         layoutImageBelowText(textRef.current, imgElRef.current, imgEntry);
       });
       return html`
-        <div class="slide" style="background-color:${bg}">
+        <div class="slide" style="background-color:${bg};color:${fg}">
           <div ref=${textRef} style="position:absolute;left:0;top:${px(SLIDE_STYLE.pad)};width:100%;text-align:center">
             <div style="font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
               ${data.title.text}
@@ -72,7 +73,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
     }
 
     return html`
-      <div class="slide" style="background-color:${bg}">
+      <div class="slide" style="background-color:${bg};color:${fg}">
         <div style="position:absolute;left:0;top:${px(data.titleY)};width:100%;text-align:center;font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
           ${data.title.text}
         </div>
@@ -91,7 +92,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
   if (style === "format") {
     const cp = data.contentPad || 0;
     return html`
-      <div class="slide" style="background-color:${bg}">
+      <div class="slide" style="background-color:${bg};color:${fg}">
         <div style="position:absolute;left:0;top:${px(data.titleY)};width:100%;text-align:center;font-size:${data.title.fontSize * PT_SCALE}px;${data.title.bold ? 'font-weight:bold;' : ''}text-decoration:underline;color:${c(data.title.color)};font-family:${data.title.fontFace || 'inherit'}">
           ${data.title.text}
         </div>
@@ -119,7 +120,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
       });
 
       return html`
-        <div class="slide" style="background-color:${bg}">
+        <div class="slide" style="background-color:${bg};color:${fg}">
           <div ref=${textRef} style="position:absolute;left:0;top:${px(p)};width:100%;text-align:center">
             <div style="font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
               ${data.title.text}
@@ -135,7 +136,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
     }
 
     return html`
-      <div class="slide" style="background-color:${bg}">
+      <div class="slide" style="background-color:${bg};color:${fg}">
         <div style="position:absolute;left:0;top:${px(data.titleY)};width:100%;text-align:center;font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
           ${data.title.text}
         </div>
@@ -158,7 +159,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
     if (imgEntry) {
       const { pad: p } = SLIDE_STYLE;
       return html`
-        <div class="slide" style="background-color:${bg}">
+        <div class="slide" style="background-color:${bg};color:${fg}">
           <div ref=${textRef} style="position:absolute;left:${px(p)};top:${px(p)};width:${px(SLIDE_STYLE.width - 2 * p)};text-align:center">
             ${data.lines.map((l) => html`
               <div style="font-size:${l.fontSize * PT_SCALE}px;${l.bold ? 'font-weight:bold;' : ''}color:${c(l.color)}">${l.text}</div>
@@ -171,7 +172,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
     }
 
     return html`
-      <div class="slide title-slide" style="background-color:${bg}">
+      <div class="slide title-slide" style="background-color:${bg};color:${fg}">
         ${data.lines.map((l) => html`
           <div style="font-size:${l.fontSize * PT_SCALE}px;${l.bold ? 'font-weight:bold;' : ''}color:${c(l.color)};padding:0 ${px(SLIDE_STYLE.pad)}">${l.text}</div>
         `)}

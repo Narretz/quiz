@@ -11,7 +11,10 @@ export const SLIDE_STYLE = {
   height: 5.625,   // inches
   pad: 0.2,        // gap between elements (inches)
   backgroundColor: "#FFFFFF",
+  // backgroundColor: "#13700c", // classic
+  // backgroundColor: "#11650b", // bit darker than classic
   textColor: "#000000",
+  // textColor: "#FCFCFC",
   title:    { fontSize: 40 },
   num:      { fontSize: 23 },
   question: { fontSize: 20, lineSpacing: 110 },
