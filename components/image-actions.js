@@ -2,11 +2,11 @@ import { h } from "preact";
 import htm from "htm";
 import { SLIDE_STYLE } from "../quiz-core.js";
 import { readFileAsDataURL, loadImageDimensions } from "../lib/utils.js";
-import { slideImages, setImage, removeImage, setManualOverride, slideAudio, setAudio, removeAudio, scheduleSave, debug } from "../lib/state.js";
+import { slideImages, setImage, removeImage, setManualOverride, slideAudio, setAudio, removeAudio, slideOverrides, scheduleSave, debug } from "../lib/state.js";
 
 const html = htm.bind(h);
 
-export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKey, imgEntry, slideKey, fittingResult, onRerender }) {
+export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKey, imgEntry, slideKey, onRerender }) {
   const images = slideImages.value;
   const qKey = `${id}:0`;
   const ansKey = `${id}:1`;
@@ -118,7 +118,7 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
     onRerender();
   }
 
-  const effective = fittingResult;
+  const effective = slideOverrides.value[slideKey];
   const displayFs = effective?.fontSize ?? SLIDE_STYLE.question.fontSize;
   const displayLs = effective?.lineSpacing ?? SLIDE_STYLE.question.lineSpacing;
 

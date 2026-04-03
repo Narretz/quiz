@@ -425,19 +425,32 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
     }
 
     if (desc.type === "description") {
+      const descSlideKey = desc.id ? `${desc.id}:0` : null;
+      const descImg = descSlideKey && images[descSlideKey];
+      let deW = fullW, enW = fullW;
+      if (descImg) {
+        const layout = computeImageLayout(descImg.width / descImg.height);
+        deW = layout.deW;
+        enW = layout.enW;
+        slide.addImage({
+          data: descImg.data,
+          x: layout.img.x, y: layout.img.y, w: layout.img.w, h: layout.img.h,
+          sizing: { type: "contain", w: layout.img.w, h: layout.img.h },
+        });
+      }
       slide.addText(desc.text.de, {
-        x: pad, y: pad, w: fullW, h: 2.2,
+        x: pad, y: pad, w: deW, h: 2.2,
         fontSize: SLIDE_STYLE.question.fontSize, valign: "top",
         lineSpacingMultiple: SLIDE_STYLE.question.lineSpacing / 100,
       });
       if (desc.text.en) {
         slide.addText(desc.text.en, {
-          x: pad, y: 2.5, w: fullW, h: 2,
+          x: pad, y: 2.5, w: enW, h: 2,
           fontSize: SLIDE_STYLE.question.fontSize, valign: "top",
           lineSpacingMultiple: SLIDE_STYLE.question.lineSpacing / 100,
         });
       }
-      addSlideMedia(slide, desc);
+      addSlideMedia(slide, desc, { skipImage: true });
       continue;
     }
 

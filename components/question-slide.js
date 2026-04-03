@@ -3,7 +3,7 @@ import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { SLIDE_STYLE, computeImageLayout, formatAnswer } from "../quiz-core.js";
 import { PT_SCALE, px, esc } from "../lib/utils.js";
-import { slideImages, slideAudio, manualOverrides, slideStyle } from "../lib/state.js";
+import { slideImages, slideAudio, manualOverrides, slideStyle, slideOverrides } from "../lib/state.js";
 import { fitSlideText } from "../lib/fitting.js";
 import { ImageActions } from "./image-actions.js";
 
@@ -18,7 +18,6 @@ export function QuestionSlide({ desc, onRerender }) {
   const fullW = SLIDE_STYLE.width - 2 * pad;
   const bg = style.backgroundColor;
   const slideRef = useRef(null);
-  const fittingResultRef = useRef(null);
 
   let deW = fullW, enW = fullW;
   let imgStyle = null;
@@ -46,13 +45,37 @@ export function QuestionSlide({ desc, onRerender }) {
 
   // Text fitting pass — runs after DOM is laid out
   useLayoutEffect(() => {
-    if (!slideRef.current || !imgEntry) return;
+    if (!slideRef.current) return;
+    if (!imgEntry) {
+      // Reset styles that fitSlideText may have mutated directly on the DOM —
+      // Preact won't re-apply them because the template values haven't changed.
+      const deEl = slideRef.current.querySelector('[data-role="de"]');
+      const enEl = slideRef.current.querySelector('[data-role="en"]');
+      if (deEl) {
+        deEl.style.fontSize = qFs + "px";
+        deEl.style.lineHeight = String(qLh);
+        deEl.style.width = px(fullW);
+      }
+      if (enEl) {
+        enEl.style.fontSize = qFs + "px";
+        enEl.style.lineHeight = String(qLh);
+        enEl.style.width = px(fullW);
+        enEl.style.top = px(2.5);
+      }
+      return;
+    }
     const images = slideImages.value;
     const manual = manualOverrides.value[slideKey];
     const result = manual
       ? fitSlideText(slideRef.current, images, manual.fontSize, manual.lineSpacing)
       : fitSlideText(slideRef.current, images);
-    fittingResultRef.current = result;
+    // Write to slideOverrides signal — used by debug inputs (ImageActions) and PPTX export
+    if (result) {
+      const prev = slideOverrides.value[slideKey];
+      if (!prev || prev.fontSize !== result.fontSize || prev.lineSpacing !== result.lineSpacing || prev.enY !== result.enY) {
+        slideOverrides.value = { ...slideOverrides.value, [slideKey]: result };
+      }
+    }
   }, [imgEntry, slideKey, style.fontSize, style.lineSpacing]);
 
   return html`
@@ -89,7 +112,7 @@ export function QuestionSlide({ desc, onRerender }) {
         </div>
       `}
       ${id && html`<${ImageActions} id=${id} withAnswers=${withAnswers} imgEntry=${imgEntry}
-                     slideKey=${slideKey} fittingResult=${fittingResultRef.current} onRerender=${onRerender} />`}
+                     slideKey=${slideKey} onRerender=${onRerender} />`}
     </div>
   `;
 }

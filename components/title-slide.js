@@ -54,7 +54,7 @@ export function TitleSlide({ desc, anchor, onRerender }) {
           </div>
         `}
         ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} linkedSlideKey=${linkedSlideKey}
-                       imgEntry=${imgEntry} slideKey=${slideKey} fittingResult=${null} onRerender=${onRerender} />`}
+                       imgEntry=${imgEntry} slideKey=${slideKey} onRerender=${onRerender} />`}
       </div>
     `;
   }
@@ -75,7 +75,7 @@ export function TitleSlide({ desc, anchor, onRerender }) {
         </div>
       `}
       ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} linkedSlideKey=${linkedSlideKey}
-                     imgEntry=${imgEntry} slideKey=${slideKey} fittingResult=${null} onRerender=${onRerender} />`}
+                     imgEntry=${imgEntry} slideKey=${slideKey} onRerender=${onRerender} />`}
     </div>
   `;
 }

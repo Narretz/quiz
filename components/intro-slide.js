@@ -164,7 +164,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender }) {
         </div>
       `}
       ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} imgEntry=${imgEntry}
-                     slideKey=${slideKey} fittingResult=${null} onRerender=${onRerender} />`}
+                     slideKey=${slideKey} onRerender=${onRerender} />`}
     `;
   }
 }
