@@ -5,6 +5,7 @@ import { buildSlideDescriptors, SLIDE_STYLE } from "../quiz-core.js";
 import { slugify } from "../lib/utils.js";
 import { currentQuiz, slideImages, slideAudio, slideOverrides } from "../lib/state.js";
 import { TitleSlide } from "./title-slide.js";
+import { DescriptionSlide } from "./description-slide.js";
 import { QuestionSlide } from "./question-slide.js";
 
 const html = htm.bind(h);
@@ -25,14 +26,15 @@ function buildSections(quiz) {
     const rounds = roundSlices[s];
     for (const r of rounds) {
       tocEntries.push({ label: r.name, anchor: slugify(r.name) });
-      sec.indices.push(idx++);
+      sec.indices.push(idx++); // round title
+      if (r.description?.de) sec.indices.push(idx++); // description slide
       const count = r.questions.length === 0 ? 10 : r.questions.length;
       for (let i = 0; i < count; i++) sec.indices.push(idx++);
     }
     sec.indices.push(idx++); // Antworten
     for (const r of rounds) {
       tocEntries.push({ label: `${r.name} Answers`, anchor: slugify(r.name) + "-answers" });
-      sec.indices.push(idx++);
+      sec.indices.push(idx++); // round title
       const count = r.questions.length === 0 ? 10 : r.questions.length;
       for (let i = 0; i < count; i++) sec.indices.push(idx++);
     }
@@ -106,6 +108,8 @@ export function SlidePreview() {
           tocIdx++;
         }
         elements.push(html`<${TitleSlide} key=${"t-" + i} desc=${desc} anchor=${anchor} />`);
+      } else if (desc.type === "description") {
+        elements.push(html`<${DescriptionSlide} key=${"d-" + i} desc=${desc} />`);
       } else {
         elements.push(html`<${QuestionSlide} key=${"q-" + i} desc=${desc} onRerender=${onRerender} />`);
       }

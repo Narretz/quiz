@@ -104,7 +104,7 @@ export function astToQuiz(ast) {
       (c) => c.metadata.col >= 2 && c.text?.trim()
     );
     if (firstIsBold && !hasAnswerCols) {
-      currentRound = { name: firstText, description: "", questions: [] };
+      currentRound = { name: firstText, description: { de: "", en: "" }, questions: [] };
       rounds.push(currentRound);
       continue;
     }
@@ -115,10 +115,9 @@ export function astToQuiz(ast) {
       const dePart = firstText;
       const enPart =
         cells.find((c) => c.metadata.col === 1)?.text?.trim() ?? "";
-      const desc = enPart ? `${dePart}\n${enPart}` : dePart;
-      currentRound.description = currentRound.description
-        ? currentRound.description + "\n" + desc
-        : desc;
+      const d = currentRound.description;
+      d.de = d.de ? d.de + "\n" + dePart : dePart;
+      if (enPart) d.en = d.en ? d.en + "\n" + enPart : enPart;
       continue;
     }
 
@@ -153,6 +152,9 @@ export function buildSlideDescriptors(quiz) {
     for (let r = 0; r < rounds.length; r++) {
       const round = rounds[r];
       addTitle(round.name);
+      if (!withAnswers && round.description.de) {
+        slides.push({ type: "description", text: round.description, id: null });
+      }
       const questions = round.questions;
       const count = questions.length === 0 ? 10 : questions.length;
       for (let i = 0; i < count; i++) {
@@ -211,6 +213,22 @@ export function buildPptx(quiz, PptxGenJS, images = {}, overrides = {}, audio = 
         slide.addText(desc.subtitle, {
           x: 0.5, y: "55%", w: 9, h: "40%",
           fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top",
+        });
+      }
+      continue;
+    }
+
+    if (desc.type === "description") {
+      slide.addText(desc.text.de, {
+        x: pad, y: pad, w: fullW, h: 2.2,
+        fontSize: SLIDE_STYLE.question.fontSize, valign: "top",
+        lineSpacingMultiple: SLIDE_STYLE.question.lineSpacing / 100,
+      });
+      if (desc.text.en) {
+        slide.addText(desc.text.en, {
+          x: pad, y: 2.5, w: fullW, h: 2,
+          fontSize: SLIDE_STYLE.question.fontSize, valign: "top",
+          lineSpacingMultiple: SLIDE_STYLE.question.lineSpacing / 100,
         });
       }
       continue;
