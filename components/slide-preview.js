@@ -1,9 +1,8 @@
 import { h } from "preact";
-import { useRef, useLayoutEffect } from "preact/hooks";
+import { useRef } from "preact/hooks";
 import htm from "htm";
-import { SLIDE_STYLE } from "../quiz-core.js";
 import { slugify } from "../lib/utils.js";
-import { currentQuiz, slideDescriptors, slideImages, slideAudio, slideOverrides } from "../lib/state.js";
+import { currentQuiz, slideDescriptors, slideImages, slideAudio } from "../lib/state.js";
 import { TitleSlide } from "./title-slide.js";
 import { IntroSlide } from "./intro-slide.js";
 import { DescriptionSlide } from "./description-slide.js";
@@ -62,13 +61,6 @@ function buildSections(quiz, descriptors) {
   return { descriptors, sections, tocEntries };
 }
 
-// Collect fitting results from QuestionSlide refs after layout
-let collectedOverrides = {};
-
-export function getCollectedOverrides() {
-  return collectedOverrides;
-}
-
 export function SlidePreview() {
   const quiz = currentQuiz.value;
   const descs = slideDescriptors.value;
@@ -88,19 +80,6 @@ export function SlidePreview() {
     // Trigger a re-render by updating currentQuiz signal (same value, new reference triggers Preact)
     currentQuiz.value = { ...quiz };
   }
-
-  // After layout, collect fitting results from DOM for PPTX export
-  useLayoutEffect(() => {
-    if (!previewRef.current) return;
-    const computed = {};
-    previewRef.current.querySelectorAll(".slide[data-slide-id]").forEach((el) => {
-      const key = `${el.dataset.slideId}:${el.dataset.answers}`;
-      // The fitting result is stored by QuestionSlide's useLayoutEffect
-      // We read it from the DOM measurement — but actually QuestionSlide stores in its own signal
-    });
-    // QuestionSlide updates slideOverrides directly is not ideal;
-    // instead we'll collect in a post-render pass
-  });
 
   const elements = [];
 
