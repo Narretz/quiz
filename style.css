@@ -114,6 +114,7 @@
         gap: 0.3rem;
         flex-wrap: wrap;
         font-size: 0.8rem;
+        margin-bottom: 10px;
     }
 
     .toc:empty {
@@ -206,6 +207,7 @@
     }
 
     .slide .img-actions .img-actions__right {
+      margin-left: auto;
       display: flex;
       gap: 3px;
     }

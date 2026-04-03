@@ -1,9 +1,11 @@
 import { h } from "preact";
+import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { INTRO_SLIDES, DEFAULT_MONEY } from "../lib/intro-slides.js";
-import { SLIDE_STYLE } from "../quiz-core.js";
-import { PT_SCALE, px } from "../lib/utils.js";
-import { slideStyle } from "../lib/state.js";
+import { SLIDE_STYLE, fit } from "../quiz-core.js";
+import { PT_SCALE, PX, px } from "../lib/utils.js";
+import { slideStyle, slideImages, slideAudio } from "../lib/state.js";
+import { ImageActions } from "./image-actions.js";
 
 const html = htm.bind(h);
 
@@ -15,10 +17,13 @@ function c(color) {
   return color ? `#${color}` : SLIDE_STYLE.textColor;
 }
 
-export function IntroSlide({ introIndex, anchor }) {
+export function IntroSlide({ introIndex, anchor, id, onRerender }) {
   const data = INTRO_SLIDES[introIndex];
   if (!data) return null;
   const bg = slideStyle.value.backgroundColor;
+  const slideKey = id ? `${id}:0` : null;
+  const imgEntry = slideKey && slideImages.value[slideKey];
+  const audioEntry = slideKey && slideAudio.value[slideKey];
 
   if (data.id === "welcome") {
     const t = data.toucan;
@@ -33,6 +38,7 @@ export function IntroSlide({ introIndex, anchor }) {
             <div style="font-size:${l.fontSize * PT_SCALE}px;font-weight:bold;color:${c(l.color)}">${l.text}</div>
           `)}
         </div>
+        ${mediaOverlay()}
       </div>
     `;
   }
@@ -50,6 +56,7 @@ export function IntroSlide({ introIndex, anchor }) {
             `)}
           </div>
         `)}
+        ${mediaOverlay()}
       </div>
     `;
   }
@@ -68,11 +75,49 @@ export function IntroSlide({ introIndex, anchor }) {
             `)}
           </div>
         `)}
+        ${mediaOverlay()}
       </div>
     `;
   }
 
   if (data.id === "golden-rules") {
+    const { pad: p, width: W, height: H } = SLIDE_STYLE;
+
+    if (imgEntry) {
+      const textRef = useRef(null);
+      const imgElRef = useRef(null);
+
+      useLayoutEffect(() => {
+        if (!textRef.current || !imgElRef.current) return;
+        const textBottom = (textRef.current.offsetTop + textRef.current.offsetHeight) / PX;
+        const imgTop = textBottom + p;
+        const boxW = W - 2 * p;
+        const boxH = H - p - imgTop;
+        if (boxH <= 0) return;
+        const ar = imgEntry.width / imgEntry.height;
+        const { w, h } = fit(boxW, boxH, ar);
+        imgElRef.current.style.left = px((W - w) / 2);
+        imgElRef.current.style.top = px(imgTop);
+        imgElRef.current.style.width = px(w);
+        imgElRef.current.style.height = px(h);
+      });
+
+      return html`
+        <div class="slide" style="background-color:${bg}">
+          <div ref=${textRef} style="position:absolute;left:0;top:${px(p)};width:100%;text-align:center">
+            <div style="font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
+              ${data.title.text}
+            </div>
+            ${data.rules.map((rule) => html`
+              <div style="font-size:${data.ruleFontSize * PT_SCALE}px;color:${c(data.ruleColor)};margin-top:4px">${rule}</div>
+            `)}
+          </div>
+          <img ref=${imgElRef} src=${imgEntry.data} style="position:absolute;object-fit:contain" />
+          ${mediaOverlay()}
+        </div>
+      `;
+    }
+
     return html`
       <div class="slide" style="background-color:${bg}">
         <div style="position:absolute;left:0;top:${px(data.titleY)};width:100%;text-align:center;font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
@@ -81,19 +126,68 @@ export function IntroSlide({ introIndex, anchor }) {
         ${data.rules.map((rule, ri) => html`
           <div style="position:absolute;left:0;top:${px(data.rulesStartY + ri * data.ruleHeight)};width:100%;text-align:center;font-size:${data.ruleFontSize * PT_SCALE}px;color:${c(data.ruleColor)}">${rule}</div>
         `)}
+        ${mediaOverlay()}
       </div>
     `;
   }
 
   if (data.id === "begin") {
+    const textRef = useRef(null);
+    const imgElRef = useRef(null);
+
+    useLayoutEffect(() => {
+      if (!imgEntry || !textRef.current || !imgElRef.current) return;
+      const { pad: p, width: W, height: H } = SLIDE_STYLE;
+      const textBottom = (textRef.current.offsetTop + textRef.current.offsetHeight) / PX;
+      const imgTop = textBottom + p;
+      const boxW = W - 2 * p;
+      const boxH = H - p - imgTop;
+      if (boxH <= 0) return;
+      const ar = imgEntry.width / imgEntry.height;
+      const { w, h } = fit(boxW, boxH, ar);
+      imgElRef.current.style.left = px((W - w) / 2);
+      imgElRef.current.style.top = px(imgTop);
+      imgElRef.current.style.width = px(w);
+      imgElRef.current.style.height = px(h);
+    });
+
+    if (imgEntry) {
+      const { pad: p } = SLIDE_STYLE;
+      return html`
+        <div class="slide" style="background-color:${bg}">
+          <div ref=${textRef} style="position:absolute;left:0;top:${px(p)};width:100%;text-align:center">
+            ${data.lines.map((l) => html`
+              <div style="font-size:${l.fontSize * PT_SCALE}px;font-weight:bold;color:${c(l.color)}">${l.text}</div>
+            `)}
+          </div>
+          <img ref=${imgElRef} src=${imgEntry.data} style="position:absolute;object-fit:contain" />
+          ${mediaOverlay()}
+        </div>
+      `;
+    }
+
     return html`
       <div class="slide title-slide" style="background-color:${bg}">
         ${data.lines.map((l) => html`
           <div style="font-size:${l.fontSize * PT_SCALE}px;font-weight:bold;color:${c(l.color)}">${l.text}</div>
         `)}
+        ${mediaOverlay()}
       </div>
     `;
   }
 
   return null;
+
+  function mediaOverlay() {
+    return html`
+      ${audioEntry && html`
+        <div class="slide-audio" style="background:${bg}e0">
+          <audio controls preload="none" src=${audioEntry.data} />
+          <span class="slide-audio__name">${audioEntry.name}</span>
+        </div>
+      `}
+      ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} imgEntry=${imgEntry}
+                     slideKey=${slideKey} fittingResult=${null} onRerender=${onRerender} />`}
+    `;
+  }
 }

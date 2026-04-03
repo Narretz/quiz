@@ -201,10 +201,12 @@ function resolveColor(c) {
   return (c || SLIDE_STYLE.textColor).replace("#", "");
 }
 
-function renderIntroSlide(slide, data, assets) {
+function renderIntroSlide(slide, data, assets, desc, images) {
   if (!data) return;
   const money = DEFAULT_MONEY;
   const { width: W, height: H, pad } = SLIDE_STYLE;
+  const slideKey = desc?.id ? `${desc.id}:0` : null;
+  const imgEntry = slideKey && images?.[slideKey];
 
   if (data.id === "welcome") {
     // Background logo — full slide, cover
@@ -282,26 +284,57 @@ function renderIntroSlide(slide, data, assets) {
   }
 
   if (data.id === "golden-rules") {
+    const titleY = imgEntry ? pad : data.titleY;
+    const rulesY = imgEntry ? pad + 0.6 : data.rulesStartY;
     slide.addText(data.title.text, {
-      x: 0, y: data.titleY, w: "100%", h: 0.8,
+      x: 0, y: titleY, w: "100%", h: 0.6,
       fontSize: data.title.fontSize, bold: true, underline: true, color: resolveColor(data.title.color), align: "center",
     });
     data.rules.forEach((rule, ri) => {
       slide.addText(rule, {
-        x: 0, y: data.rulesStartY + ri * data.ruleHeight, w: "100%", h: data.ruleHeight,
+        x: 0, y: rulesY + ri * 0.5, w: "100%", h: 0.5,
         fontSize: data.ruleFontSize, color: resolveColor(data.ruleColor), align: "center", valign: "middle",
       });
     });
+    if (imgEntry) {
+      const textBottom = rulesY + data.rules.length * 0.5;
+      addCompactImage(slide, imgEntry, textBottom);
+    }
     return;
   }
 
   if (data.id === "begin") {
-    const runs = data.lines.map((l) => ({
-      text: l.text + "\n",
-      options: { fontSize: l.fontSize, bold: l.bold, color: resolveColor(l.color) },
-    }));
-    slide.addText(runs, { x: 0, y: 0, w: "100%", h: "100%", align: "center", valign: "middle" });
+    if (imgEntry) {
+      // Text at top, image below
+      const textH = data.lines.length * 0.5;
+      const runs = data.lines.map((l) => ({
+        text: l.text + "\n",
+        options: { fontSize: l.fontSize, bold: l.bold, color: resolveColor(l.color) },
+      }));
+      slide.addText(runs, { x: 0, y: pad, w: "100%", h: textH, align: "center", valign: "top" });
+      addCompactImage(slide, imgEntry, pad + textH);
+    } else {
+      const runs = data.lines.map((l) => ({
+        text: l.text + "\n",
+        options: { fontSize: l.fontSize, bold: l.bold, color: resolveColor(l.color) },
+      }));
+      slide.addText(runs, { x: 0, y: 0, w: "100%", h: "100%", align: "center", valign: "middle" });
+    }
     return;
+  }
+
+  function addCompactImage(slide, entry, textBottom) {
+    const imgTop = textBottom + pad;
+    const boxW = W - 2 * pad;
+    const boxH = H - pad - imgTop;
+    if (boxH <= 0) return;
+    const ar = entry.width / entry.height;
+    const { w, h } = fit(boxW, boxH, ar);
+    slide.addImage({
+      data: entry.data,
+      x: (W - w) / 2, y: imgTop, w, h,
+      sizing: { type: "contain", w, h },
+    });
   }
 }
 
@@ -321,26 +354,81 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
   const fullW = W - 2 * pad;
   const bgColor = backgroundColor.replace("#", "");
 
+  // Add image/audio to any slide by its ID
+  function addSlideMedia(slide, desc, { skipImage = false } = {}) {
+    const slideKey = desc.id ? `${desc.id}:0` : null;
+    if (!slideKey) return;
+    if (!skipImage) {
+      const imgEntry = images[slideKey];
+      if (imgEntry) {
+        slide.addImage({
+          data: imgEntry.data,
+          x: 0, y: 0, w: W, h: H,
+          sizing: { type: "contain", w: W, h: H },
+        });
+      }
+    }
+    const audioEntry = audio[slideKey];
+    if (audioEntry) {
+      const audioData = audioEntry.data.replace(/^data:/, "").replace(/^audio\/mpeg/, "audio/mp3");
+      slide.addMedia({
+        type: "audio", data: audioData,
+        x: (W - 0.5) / 2, y: (H - 0.5) / 2, w: 0.5, h: 0.5,
+      });
+    }
+  }
+
   for (const desc of descriptors) {
     const slide = pptx.addSlide();
     slide.background = { color: bgColor };
 
     if (desc.type === "title") {
-      slide.addText(desc.text, {
-        x: 0, y: desc.subtitle ? 0.5 : 0, w: "100%", h: desc.subtitle ? "50%" : "100%",
-        fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "middle",
-      });
-      if (desc.subtitle) {
-        slide.addText(desc.subtitle, {
-          x: 0.5, y: "55%", w: 9, h: "40%",
-          fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top",
+      const slideKey = desc.id ? `${desc.id}:0` : null;
+      const hasImg = slideKey && images[slideKey];
+      if (hasImg) {
+        // Image mode: text at top, image below
+        const textH = desc.subtitle ? 1.8 : 1.0;
+        slide.addText(desc.text, {
+          x: 0, y: pad, w: "100%", h: textH * 0.6,
+          fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "top",
         });
+        if (desc.subtitle) {
+          slide.addText(desc.subtitle, {
+            x: 0.5, y: pad + textH * 0.6, w: W - 1, h: textH * 0.4,
+            fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top",
+          });
+        }
+        // Image fills remaining space below text
+        const imgTop = pad + textH + pad;
+        const imgBoxW = W - 2 * pad;
+        const imgBoxH = H - pad - imgTop;
+        const ar = hasImg.width / hasImg.height;
+        const { w: imgW, h: imgH } = fit(imgBoxW, imgBoxH, ar);
+        slide.addImage({
+          data: hasImg.data,
+          x: (W - imgW) / 2, y: imgTop, w: imgW, h: imgH,
+          sizing: { type: "contain", w: imgW, h: imgH },
+        });
+      } else {
+        // No image: centered
+        slide.addText(desc.text, {
+          x: 0, y: desc.subtitle ? 0.5 : 0, w: "100%", h: desc.subtitle ? "50%" : "100%",
+          fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "middle",
+        });
+        if (desc.subtitle) {
+          slide.addText(desc.subtitle, {
+            x: 0.5, y: "55%", w: 9, h: "40%",
+            fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top",
+          });
+        }
       }
+      addSlideMedia(slide, desc, { skipImage: true });
       continue;
     }
 
     if (desc.type === "intro") {
-      renderIntroSlide(slide, desc.data || INTRO_SLIDES[desc.introIndex], introAssets);
+      renderIntroSlide(slide, desc.data || INTRO_SLIDES[desc.introIndex], introAssets, desc, images);
+      addSlideMedia(slide, desc, { skipImage: true });
       continue;
     }
 
@@ -357,6 +445,7 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
           lineSpacingMultiple: SLIDE_STYLE.question.lineSpacing / 100,
         });
       }
+      addSlideMedia(slide, desc);
       continue;
     }
 

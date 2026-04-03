@@ -108,16 +108,16 @@ export function SlidePreview() {
           anchor = tocEntries[tocIdx].anchor;
           tocIdx++;
         }
-        elements.push(html`<${TitleSlide} key=${"t-" + i} desc=${desc} anchor=${anchor} />`);
+        elements.push(html`<${TitleSlide} key=${"t-" + i} desc=${desc} anchor=${anchor} onRerender=${onRerender} />`);
       } else if (desc.type === "intro") {
         let anchor = null;
         if (desc.introIndex === 0 && tocIdx < tocEntries.length) {
           anchor = tocEntries[tocIdx].anchor;
           tocIdx++;
         }
-        elements.push(html`<${IntroSlide} key=${"i-" + i} introIndex=${desc.introIndex} anchor=${anchor} />`);
+        elements.push(html`<${IntroSlide} key=${"i-" + i} introIndex=${desc.introIndex} anchor=${anchor} id=${desc.introIndex >= 3 ? desc.id : null} onRerender=${onRerender} />`);
       } else if (desc.type === "description") {
-        elements.push(html`<${DescriptionSlide} key=${"d-" + i} desc=${desc} />`);
+        elements.push(html`<${DescriptionSlide} key=${"d-" + i} desc=${desc} onRerender=${onRerender} />`);
       } else {
         elements.push(html`<${QuestionSlide} key=${"q-" + i} desc=${desc} onRerender=${onRerender} />`);
       }

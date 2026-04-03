@@ -6,7 +6,7 @@ import { slideImages, setImage, removeImage, setManualOverride, slideAudio, setA
 
 const html = htm.bind(h);
 
-export function ImageActions({ id, withAnswers, imgEntry, slideKey, fittingResult, onRerender }) {
+export function ImageActions({ id, withAnswers, isQuestion = true, imgEntry, slideKey, fittingResult, onRerender }) {
   const images = slideImages.value;
   const qKey = `${id}:0`;
   const ansKey = `${id}:1`;
@@ -112,7 +112,7 @@ export function ImageActions({ id, withAnswers, imgEntry, slideKey, fittingResul
 
   return html`
     <div class="img-actions">
-      <button onClick=${nav}>${withAnswers ? "\u2191 question" : "\u2193 answer"}</button>
+      ${isQuestion && html`<button onClick=${nav}>${withAnswers ? "\u2191 question" : "\u2193 answer"}</button>`}
         <div class="img-actions__right">
         ${debug && imgEntry && html`
           <label class="override-label">
@@ -135,7 +135,7 @@ export function ImageActions({ id, withAnswers, imgEntry, slideKey, fittingResul
         ${isLinked && html`
           <button onClick=${unlink}>unlink img from question</button>
         `}
-        ${!withAnswers && imgEntry && images[ansKey]?.data === imgEntry.data && html`
+        ${isQuestion && !withAnswers && imgEntry && images[ansKey]?.data === imgEntry.data && html`
           <button onClick=${() => { removeImage(ansKey); scheduleSave(); onRerender(); }}>remove img from answer</button>
         `}
         <label>
