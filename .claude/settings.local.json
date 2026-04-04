@@ -16,7 +16,8 @@
       "WebFetch(domain:docs.libreoffice.org)",
       "Bash(npm search:*)",
       "Bash(npm view:*)",
-      "Bash(npm info:*)"
+      "Bash(npm info:*)",
+      "Bash(sed 's/<a:t>//g')"
     ]
   },
   "enabledMcpjsonServers": [
