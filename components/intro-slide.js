@@ -3,7 +3,7 @@ import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { INTRO_SLIDES, DEFAULT_MONEY } from "../lib/intro-slides.js";
 import { SLIDE_STYLE } from "../quiz-core.js";
-import { PT_SCALE, px, layoutImageBelowText } from "../lib/utils.js";
+import { PT_SCALE, px, PX, layoutImageBelowText } from "../lib/utils.js";
 import { slideStyle, slideImages, slideAudio } from "../lib/state.js";
 import { ImageActions } from "./image-actions.js";
 
@@ -162,7 +162,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
         <div class="slide" style="background-color:${bg};color:${fg}">
           <div ref=${textRef} style="position:absolute;left:${px(p)};top:${px(p)};width:${px(SLIDE_STYLE.width - 2 * p)};text-align:center">
             ${data.lines.map((l) => html`
-              <div style="font-size:${l.fontSize * PT_SCALE}px;${l.bold ? 'font-weight:bold;' : ''}color:${c(l.color)}">${l.text}</div>
+              <div style="font-size:${l.fontSize * PT_SCALE}px;${l.bold ? 'font-weight:bold;' : ''}color:${c(l.color)};${l.marginTop ? `margin-top:${l.marginTop * PX}px;` : ''}">${l.text}</div>
             `)}
           </div>
           <img ref=${imgElRef} src=${imgEntry.data} style="position:absolute;object-fit:contain" />
@@ -174,7 +174,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
     return html`
       <div class="slide title-slide" style="background-color:${bg};color:${fg}">
         ${data.lines.map((l) => html`
-          <div style="font-size:${l.fontSize * PT_SCALE}px;${l.bold ? 'font-weight:bold;' : ''}color:${c(l.color)};padding:0 ${px(SLIDE_STYLE.pad)}">${l.text}</div>
+          <div style="font-size:${l.fontSize * PT_SCALE}px;${l.bold ? 'font-weight:bold;' : ''}color:${c(l.color)};padding:0 ${px(SLIDE_STYLE.pad)};${l.marginTop ? `margin-top:${l.marginTop * PX}px;` : ''}">${l.text}</div>
         `)}
         ${mediaOverlay()}
       </div>

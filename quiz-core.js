@@ -265,7 +265,10 @@ function renderIntroSlide(slide, data, assets, desc, images) {
   if (style === "welcome") {
     // Background logo — full slide, cover
     if (assets.logo) {
-      slide.addImage({ data: assets.logo, x: 0, y: 0, w: W, h: H, sizing: { type: "contain", w: W, h: H } });
+      // Contain-fit: calculate dimensions to maintain aspect ratio within slide
+      const logoAr = 504 / 360; // tipperary-logo.gif native aspect ratio
+      const { w: lw, h: lh } = fit(W, H, logoAr);
+      slide.addImage({ data: assets.logo, x: (W - lw) / 2, y: (H - lh) / 2, w: lw, h: lh });
     }
     // Title
     slide.addText(data.title.text, {
@@ -367,21 +370,41 @@ function renderIntroSlide(slide, data, assets, desc, images) {
   }
 
   if (style === "begin") {
+    // Split lines into groups separated by marginTop gaps
+    const groups = []; // [{ y, runs, h }]
+    let y = imgEntry ? pad : null; // absolute positioning for image layout, null for centered
+    for (const l of data.lines) {
+      if (l.marginTop && y != null) y += l.marginTop;
+      const run = { text: l.text + "\n", options: { fontSize: l.fontSize, bold: !!l.bold, color: resolveColor(l.color) } };
+      const lastGroup = groups[groups.length - 1];
+      if (lastGroup && !l.marginTop) {
+        lastGroup.runs.push(run);
+        lastGroup.h += 0.5;
+      } else {
+        groups.push({ y, runs: [run], h: 0.5 });
+      }
+      if (y != null) y += 0.5;
+    }
     if (imgEntry) {
-      // Text at top, image below
-      const textH = data.lines.length * 0.5;
-      const runs = data.lines.map((l) => ({
-        text: l.text + "\n",
-        options: { fontSize: l.fontSize, bold: !!l.bold, color: resolveColor(l.color) },
-      }));
-      slide.addText(runs, { x: pad, y: pad, w: W - 2 * pad, h: textH, align: "center", valign: "top" });
-      addImageBelowText(slide, imgEntry, pad + textH);
+      for (const g of groups) {
+        slide.addText(g.runs, { x: pad, y: g.y, w: W - 2 * pad, h: g.h, align: "center", valign: "top" });
+      }
+      addImageBelowText(slide, imgEntry, y);
+    } else if (groups.length === 1) {
+      slide.addText(groups[0].runs, { x: pad, y: 0, w: W - 2 * pad, h: "100%", align: "center", valign: "middle" });
     } else {
-      const runs = data.lines.map((l) => ({
-        text: l.text + "\n",
-        options: { fontSize: l.fontSize, bold: !!l.bold, color: resolveColor(l.color) },
-      }));
-      slide.addText(runs, { x: pad, y: 0, w: W - 2 * pad, h: "100%", align: "center", valign: "middle" });
+      // Multiple groups with gaps — center the whole block vertically
+      const totalH = groups.reduce((sum, g) => sum + g.h, 0) + data.lines.reduce((sum, l) => sum + (l.marginTop || 0), 0);
+      let cy = (H - totalH) / 2;
+      for (let gi = 0; gi < groups.length; gi++) {
+        const g = groups[gi];
+        // Find marginTop of first line in this group
+        const lineIdx = groups.slice(0, gi).reduce((sum, gg) => sum + gg.runs.length, 0);
+        const firstLine = data.lines[lineIdx];
+        if (firstLine?.marginTop) cy += firstLine.marginTop;
+        slide.addText(g.runs, { x: pad, y: cy, w: W - 2 * pad, h: g.h, align: "center", valign: "top" });
+        cy += g.h;
+      }
     }
     return;
   }
@@ -404,6 +427,7 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
   const W = SLIDE_STYLE.width;
   const fullW = W - 2 * pad;
   const bgColor = backgroundColor.replace("#", "");
+  const fgColor = SLIDE_STYLE.textColor.replace("#", "");
 
   // Add image/audio to any slide by its ID
   function addSlideMedia(slide, desc, { skipImage = false } = {}) {
@@ -441,12 +465,12 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
         const textH = desc.subtitle ? 1.8 : 1.0;
         slide.addText(desc.text, {
           x: 0, y: pad, w: "100%", h: textH * 0.6,
-          fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "top",
+          fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "top", color: fgColor,
         });
         if (desc.subtitle) {
           slide.addText(desc.subtitle, {
             x: 0.5, y: pad + textH * 0.6, w: W - 1, h: textH * 0.4,
-            fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top",
+            fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top", color: fgColor,
           });
         }
         addImageBelowText(slide, hasImg, pad + textH);
@@ -454,12 +478,12 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
         // No image: centered
         slide.addText(desc.text, {
           x: 0, y: desc.subtitle ? 0.5 : 0, w: "100%", h: desc.subtitle ? "50%" : "100%",
-          fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "middle",
+          fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "middle", color: fgColor,
         });
         if (desc.subtitle) {
           slide.addText(desc.subtitle, {
             x: 0.5, y: "55%", w: 9, h: "40%",
-            fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top",
+            fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top", color: fgColor,
           });
         }
       }
@@ -489,13 +513,13 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
       }
       slide.addText(desc.text.de, {
         x: pad, y: pad, w: deW, h: 2.2,
-        fontSize: SLIDE_STYLE.question.fontSize, valign: "top",
+        fontSize: SLIDE_STYLE.question.fontSize, valign: "top", color: fgColor,
         lineSpacingMultiple: SLIDE_STYLE.question.lineSpacing / 100,
       });
       if (desc.text.en) {
         slide.addText(desc.text.en, {
           x: pad, y: 2.5, w: enW, h: 2,
-          fontSize: SLIDE_STYLE.question.fontSize, valign: "top",
+          fontSize: SLIDE_STYLE.question.fontSize, valign: "top", color: fgColor,
           lineSpacingMultiple: SLIDE_STYLE.question.lineSpacing / 100,
         });
       }
@@ -519,7 +543,7 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
         sizing: { type: "contain", w, h },
       });
       slide.addText(String(num), {
-        x: pad, y: pad, w: 0.8, h: 0.5, fontSize: SLIDE_STYLE.num.fontSize, bold: true,
+        x: pad, y: pad, w: 0.8, h: 0.5, fontSize: SLIDE_STYLE.num.fontSize, bold: true, color: fgColor,
       });
       continue;
     }
@@ -567,19 +591,21 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
 
     if (hasQuestionText) {
       slide.addText([
-        { text: `${num}  `, options: { fontSize: SLIDE_STYLE.num.fontSize, bold: true } },
-        { text: q.text.de, options: { fontSize: qFontSize } },
+        { text: `${num}  `, options: { fontSize: SLIDE_STYLE.num.fontSize, bold: true, color: fgColor } },
+        { text: q.text.de, options: { fontSize: qFontSize, color: fgColor } },
       ], {
         x: pad, y: pad, w: deW, h: deH, valign: "top",
-        lineSpacingMultiple: qLineSpacing / 100,      });
+        lineSpacingMultiple: qLineSpacing / 100,
+      });
       if (q.text.en) {
         slide.addText(q.text.en, {
-          x: pad, y: enY, w: enW, h: enH, fontSize: qFontSize, valign: "top",
-          lineSpacingMultiple: qLineSpacing / 100,        });
+          x: pad, y: enY, w: enW, h: enH, fontSize: qFontSize, valign: "top", color: fgColor,
+          lineSpacingMultiple: qLineSpacing / 100,
+        });
       }
     } else {
       slide.addText(String(num), {
-        x: pad, y: pad, w: 0.8, h: 0.5, fontSize: SLIDE_STYLE.num.fontSize, bold: true,
+        x: pad, y: pad, w: 0.8, h: 0.5, fontSize: SLIDE_STYLE.num.fontSize, bold: true, color: fgColor,
       });
     }
 
