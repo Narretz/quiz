@@ -22,9 +22,12 @@ export const SLIDE_STYLE = {
 };
 
 export function formatAnswer(q) {
-  return q.answers.de === q.answers.en
-    ? q.answers.de
-    : `${q.answers.de} ⬧ ${q.answers.en}`;
+  const de = (q.answers.de || "").trim();
+  const en = (q.answers.en || "").trim();
+  if (!de && !en) return "";
+  if (!en || de === en) return de;
+  if (!de) return en;
+  return `${de} ⬧ ${en}`;
 }
 
 

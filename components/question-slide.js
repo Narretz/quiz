@@ -142,7 +142,8 @@ export function QuestionSlide({ desc, onRerender }) {
                  const text = e.target.textContent.trim();
                  if (text === ansDe) return;
                  const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
-                 quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, answers: { ...existing.answers, de: text } } };
+                 const en = ansEn ? existing.answers.en : text;
+                 quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, answers: { de: text, en } } };
                  scheduleSave();
                  onRerender();
                }}
@@ -153,7 +154,8 @@ export function QuestionSlide({ desc, onRerender }) {
                    const text = e.target.textContent.trim();
                    if (text !== ansDe) {
                      const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
-                     quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, answers: { ...existing.answers, de: text } } };
+                     const en = ansEn ? existing.answers.en : text;
+                     quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, answers: { de: text, en } } };
                      scheduleSave();
                      onRerender();
                    }
@@ -161,7 +163,7 @@ export function QuestionSlide({ desc, onRerender }) {
                  }
                }}>
           </div>
-          <span class=${`answer-bar__sep ${!ansEn ? 'answer-bar__sep--hover' : ''}`}>⬧</span>
+          <span class=${`answer-bar__sep ${(!ansDe || !ansEn) ? 'answer-bar__sep--hover' : ''}`}>⬧</span>
           <div ref=${ansEnRef} contentEditable
                class="answer-bar__field answer-bar__field--en"
                onBlur=${(e) => {
