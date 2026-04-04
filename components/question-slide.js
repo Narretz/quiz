@@ -85,6 +85,18 @@ export function QuestionSlide({ desc, onRerender }) {
     el.style.height = px(h);
   });
 
+  // Measure answer bar height and store for PPTX export
+  useLayoutEffect(() => {
+    if (!ansBarRef.current || !withAnswers || !slideKey) return;
+    const answerH = ansBarRef.current.offsetHeight / PX;
+    if (answerH > 0) {
+      const prev = slideOverrides.value[slideKey];
+      if (!prev || prev.answerH !== answerH) {
+        slideOverrides.value = { ...slideOverrides.value, [slideKey]: { ...prev, answerH } };
+      }
+    }
+  }, [ansDe, ansEn]);
+
   // Sync answer field contents imperatively — avoid Preact overwriting user edits
   useLayoutEffect(() => {
     if (ansDeRef.current && ansDeRef.current !== document.activeElement) {

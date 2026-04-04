@@ -556,7 +556,7 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
 
     // Bottom limit for text
     let bottomLimit = H - pad;
-    if (withAnswers) bottomLimit = H - 0.7 - pad; // leave room for answer bar
+    if (withAnswers) bottomLimit = H - (override?.answerH || 0.7) - pad; // leave room for answer bar
 
     // Answer slides without question text: images handled in answer bar block below
     // Answer slides with question text: use computeImageLayout (same as question slides)
@@ -615,8 +615,8 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
     if (withAnswers) {
       const answer = q ? formatAnswer(q) : "";
       if (answer) {
-        const answerLines = Math.ceil(answer.length / 40); // ~40 chars per line at fontSize 20
-        const answerH = Math.max(0.5, Math.min(1.5, answerLines * 0.35));
+        const measuredH = override?.answerH;
+        const answerH = measuredH || Math.max(0.5, Math.min(1.5, Math.ceil(answer.length / 40) * 0.35));
         const answerY = H - answerH;
         slide.addText(answer, {
           x: 0, y: answerY, w: W, h: answerH,
