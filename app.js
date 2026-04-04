@@ -49,6 +49,10 @@ function App() {
 
 // Initial load
 refreshSavedList();
+const quizParam = new URLSearchParams(location.search).get("quiz");
+if (quizParam) loadSavedQuiz(quizParam).then(() => {
+  if (location.hash) requestAnimationFrame(() => document.querySelector(location.hash)?.scrollIntoView());
+});
 
 // Mount
 render(html`<${App} />`, document.getElementById("app"));
