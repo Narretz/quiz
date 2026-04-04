@@ -200,25 +200,25 @@
         padding: 4px 0;
         z-index: 1;
         display: none;
-        align-items: center;
-        justify-content: center;
+        text-align: center;
     }
 
     .answer-bar--filled {
-        display: flex;
+        display: block;
     }
 
     .slide:hover .answer-bar,
     .answer-bar:focus-within {
-        display: flex;
+        display: block;
     }
 
     .answer-bar__field {
-        min-height: 1.2em;
+        display: inline-block;
         outline: none;
         cursor: text;
-        padding: 0 4px;
-        text-align: center;
+        min-width: 1em;
+        min-height: 1.2em;
+        vertical-align: middle;
     }
 
     .answer-bar__sep {
@@ -226,7 +226,6 @@
         user-select: none;
     }
 
-    /* Sep/tags: always take space, invisible until hover (no layout shift) */
     .answer-bar__sep--hover {
         visibility: hidden;
     }
@@ -236,12 +235,11 @@
         visibility: visible;
     }
 
-.answer-bar__tag {
+    .answer-bar__tag {
         font-size: 11px;
         text-transform: uppercase;
         visibility: hidden;
         user-select: none;
-        flex-shrink: 0;
         padding: 0 3px;
         opacity: 0.8;
         cursor: pointer;

@@ -149,7 +149,7 @@ export function QuestionSlide({ desc, onRerender }) {
              }}>
           <span class="answer-bar__tag answer-bar__tag--de"
                 onClick=${(e) => { e.stopPropagation(); focusEnd(ansDeRef.current); }}>de</span>
-          <div ref=${ansDeRef} contentEditable class="answer-bar__field answer-bar__field--de"
+          <span ref=${ansDeRef} contentEditable class="answer-bar__field answer-bar__field--de"
                onBlur=${(e) => {
                  const text = e.target.textContent.trim();
                  if (text === ansDe) return;
@@ -174,9 +174,9 @@ export function QuestionSlide({ desc, onRerender }) {
                    requestAnimationFrame(() => { if (ansEnRef.current) ansEnRef.current.focus(); });
                  }
                }}>
-          </div>
+          </span>
           <span class=${`answer-bar__sep ${(!ansDe || !ansEn) ? 'answer-bar__sep--hover' : ''}`}>⬧</span>
-          <div ref=${ansEnRef} contentEditable
+          <span ref=${ansEnRef} contentEditable
                class="answer-bar__field answer-bar__field--en"
                onBlur=${(e) => {
                  const text = e.target.textContent.trim();
@@ -190,7 +190,7 @@ export function QuestionSlide({ desc, onRerender }) {
                onKeyDown=${(e) => {
                  if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
                }}>
-          </div>
+          </span>
           <span class=${`answer-bar__tag answer-bar__tag--en ${!ansEn ? 'answer-bar__tag--edit' : ''}`}
                 onClick=${(e) => { e.stopPropagation(); focusEnd(ansEnRef.current); }}>
             en
