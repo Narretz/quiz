@@ -11,7 +11,7 @@ answer editing:
 - show language indicators directly after language (can display outside, doesn't matter) ✅
 
 pptx:
-- answer boxes still too big sometimes -> calculate exactly like text boxes?
+- answer boxes still too big sometimes -> calculate exactly like text boxes? ✅
 - Let us begin + Pause/Break + No phones text box is not centered aligned (impress only so not super important)
 - cover image still stretched instead of contain ✅
 - quiz rules -> first line bit too close to title ✅
