@@ -1,13 +1,21 @@
 import { h } from "preact";
 import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
-import { SLIDE_STYLE, computeImageLayout, formatAnswer, fit } from "../quiz-core.js";
-import { PT_SCALE, PX, px, esc } from "../lib/utils.js";
+import { SLIDE_STYLE, computeImageLayout, fit } from "../quiz-core.js";
+import { PT_SCALE, PX, px } from "../lib/utils.js";
 import { slideImages, slideAudio, quizQuestions, manualOverrides, slideStyle, slideOverrides, scheduleSave } from "../lib/state.js";
 import { fitSlideText } from "../lib/fitting.js";
 import { ImageActions } from "./image-actions.js";
 
 const html = htm.bind(h);
+
+function focusEnd(el) {
+  if (!el) return;
+  el.focus();
+  const sel = window.getSelection();
+  sel.selectAllChildren(el);
+  sel.collapseToEnd();
+}
 
 export function QuestionSlide({ desc, onRerender }) {
   const { num, withAnswers, id, noAnswerText } = desc;
@@ -20,6 +28,8 @@ export function QuestionSlide({ desc, onRerender }) {
   const bg = style.backgroundColor;
   const slideRef = useRef(null);
   const ansBarRef = useRef(null);
+  const ansDeRef = useRef(null);
+  const ansEnRef = useRef(null);
   const ansImgRef = useRef(null);
 
   let deW = fullW, enW = fullW;
@@ -52,6 +62,9 @@ export function QuestionSlide({ desc, onRerender }) {
   const qLh = SLIDE_STYLE.question.lineSpacing / 100;
   const numFs = SLIDE_STYLE.num.fontSize * PT_SCALE;
   const ansFs = SLIDE_STYLE.answer.fontSize * PT_SCALE;
+  const ansDe = q?.answers?.de || "";
+  const ansEnRaw = q?.answers?.en || "";
+  const ansEn = ansEnRaw !== ansDe ? ansEnRaw : "";
 
   // Answer slide image layout: fill space between number and answer bar
   useLayoutEffect(() => {
@@ -71,6 +84,18 @@ export function QuestionSlide({ desc, onRerender }) {
     el.style.width = px(w);
     el.style.height = px(h);
   });
+
+  // Sync answer field contents imperatively — avoid Preact overwriting user edits
+  useLayoutEffect(() => {
+    if (ansDeRef.current && ansDeRef.current !== document.activeElement) {
+      ansDeRef.current.textContent = ansDe;
+    }
+  }, [ansDe]);
+  useLayoutEffect(() => {
+    if (ansEnRef.current && ansEnRef.current !== document.activeElement) {
+      ansEnRef.current.textContent = ansEn;
+    }
+  }, [ansEn]);
 
   // Text fitting pass — runs after DOM is laid out
   useLayoutEffect(() => {
@@ -105,22 +130,57 @@ export function QuestionSlide({ desc, onRerender }) {
         <div style="position:absolute;left:${px(pad)};top:${px(pad)};font-size:${numFs}px;font-weight:bold">${num}</div>
       `}
       ${withAnswers && html`
-        <div ref=${ansBarRef} contentEditable class="answer-bar ${(q && formatAnswer(q)) ? 'answer-bar--filled' : ''}"
+        <div ref=${ansBarRef} class="answer-bar ${(ansDe || ansEn) ? 'answer-bar--filled' : ''}"
              style="font-size:${ansFs}px;background:${SLIDE_STYLE.answer.backgroundColor};color:${SLIDE_STYLE.answer.color}"
-             onBlur=${(e) => {
-               const text = e.target.textContent.trim();
-               const old = q ? formatAnswer(q) : "";
-               if (text === old) return;
-               const parts = text.split("⬧").map(s => s.trim());
-               const de = parts[0] || "";
-               const en = parts[1] ?? de;
-               const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
-               quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, answers: { de, en } } };
-               scheduleSave();
-               onRerender();
-             }}
-             onKeyDown=${(e) => { if (e.key === "Enter") { e.preventDefault(); e.target.blur(); } }}>
-          ${q ? formatAnswer(q) : ""}
+             onClick=${(e) => {
+               if (e.target === ansBarRef.current && ansDeRef.current) ansDeRef.current.focus();
+             }}>
+          <span class="answer-bar__tag answer-bar__tag--de"
+                onClick=${(e) => { e.stopPropagation(); focusEnd(ansDeRef.current); }}>de</span>
+          <div ref=${ansDeRef} contentEditable class="answer-bar__field answer-bar__field--de"
+               onBlur=${(e) => {
+                 const text = e.target.textContent.trim();
+                 if (text === ansDe) return;
+                 const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
+                 quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, answers: { ...existing.answers, de: text } } };
+                 scheduleSave();
+                 onRerender();
+               }}
+               onKeyDown=${(e) => {
+                 if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+                 if (e.key === "Tab") {
+                   e.preventDefault();
+                   const text = e.target.textContent.trim();
+                   if (text !== ansDe) {
+                     const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
+                     quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, answers: { ...existing.answers, de: text } } };
+                     scheduleSave();
+                     onRerender();
+                   }
+                   requestAnimationFrame(() => { if (ansEnRef.current) ansEnRef.current.focus(); });
+                 }
+               }}>
+          </div>
+          <span class=${`answer-bar__sep ${!ansEn ? 'answer-bar__sep--hover' : ''}`}>⬧</span>
+          <div ref=${ansEnRef} contentEditable
+               class="answer-bar__field answer-bar__field--en"
+               onBlur=${(e) => {
+                 const text = e.target.textContent.trim();
+                 if (text === ansEn) return;
+                 const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
+                 const en = text || existing.answers.de;
+                 quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, answers: { ...existing.answers, en } } };
+                 scheduleSave();
+                 onRerender();
+               }}
+               onKeyDown=${(e) => {
+                 if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+               }}>
+          </div>
+          <span class=${`answer-bar__tag answer-bar__tag--en ${!ansEn ? 'answer-bar__tag--edit' : ''}`}
+                onClick=${(e) => { e.stopPropagation(); focusEnd(ansEnRef.current); }}>
+            en
+          </span>
         </div>
       `}
       ${withAnswers && html`

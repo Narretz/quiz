@@ -197,21 +197,63 @@
         width: 100%;
         min-height: 1.5em;
         font-weight: bold;
-        text-align: center;
         padding: 4px 0;
         z-index: 1;
-        cursor: text;
-        outline: none;
         display: none;
+        align-items: center;
+        justify-content: center;
     }
 
     .answer-bar--filled {
-        display: block;
+        display: flex;
     }
 
     .slide:hover .answer-bar,
-    .answer-bar:focus {
-        display: block;
+    .answer-bar:focus-within {
+        display: flex;
+    }
+
+    .answer-bar__field {
+        min-height: 1.2em;
+        outline: none;
+        cursor: text;
+        padding: 0 4px;
+        text-align: center;
+    }
+
+    .answer-bar__sep {
+        padding: 0 4px;
+        user-select: none;
+    }
+
+    /* Sep/tags: always take space, invisible until hover (no layout shift) */
+    .answer-bar__sep--hover {
+        visibility: hidden;
+    }
+
+    .answer-bar:hover .answer-bar__sep--hover,
+    .answer-bar:focus-within .answer-bar__sep--hover {
+        visibility: visible;
+    }
+
+.answer-bar__tag {
+        font-size: 11px;
+        text-transform: uppercase;
+        visibility: hidden;
+        user-select: none;
+        flex-shrink: 0;
+        padding: 0 3px;
+        opacity: 0.8;
+        cursor: pointer;
+    }
+
+    .answer-bar:hover .answer-bar__tag,
+    .answer-bar:focus-within .answer-bar__tag {
+        visibility: visible;
+    }
+
+    .answer-bar__tag:hover {
+        opacity: 1;
     }
 
     .slide .img-actions {
