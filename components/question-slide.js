@@ -74,25 +74,7 @@ export function QuestionSlide({ desc, onRerender }) {
 
   // Text fitting pass — runs after DOM is laid out
   useLayoutEffect(() => {
-    if (!slideRef.current) return;
-    if (!imgEntry) {
-      // Reset styles that fitSlideText may have mutated directly on the DOM —
-      // Preact won't re-apply them because the template values haven't changed.
-      const deEl = slideRef.current.querySelector('[data-role="de"]');
-      const enEl = slideRef.current.querySelector('[data-role="en"]');
-      if (deEl) {
-        deEl.style.fontSize = qFs + "px";
-        deEl.style.lineHeight = String(qLh);
-        deEl.style.width = px(fullW);
-      }
-      if (enEl) {
-        enEl.style.fontSize = qFs + "px";
-        enEl.style.lineHeight = String(qLh);
-        enEl.style.width = px(fullW);
-        enEl.style.top = px(2.5);
-      }
-      return;
-    }
+    if (!slideRef.current || !hasQuestionText) return;
     const images = slideImages.value;
     const manual = manualOverrides.value[slideKey];
     const result = manual

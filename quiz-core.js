@@ -514,13 +514,13 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
       slide.addText(desc.text.de, {
         x: pad, y: pad, w: deW, h: 2.2,
         fontSize: SLIDE_STYLE.question.fontSize, valign: "top", color: fgColor,
-        lineSpacingMultiple: SLIDE_STYLE.question.lineSpacing / 100,
+        lineSpacing: SLIDE_STYLE.question.fontSize * SLIDE_STYLE.question.lineSpacing / 100,
       });
       if (desc.text.en) {
         slide.addText(desc.text.en, {
           x: pad, y: 2.5, w: enW, h: 2,
           fontSize: SLIDE_STYLE.question.fontSize, valign: "top", color: fgColor,
-          lineSpacingMultiple: SLIDE_STYLE.question.lineSpacing / 100,
+          lineSpacing: SLIDE_STYLE.question.fontSize * SLIDE_STYLE.question.lineSpacing / 100,
         });
       }
       addSlideMedia(slide, desc, { skipImage: true });
@@ -595,12 +595,12 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
         { text: q.text.de, options: { fontSize: qFontSize, color: fgColor } },
       ], {
         x: pad, y: pad, w: deW, h: deH, valign: "top",
-        lineSpacingMultiple: qLineSpacing / 100,
+        lineSpacing: qFontSize * qLineSpacing / 100,
       });
       if (q.text.en) {
         slide.addText(q.text.en, {
           x: pad, y: enY, w: enW, h: enH, fontSize: qFontSize, valign: "top", color: fgColor,
-          lineSpacingMultiple: qLineSpacing / 100,
+          lineSpacing: qFontSize * qLineSpacing / 100,
         });
       }
     } else {
