@@ -19,6 +19,10 @@
       margin: 10px 10px 10px 0;
     }
 
+    details ul {
+        margin-left: 20px;
+    }
+
     .controls {
         display: flex;
         gap: 1rem;

@@ -32,7 +32,17 @@ function App() {
 
   return html`
     <h1>Quiz XLSX to PPTX</h1>
-    <p class="howto">How does it work? Upload an .xlsx file. A quiz presentation will be created. You can add images to slides. Adding an image to a question will automatically add it to the answer, but you can also add separate images to questions/answers. Your changes will be saved locally in this browser and can be restored when you come back. You can also download the presentation with all images included.</p>
+    <details class="howto">
+      <summary><h2>How does it work?</h2></summary>
+      <p>Upload an .xlsx file in the usual format. A quiz is created with the default structure and slides.</p>
+      <ul>
+        <li>For empty rounds, 10 slides are created automatically</li>
+        <li>You can add 1 image and/or 1 audio file to all slides, except the first 3. Text will automatically be repositioned. Adding an image to a question will automatically add it to the answer, but you can also add distinct images to questions/answers</li>
+        <li>Questions, answers, and round descriptions can be edited per language by clicking into the text. Answers can only be edited in the answer slide.</li>
+        <li>Your changes will be saved locally in this browser and you can load quizzes later and continue editing.</li>
+        <li>Downloading the quiz as .pptx will include all media and text changes and create very similar output, but you should check for text overflow specifically.</li>
+      </ul>
+    </details>
     <div class="controls">
       <label class="upload-btn">
         Upload .xlsx
