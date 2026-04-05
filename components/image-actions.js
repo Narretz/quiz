@@ -124,9 +124,11 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
 
   return html`
     <div class="img-actions">
-      ${isQuestion && html`<button onClick=${nav}>${withAnswers ? "\u2191 question" : "\u2193 answer"}</button>`}
-      ${isRoundTitle && html`<button onClick=${nav}>${!isSource ? "\u2191 questions" : "\u2193 answers"}</button>`}
-        <div class="img-actions__right">
+      <div class="img-actions__left">
+        ${isQuestion && html`<button onClick=${nav}>${withAnswers ? "\u2191 question" : "\u2193 answer"}</button>`}
+        ${isRoundTitle && html`<button onClick=${nav}>${!isSource ? "\u2191 questions" : "\u2193 answers"}</button>`}
+      </div>
+      <div class="img-actions__right">
         ${debug && imgEntry && html`
           <label class="override-label">
             <input type="number" class="slide-fs-input" step="0.5" value=${displayFs}

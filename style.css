@@ -221,6 +221,11 @@
         vertical-align: middle;
     }
 
+    .answer-bar__field:focus {
+        outline: 1.5px solid rgba(255, 255, 255, 0.35);
+        outline-offset: 2px;
+    }
+
     .answer-bar__sep {
         padding: 0 4px;
         user-select: none;
@@ -254,6 +259,40 @@
         opacity: 1;
     }
 
+    .q-text__field {
+        outline: none;
+        min-width: 1em;
+    }
+
+    .q-text__field:focus {
+        outline: 1.5px solid rgba(255, 255, 255, 0.35);
+        outline-offset: 2px;
+    }
+
+    .q-text__tag {
+        position: absolute;
+        left: 0;
+        bottom: -14px;
+        font-size: 11px;
+        text-transform: uppercase;
+        /*visibility: hidden;*/
+        display: none;
+        user-select: none;
+        padding: 0 3px;
+        opacity: 0.8;
+        cursor: pointer;
+    }
+
+    .slide:hover .q-text__tag,
+    [data-role]:focus-within > .q-text__tag {
+        /*visibility: visible;*/
+        display: block;
+    }
+
+    .q-text__tag:hover {
+        opacity: 1;
+    }
+
     .slide .img-actions {
         position: absolute;
         top: 4px;
@@ -264,23 +303,29 @@
         z-index: 2;
         font-size: 1rem;
         left: 4px;
+        pointer-events: none;
     }
 
     .slide:hover .img-actions {
         display: flex;
     }
 
+    .slide .img-actions .img-actions__left {
+      pointer-events: all;
+    }
+
     .slide .img-actions .img-actions__right {
       margin-left: auto;
       display: flex;
       gap: 3px;
+      pointer-events: all;
     }
 
     .slide .img-actions button {
         font-size: 1rem;
         padding: 2px 6px;
         border-radius: 3px;
-        background: rgba(0, 0, 0, 0.65);
+        background: rgba(0, 0, 0, 0.6);
         color: #fff;
         border: none;
         cursor: pointer;

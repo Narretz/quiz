@@ -31,6 +31,8 @@ export function QuestionSlide({ desc, onRerender }) {
   const ansDeRef = useRef(null);
   const ansEnRef = useRef(null);
   const ansImgRef = useRef(null);
+  const deTextRef = useRef(null);
+  const enTextRef = useRef(null);
 
   let deW = fullW, enW = fullW;
   let imgStyle = null;
@@ -109,6 +111,18 @@ export function QuestionSlide({ desc, onRerender }) {
     }
   }, [ansEn]);
 
+  // Sync question text fields imperatively — avoid Preact overwriting user edits
+  useLayoutEffect(() => {
+    if (deTextRef.current && deTextRef.current !== document.activeElement) {
+      deTextRef.current.textContent = q?.text?.de || "";
+    }
+  }, [q?.text?.de]);
+  useLayoutEffect(() => {
+    if (enTextRef.current && enTextRef.current !== document.activeElement) {
+      enTextRef.current.textContent = q?.text?.en || "";
+    }
+  }, [q?.text?.en]);
+
   // Text fitting pass — runs after DOM is laid out
   useLayoutEffect(() => {
     if (!slideRef.current || !hasQuestionText) return;
@@ -124,20 +138,53 @@ export function QuestionSlide({ desc, onRerender }) {
         slideOverrides.value = { ...slideOverrides.value, [slideKey]: result };
       }
     }
-  }, [imgEntry, slideKey, style.fontSize, style.lineSpacing]);
+  }, [imgEntry, slideKey, style.fontSize, style.lineSpacing, q?.text?.de, q?.text?.en]);
 
   return html`
     <div class="slide" ref=${slideRef} style="background-color:${bg};color:${style.textColor || '#000'}"
          data-slide-id=${id} data-answers=${withAnswers ? "1" : "0"}>
-      ${hasQuestionText ? html`
-        <div data-role="de" style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${qFs}px;line-height:${qLh}">
-          <span style="font-size:${numFs}px;font-weight:bold">${num}</span>${" "}${q.text.de}
+      ${q ? html`
+        <div lang="de" data-role="de" style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${qFs}px;line-height:${qLh}">
+          <span style="font-size:${numFs}px;font-weight:bold">${num}</span>${" "}<span ref=${deTextRef} contentEditable class="q-text__field"
+               onBlur=${(e) => {
+                 const text = e.target.textContent.trim();
+                 if (text === (q.text.de || "")) return;
+                 const existing = quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
+                 quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, text: { ...existing.text, de: text } } };
+                 scheduleSave();
+                 onRerender();
+               }}
+               onKeyDown=${(e) => {
+                 if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+                 if (e.key === "Tab") {
+                   e.preventDefault();
+                   const text = e.target.textContent.trim();
+                   if (text !== (q.text.de || "")) {
+                     const existing = quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
+                     quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, text: { ...existing.text, de: text } } };
+                     scheduleSave();
+                     onRerender();
+                   }
+                   requestAnimationFrame(() => { if (enTextRef.current) focusEnd(enTextRef.current); });
+                 }
+               }}></span>
+          <span class="q-text__tag q-text__tag--de" onClick=${(e) => { e.stopPropagation(); focusEnd(deTextRef.current); }}>de</span>
         </div>
-        ${q.text.en && html`
-          <div data-role="en" style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${qFs}px;line-height:${qLh}">
-            ${q.text.en}
-          </div>
-        `}
+        <div lang="en" data-role="en" style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${qFs}px;line-height:${qLh}">
+          <span ref=${enTextRef} contentEditable class="q-text__field"
+               onBlur=${(e) => {
+                 const text = e.target.textContent.trim();
+                 if (text === (q.text.en || "")) return;
+                 const existing = quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
+                 quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, text: { ...existing.text, en: text } } };
+                 scheduleSave();
+                 onRerender();
+               }}
+               onKeyDown=${(e) => {
+                 if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+               }}></span>
+          <span class="q-text__tag q-text__tag--en" onClick=${(e) => { e.stopPropagation(); focusEnd(enTextRef.current); }}>en</span>
+        </div>
       ` : html`
         <div style="position:absolute;left:${px(pad)};top:${px(pad)};font-size:${numFs}px;font-weight:bold">${num}</div>
       `}

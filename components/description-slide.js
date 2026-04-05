@@ -3,11 +3,19 @@ import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { SLIDE_STYLE, computeImageLayout } from "../quiz-core.js";
 import { PT_SCALE, PX, px } from "../lib/utils.js";
-import { slideStyle, slideImages, slideAudio, slideOverrides } from "../lib/state.js";
+import { slideStyle, slideImages, slideAudio, slideOverrides, slideDescriptors, scheduleSave } from "../lib/state.js";
 import { fitSlideText } from "../lib/fitting.js";
 import { ImageActions } from "./image-actions.js";
 
 const html = htm.bind(h);
+
+function focusEnd(el) {
+  if (!el) return;
+  el.focus();
+  const sel = window.getSelection();
+  sel.selectAllChildren(el);
+  sel.collapseToEnd();
+}
 
 export function DescriptionSlide({ desc, onRerender }) {
   const bg = slideStyle.value.backgroundColor;
@@ -18,6 +26,8 @@ export function DescriptionSlide({ desc, onRerender }) {
   const lh = SLIDE_STYLE.question.lineSpacing / 100;
   const deRef = useRef(null);
   const enRef = useRef(null);
+  const deTextRef = useRef(null);
+  const enTextRef = useRef(null);
   const slideRef = useRef(null);
   const id = desc.id;
   const slideKey = id ? `${id}:0` : null;
@@ -33,6 +43,29 @@ export function DescriptionSlide({ desc, onRerender }) {
     const { img } = layout;
     imgStyle = { position: "absolute", left: px(img.x), top: px(img.y), width: px(img.w), height: px(img.h), objectFit: "contain" };
   }
+
+  function updateText(lang, text) {
+    const descs = slideDescriptors.value;
+    const idx = descs.findIndex(d => d.id === id);
+    if (idx === -1) return;
+    const updated = [...descs];
+    updated[idx] = { ...updated[idx], text: { ...updated[idx].text, [lang]: text } };
+    slideDescriptors.value = updated;
+    scheduleSave();
+    onRerender();
+  }
+
+  // Sync text fields imperatively — avoid Preact overwriting user edits
+  useLayoutEffect(() => {
+    if (deTextRef.current && deTextRef.current !== document.activeElement) {
+      deTextRef.current.textContent = desc.text.de || "";
+    }
+  }, [desc.text.de]);
+  useLayoutEffect(() => {
+    if (enTextRef.current && enTextRef.current !== document.activeElement) {
+      enTextRef.current.textContent = desc.text.en || "";
+    }
+  }, [desc.text.en]);
 
   useLayoutEffect(() => {
     if (imgEntry && slideRef.current) {
@@ -61,20 +94,42 @@ export function DescriptionSlide({ desc, onRerender }) {
         enRef.current.style.top = Math.round(enY * PX) + "px";
       }
     }
-  });
+  }, [desc.text.de, desc.text.en]);
 
   return html`
     <div class="slide" ref=${slideRef} style="background-color:${bg};color:${fg}"
          data-slide-id=${id} data-answers="0">
       ${imgStyle && html`<img src=${imgEntry.data} style=${imgStyle} />`}
-      <div ref=${deRef} data-role="de" style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${fs}px;line-height:${lh};white-space:pre-line">
-        ${desc.text.de}
+      <div ref=${deRef} lang="de" data-role="de" style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${fs}px;line-height:${lh};white-space:pre-line">
+        <span ref=${deTextRef} contentEditable class="q-text__field"
+             onBlur=${(e) => {
+               const text = e.target.textContent.trim();
+               if (text === (desc.text.de || "")) return;
+               updateText("de", text);
+             }}
+             onKeyDown=${(e) => {
+               if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+               if (e.key === "Tab") {
+                 e.preventDefault();
+                 const text = e.target.textContent.trim();
+                 if (text !== (desc.text.de || "")) updateText("de", text);
+                 requestAnimationFrame(() => { if (enTextRef.current) focusEnd(enTextRef.current); });
+               }
+             }}></span>
+        <span class="q-text__tag q-text__tag--de" onClick=${(e) => { e.stopPropagation(); focusEnd(deTextRef.current); }}>de</span>
       </div>
-      ${desc.text.en && html`
-        <div ref=${enRef} data-role="en" style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${fs}px;line-height:${lh};white-space:pre-line">
-          ${desc.text.en}
-        </div>
-      `}
+      <div ref=${enRef} lang="en" data-role="en" style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${fs}px;line-height:${lh};white-space:pre-line">
+        <span ref=${enTextRef} contentEditable class="q-text__field"
+             onBlur=${(e) => {
+               const text = e.target.textContent.trim();
+               if (text === (desc.text.en || "")) return;
+               updateText("en", text);
+             }}
+             onKeyDown=${(e) => {
+               if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+             }}></span>
+        <span class="q-text__tag q-text__tag--en" onClick=${(e) => { e.stopPropagation(); focusEnd(enTextRef.current); }}>en</span>
+      </div>
       ${audioEntry && html`
         <div class="slide-audio" style="background:${bg}e0">
           <audio controls preload="none" src=${audioEntry.data} />
