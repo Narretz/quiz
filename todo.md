@@ -1,3 +1,19 @@
+Feedback
+
+- Frage-Nummer auch in den Englischen Block
+- Video
+- Lasst uns beginnen - Text unten
+- Zwei Bilder
+- Name Ten: Text drin lassen
+- Jackpot-Antworten zeigen nach click
+
+- Zwischenstand Folie ✅
+- More bottom padding for answer block
+- Bold formatting
+- Feld für Jackpot-Summe
+- Feld für Email-Adresse
+
+
 MVP
 - export with green background and white font color ✅
 - add intro slides ✅
