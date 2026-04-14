@@ -2,10 +2,11 @@ import { h } from "preact";
 import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { INTRO_SLIDES, DEFAULT_MONEY } from "../lib/intro-slides.js";
-import { SLIDE_STYLE } from "../quiz-core.js";
-import { PT_SCALE, px, PX, layoutImageBelowText } from "../lib/utils.js";
+import { SLIDE_STYLE, getSlideImages } from "../quiz-core.js";
+import { PT_SCALE, px, PX, layoutImageBelowText, layoutTwoImagesBelowText } from "../lib/utils.js";
 import { slideStyle, slideImages, slideAudio } from "../lib/state.js";
 import { ImageActions } from "./image-actions.js";
+import { SlideImage } from "./slide-image.js";
 
 const html = htm.bind(h);
 
@@ -24,7 +25,8 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
   const bg = slideStyle.value.backgroundColor;
   const fg = slideStyle.value.textColor || '#000';
   const slideKey = id ? `${id}:0` : null;
-  const imgEntry = slideKey && slideImages.value[slideKey];
+  const [imgEntry, imgEntry1] = slideKey ? getSlideImages(slideImages.value, slideKey) : [null, null];
+  const hasTwoImages = imgEntry && imgEntry1;
   const audioEntry = slideKey && slideAudio.value[slideKey];
 
   if (style === "welcome") {
@@ -49,8 +51,13 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
     if (imgEntry) {
       const textRef = useRef(null);
       const imgElRef = useRef(null);
+      const img1ElRef = useRef(null);
       useLayoutEffect(() => {
-        layoutImageBelowText(textRef.current, imgElRef.current, imgEntry);
+        if (hasTwoImages) {
+          layoutTwoImagesBelowText(textRef.current, imgElRef.current, img1ElRef.current, imgEntry, imgEntry1);
+        } else {
+          layoutImageBelowText(textRef.current, imgElRef.current, imgEntry);
+        }
       });
       return html`
         <div class="slide" style="background-color:${bg};color:${fg}">
@@ -66,7 +73,10 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
               </div>
             `)}
           </div>
-          <img ref=${imgElRef} src=${imgEntry.data} style="position:absolute;object-fit:contain" />
+          <${SlideImage} src=${imgEntry.data} imgRef=${imgElRef} slideKey=${slideKey} imgIdx=${0}
+               isSource=${false} linkKey=${null} onRerender=${onRerender} />
+          ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} imgRef=${img1ElRef} slideKey=${slideKey} imgIdx=${1}
+               isSource=${false} linkKey=${null} onRerender=${onRerender} />`}
           ${mediaOverlay()}
         </div>
       `;
@@ -114,9 +124,14 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
     if (imgEntry) {
       const textRef = useRef(null);
       const imgElRef = useRef(null);
+      const img1ElRef = useRef(null);
 
       useLayoutEffect(() => {
-        layoutImageBelowText(textRef.current, imgElRef.current, imgEntry);
+        if (hasTwoImages) {
+          layoutTwoImagesBelowText(textRef.current, imgElRef.current, img1ElRef.current, imgEntry, imgEntry1);
+        } else {
+          layoutImageBelowText(textRef.current, imgElRef.current, imgEntry);
+        }
       });
 
       return html`
@@ -129,7 +144,10 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
               <div style="font-size:${data.ruleFontSize * PT_SCALE}px;color:${c(data.ruleColor)};margin-top:4px">${rule}</div>
             `)}
           </div>
-          <img ref=${imgElRef} src=${imgEntry.data} style="position:absolute;object-fit:contain" />
+          <${SlideImage} src=${imgEntry.data} imgRef=${imgElRef} slideKey=${slideKey} imgIdx=${0}
+               isSource=${false} linkKey=${null} onRerender=${onRerender} />
+          ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} imgRef=${img1ElRef} slideKey=${slideKey} imgIdx=${1}
+               isSource=${false} linkKey=${null} onRerender=${onRerender} />`}
           ${mediaOverlay()}
         </div>
       `;
@@ -151,9 +169,14 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
   if (style === "begin") {
     const textRef = useRef(null);
     const imgElRef = useRef(null);
+    const img1ElRef = useRef(null);
 
     useLayoutEffect(() => {
-      layoutImageBelowText(textRef.current, imgElRef.current, imgEntry);
+      if (hasTwoImages) {
+        layoutTwoImagesBelowText(textRef.current, imgElRef.current, img1ElRef.current, imgEntry, imgEntry1);
+      } else {
+        layoutImageBelowText(textRef.current, imgElRef.current, imgEntry);
+      }
     });
 
     if (imgEntry) {
@@ -165,7 +188,10 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
               <div style="font-size:${l.fontSize * PT_SCALE}px;${l.bold ? 'font-weight:bold;' : ''}color:${c(l.color)};${l.marginTop ? `margin-top:${l.marginTop * PX}px;` : ''}">${l.text}</div>
             `)}
           </div>
-          <img ref=${imgElRef} src=${imgEntry.data} style="position:absolute;object-fit:contain" />
+          <${SlideImage} src=${imgEntry.data} imgRef=${imgElRef} slideKey=${slideKey} imgIdx=${0}
+               isSource=${false} linkKey=${null} onRerender=${onRerender} />
+          ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} imgRef=${img1ElRef} slideKey=${slideKey} imgIdx=${1}
+               isSource=${false} linkKey=${null} onRerender=${onRerender} />`}
           ${mediaOverlay()}
         </div>
       `;

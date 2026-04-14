@@ -79,6 +79,32 @@ export function computeImageLayout(aspectRatio) {
   };
 }
 
+/** Return [img0, img1] for a slide key, where either may be null. */
+export function getSlideImages(images, slideKey) {
+  return [images[slideKey] || null, images[slideKey + ":1"] || null];
+}
+
+/** Side-by-side layout for two images at bottom of slide. heightFrac controls image area (default 0.45). */
+export function computeTwoImageLayout(ar0, ar1, heightFrac = 0.45) {
+  const { width: W, height: H, pad } = SLIDE_STYLE;
+  const fullW = W - 2 * pad;
+  const gap = pad;
+  const boxW = (fullW - gap) / 2;
+  const boxH = H * heightFrac;
+  const topY = H - pad - boxH;
+
+  const img0 = fit(boxW, boxH, ar0);
+  const img1 = fit(boxW, boxH, ar1);
+
+  return {
+    mode: "two-images",
+    img0: { x: pad + (boxW - img0.w) / 2, y: topY + (boxH - img0.h) / 2, w: img0.w, h: img0.h },
+    img1: { x: pad + boxW + gap + (boxW - img1.w) / 2, y: topY + (boxH - img1.h) / 2, w: img1.w, h: img1.h },
+    deW: fullW, enW: fullW, answerW: fullW,
+    textBottomLimit: topY - pad,
+  };
+}
+
 export function astToQuiz(ast) {
   const sheet =
     ast.content.find((s) => s.metadata.sheetName === "Tabelle1") ??
@@ -204,6 +230,7 @@ export function buildSlideDescriptors(quiz) {
   addTitle(ANTWORTEN_TEXT, ANTWORTEN_SUB, "antworten-s0");
   addRoundQuestions(quiz.rounds.slice(0, 2), 0, true);
   addExtra("break-1");
+  addExtra("points");
 
   // --- Section 2: Rounds 2-4 ---
   addRoundQuestions(quiz.rounds.slice(2, 5), 2, false);
@@ -257,13 +284,34 @@ function addImageBelowText(slide, entry, textBottom) {
   });
 }
 
+/** Add two images side-by-side below text, contain-fit to remaining slide space. */
+function addTwoImagesBelowText(slide, entry0, entry1, textBottom) {
+  const { pad, width: W, height: H } = SLIDE_STYLE;
+  const imgTop = textBottom + pad;
+  const fullW = W - 2 * pad;
+  const boxH = H - pad - imgTop;
+  if (boxH <= 0) return;
+  const gap = pad;
+  const boxW = (fullW - gap) / 2;
+  for (const [entry, xOff] of [[entry0, pad], [entry1, pad + boxW + gap]]) {
+    const ar = entry.width / entry.height;
+    const { w, h } = fit(boxW, boxH, ar);
+    slide.addImage({
+      data: entry.data,
+      x: xOff + (boxW - w) / 2, y: imgTop + (boxH - h) / 2, w, h,
+      sizing: { type: "contain", w, h },
+    });
+  }
+}
+
 function renderIntroSlide(slide, data, assets, desc, images) {
   if (!data) return;
   const money = DEFAULT_MONEY;
   const { width: W, height: H, pad } = SLIDE_STYLE;
   const style = data.style || data.id; // migration fallback for old saves
   const slideKey = desc?.id ? `${desc.id}:0` : null;
-  const imgEntry = slideKey && images?.[slideKey];
+  const [imgEntry, imgEntry1] = slideKey && images ? getSlideImages(images, slideKey) : [null, null];
+  const hasTwoImages = imgEntry && imgEntry1;
 
   if (style === "welcome") {
     // Background logo — full slide, cover
@@ -319,7 +367,8 @@ function renderIntroSlide(slide, data, assets, desc, images) {
       }
     });
     if (imgEntry) {
-      addImageBelowText(slide, imgEntry, textBottom);
+      if (hasTwoImages) addTwoImagesBelowText(slide, imgEntry, imgEntry1, textBottom);
+      else addImageBelowText(slide, imgEntry, textBottom);
     }
     return;
   }
@@ -367,7 +416,8 @@ function renderIntroSlide(slide, data, assets, desc, images) {
     });
     if (imgEntry) {
       const textBottom = rulesY + data.rules.length * 0.5;
-      addImageBelowText(slide, imgEntry, textBottom);
+      if (hasTwoImages) addTwoImagesBelowText(slide, imgEntry, imgEntry1, textBottom);
+      else addImageBelowText(slide, imgEntry, textBottom);
     }
     return;
   }
@@ -392,7 +442,8 @@ function renderIntroSlide(slide, data, assets, desc, images) {
       for (const g of groups) {
         slide.addText(g.runs, { x: pad, y: g.y, w: W - 2 * pad, h: g.h, align: "center", valign: "top" });
       }
-      addImageBelowText(slide, imgEntry, y);
+      if (hasTwoImages) addTwoImagesBelowText(slide, imgEntry, imgEntry1, y);
+      else addImageBelowText(slide, imgEntry, y);
     } else if (groups.length === 1) {
       slide.addText(groups[0].runs, { x: pad, y: 0, w: W - 2 * pad, h: "100%", align: "center", valign: "middle" });
     } else {
@@ -462,8 +513,8 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
 
     if (desc.type === "title") {
       const slideKey = desc.id ? `${desc.id}:0` : null;
-      const hasImg = slideKey && images[slideKey];
-      if (hasImg) {
+      const [img0, img1] = slideKey ? getSlideImages(images, slideKey) : [null, null];
+      if (img0) {
         // Image mode: text at top, image below
         const textH = desc.subtitle ? 1.8 : 1.0;
         slide.addText(desc.text, {
@@ -476,7 +527,11 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
             fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top", color: fgColor,
           });
         }
-        addImageBelowText(slide, hasImg, pad + textH);
+        if (img1) {
+          addTwoImagesBelowText(slide, img0, img1, pad + textH);
+        } else {
+          addImageBelowText(slide, img0, pad + textH);
+        }
       } else {
         // No image: centered
         slide.addText(desc.text, {
@@ -502,9 +557,16 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
 
     if (desc.type === "description") {
       const descSlideKey = desc.id ? `${desc.id}:0` : null;
-      const descImg = descSlideKey && images[descSlideKey];
+      const [descImg, descImg1] = descSlideKey ? getSlideImages(images, descSlideKey) : [null, null];
       let deW = fullW, enW = fullW;
-      if (descImg) {
+      if (descImg && descImg1) {
+        const layout = computeTwoImageLayout(descImg.width / descImg.height, descImg1.width / descImg1.height);
+        deW = layout.deW;
+        enW = layout.enW;
+        for (const [entry, img] of [[descImg, layout.img0], [descImg1, layout.img1]]) {
+          slide.addImage({ data: entry.data, x: img.x, y: img.y, w: img.w, h: img.h, sizing: { type: "contain", w: img.w, h: img.h } });
+        }
+      } else if (descImg) {
         const layout = computeImageLayout(descImg.width / descImg.height);
         deW = layout.deW;
         enW = layout.enW;
@@ -533,18 +595,29 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
     const { num, withAnswers, id, noAnswerText } = desc;
     const q = (noAnswerText && withAnswers) ? null : (questions[id] || desc.q); // desc.q fallback for old saves
     const slideKey = id ? `${id}:${withAnswers ? 1 : 0}` : null;
-    const imgEntry = slideKey && images[slideKey];
+    const [imgEntry, imgEntry1] = slideKey ? getSlideImages(images, slideKey) : [null, null];
+    const hasTwoImages = imgEntry && imgEntry1;
 
     // No question text, no answer bar — image fills the slide
     const hasQuestionText = q && (q.text.de || q.text.en);
     if (!hasQuestionText && !withAnswers && imgEntry) {
-      const ar = imgEntry.width / imgEntry.height;
-      const { w, h } = fit(W - 2 * pad, H - 2 * pad, ar);
-      slide.addImage({
-        data: imgEntry.data,
-        x: (W - w) / 2, y: (H - h) / 2, w, h,
-        sizing: { type: "contain", w, h },
-      });
+      if (hasTwoImages) {
+        const gap = pad;
+        const boxW = (W - 2 * pad - gap) / 2, boxH = H - 2 * pad;
+        for (const [entry, xOff] of [[imgEntry, pad], [imgEntry1, pad + boxW + gap]]) {
+          const ar = entry.width / entry.height;
+          const { w: iw, h: ih } = fit(boxW, boxH, ar);
+          slide.addImage({ data: entry.data, x: xOff + (boxW - iw) / 2, y: (H - ih) / 2, w: iw, h: ih, sizing: { type: "contain", w: iw, h: ih } });
+        }
+      } else {
+        const ar = imgEntry.width / imgEntry.height;
+        const { w, h } = fit(W - 2 * pad, H - 2 * pad, ar);
+        slide.addImage({
+          data: imgEntry.data,
+          x: (W - w) / 2, y: (H - h) / 2, w, h,
+          sizing: { type: "contain", w, h },
+        });
+      }
       slide.addText(String(num), {
         x: pad, y: pad, w: 0.8, h: 0.5, fontSize: SLIDE_STYLE.num.fontSize, bold: true, color: fgColor,
       });
@@ -561,7 +634,16 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
     // Answer slides without question text: images handled in answer bar block below
     // Answer slides with question text: use computeImageLayout (same as question slides)
     if (imgEntry && (!withAnswers || hasQuestionText)) {
-      if (override?.imgLayout) {
+      if (hasTwoImages) {
+        const frac = override?.twoImageFrac || 0.45;
+        const layout = computeTwoImageLayout(imgEntry.width / imgEntry.height, imgEntry1.width / imgEntry1.height, frac);
+        deW = layout.deW;
+        enW = layout.enW;
+        bottomLimit = Math.min(bottomLimit, layout.textBottomLimit);
+        for (const [entry, img] of [[imgEntry, layout.img0], [imgEntry1, layout.img1]]) {
+          slide.addImage({ data: entry.data, x: img.x, y: img.y, w: img.w, h: img.h, sizing: { type: "contain", w: img.w, h: img.h } });
+        }
+      } else if (override?.imgLayout) {
         // Compact layout from browser fitting pass
         deW = override.deW ?? fullW;
         enW = override.enW ?? fullW;
@@ -629,24 +711,44 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
           const imgTop = pad + 0.5;
           const imgBoxH = answerY - imgTop - pad;
           if (imgBoxH > 0) {
-            const ar = imgEntry.width / imgEntry.height;
-            const { w: iw, h: ih } = fit(fullW, imgBoxH, ar);
-            slide.addImage({
-              data: imgEntry.data,
-              x: (W - iw) / 2, y: imgTop, w: iw, h: ih,
-              sizing: { type: "contain", w: iw, h: ih },
-            });
+            if (hasTwoImages) {
+              const gap = pad;
+              const boxW = (fullW - gap) / 2;
+              for (const [entry, xOff] of [[imgEntry, pad], [imgEntry1, pad + boxW + gap]]) {
+                const ar = entry.width / entry.height;
+                const { w: iw, h: ih } = fit(boxW, imgBoxH, ar);
+                slide.addImage({ data: entry.data, x: xOff + (boxW - iw) / 2, y: imgTop + (imgBoxH - ih) / 2, w: iw, h: ih, sizing: { type: "contain", w: iw, h: ih } });
+              }
+            } else {
+              const ar = imgEntry.width / imgEntry.height;
+              const { w: iw, h: ih } = fit(fullW, imgBoxH, ar);
+              slide.addImage({
+                data: imgEntry.data,
+                x: (W - iw) / 2, y: imgTop, w: iw, h: ih,
+                sizing: { type: "contain", w: iw, h: ih },
+              });
+            }
           }
         }
       } else if (imgEntry && !hasQuestionText) {
         // No answer, no question text — image fills slide (below number)
-        const ar = imgEntry.width / imgEntry.height;
-        const { w: iw, h: ih } = fit(W - 2 * pad, H - 2 * pad, ar);
-        slide.addImage({
-          data: imgEntry.data,
-          x: (W - iw) / 2, y: (H - ih) / 2, w: iw, h: ih,
-          sizing: { type: "contain", w: iw, h: ih },
-        });
+        if (hasTwoImages) {
+          const gap = pad;
+          const boxW = (W - 2 * pad - gap) / 2, boxH = H - 2 * pad;
+          for (const [entry, xOff] of [[imgEntry, pad], [imgEntry1, pad + boxW + gap]]) {
+            const ar = entry.width / entry.height;
+            const { w: iw, h: ih } = fit(boxW, boxH, ar);
+            slide.addImage({ data: entry.data, x: xOff + (boxW - iw) / 2, y: (H - ih) / 2, w: iw, h: ih, sizing: { type: "contain", w: iw, h: ih } });
+          }
+        } else {
+          const ar = imgEntry.width / imgEntry.height;
+          const { w: iw, h: ih } = fit(W - 2 * pad, H - 2 * pad, ar);
+          slide.addImage({
+            data: imgEntry.data,
+            x: (W - iw) / 2, y: (H - ih) / 2, w: iw, h: ih,
+            sizing: { type: "contain", w: iw, h: ih },
+          });
+        }
       }
     }
 

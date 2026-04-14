@@ -1,10 +1,11 @@
 import { h } from "preact";
 import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
-import { SLIDE_STYLE } from "../quiz-core.js";
-import { PT_SCALE, PX, px, layoutImageBelowText } from "../lib/utils.js";
+import { SLIDE_STYLE, getSlideImages } from "../quiz-core.js";
+import { PT_SCALE, PX, px, layoutImageBelowText, layoutTwoImagesBelowText } from "../lib/utils.js";
 import { slideStyle, slideImages, slideAudio } from "../lib/state.js";
 import { ImageActions } from "./image-actions.js";
+import { SlideImage } from "./slide-image.js";
 
 const html = htm.bind(h);
 
@@ -18,7 +19,8 @@ export function TitleSlide({ desc, anchor, onRerender }) {
   const titleForQuestions = id?.startsWith("title-r") && !id.endsWith("-ans");
 
   const slideKey = id ? `${id}:0` : null;
-  const imgEntry = slideKey && slideImages.value[slideKey];
+  const [imgEntry, imgEntry1] = slideKey ? getSlideImages(slideImages.value, slideKey) : [null, null];
+  const hasTwoImages = imgEntry && imgEntry1;
   const audioEntry = slideKey && slideAudio.value[slideKey];
   // Link round question titles ↔ answer titles
   let linkedSlideKey = null;
@@ -29,9 +31,14 @@ export function TitleSlide({ desc, anchor, onRerender }) {
   }
   const textRef = useRef(null);
   const imgRef = useRef(null);
+  const img1Ref = useRef(null);
 
   useLayoutEffect(() => {
-    layoutImageBelowText(textRef.current, imgRef.current, imgEntry);
+    if (hasTwoImages) {
+      layoutTwoImagesBelowText(textRef.current, imgRef.current, img1Ref.current, imgEntry, imgEntry1);
+    } else {
+      layoutImageBelowText(textRef.current, imgRef.current, imgEntry);
+    }
   });
 
   if (imgEntry) {
@@ -47,7 +54,10 @@ export function TitleSlide({ desc, anchor, onRerender }) {
             <div style="margin-top:8px;font-size:${subtitleFs}px;white-space:pre-line">${desc.subtitle}</div>
           `}
         </div>
-        <img ref=${imgRef} src=${imgEntry.data} style="position:absolute;object-fit:contain" />
+        <${SlideImage} src=${imgEntry.data} imgRef=${imgRef} slideKey=${slideKey} imgIdx=${0}
+             isSource=${titleForQuestions} linkKey=${linkedSlideKey} onRerender=${onRerender} />
+        ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} imgRef=${img1Ref} slideKey=${slideKey} imgIdx=${1}
+             isSource=${titleForQuestions} linkKey=${linkedSlideKey} onRerender=${onRerender} />`}
         ${audioEntry && html`
           <div class="slide-audio" style="background:${bg}e0">
             <audio controls preload="none" src=${audioEntry.data} />

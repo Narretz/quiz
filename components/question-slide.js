@@ -1,11 +1,12 @@
 import { h } from "preact";
 import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
-import { SLIDE_STYLE, computeImageLayout, fit } from "../quiz-core.js";
+import { SLIDE_STYLE, computeImageLayout, computeTwoImageLayout, getSlideImages, fit } from "../quiz-core.js";
 import { PT_SCALE, PX, px } from "../lib/utils.js";
 import { slideImages, slideAudio, quizQuestions, manualOverrides, slideStyle, slideOverrides, scheduleSave } from "../lib/state.js";
 import { fitSlideText } from "../lib/fitting.js";
 import { ImageActions } from "./image-actions.js";
+import { SlideImage } from "./slide-image.js";
 
 const html = htm.bind(h);
 
@@ -21,7 +22,8 @@ export function QuestionSlide({ desc, onRerender }) {
   const { num, withAnswers, id, noAnswerText } = desc;
   const q = (noAnswerText && withAnswers) ? null : (quizQuestions.value[id] || desc.q); // desc.q fallback for old saves
   const slideKey = id ? `${id}:${withAnswers ? 1 : 0}` : null;
-  const imgEntry = slideKey && slideImages.value[slideKey];
+  const [imgEntry, imgEntry1] = slideKey ? getSlideImages(slideImages.value, slideKey) : [null, null];
+  const hasTwoImages = imgEntry && imgEntry1;
   const style = slideStyle.value;
   const { pad } = SLIDE_STYLE;
   const fullW = SLIDE_STYLE.width - 2 * pad;
@@ -35,23 +37,41 @@ export function QuestionSlide({ desc, onRerender }) {
   const enTextRef = useRef(null);
 
   let deW = fullW, enW = fullW;
-  let imgStyle = null;
+  let imgStyle = null, imgStyle1 = null;
   const hasQuestionText = q && (q.text.de || q.text.en);
   const hasAnswer = q && (q.answers.de || q.answers.en);
   // No question text + answer + image on answer slide: image above answer bar (measured via ref)
   const answerImgLayout = withAnswers && imgEntry && !hasQuestionText && hasAnswer;
 
   if (imgEntry && !answerImgLayout) {
-    if (!hasQuestionText) {
-      // No question text, no answer bar — image fills the slide
+    if (hasTwoImages && hasQuestionText) {
+      // Two images: side-by-side at bottom
+      const layout = computeTwoImageLayout(imgEntry.width / imgEntry.height, imgEntry1.width / imgEntry1.height);
+      deW = layout.deW;
+      enW = layout.enW;
+      const toStyle = (img) => ({ position: "absolute", left: px(img.x), top: px(img.y), width: px(img.w), height: px(img.h), objectFit: "contain" });
+      imgStyle = toStyle(layout.img0);
+      imgStyle1 = toStyle(layout.img1);
+    } else if (!hasQuestionText) {
+      // No question text, no answer bar — image(s) fill the slide
       const ar = imgEntry.width / imgEntry.height;
       const W = SLIDE_STYLE.width, H = SLIDE_STYLE.height;
-      const boxW = W - 2 * pad, boxH = H - 2 * pad;
-      const fitW = ar > boxW / boxH ? boxW : boxH * ar;
-      const fitH = ar > boxW / boxH ? boxW / ar : boxH;
-      imgStyle = { position: "absolute", left: px((W - fitW) / 2), top: px((H - fitH) / 2), width: px(fitW), height: px(fitH), objectFit: "contain" };
+      if (hasTwoImages) {
+        const W = SLIDE_STYLE.width, H = SLIDE_STYLE.height;
+        const gap = pad;
+        const boxW = (W - 2 * pad - gap) / 2, boxH = H - 2 * pad;
+        const f0 = fit(boxW, boxH, ar), f1 = fit(boxW, boxH, imgEntry1.width / imgEntry1.height);
+        const toStyle = (img) => ({ position: "absolute", left: px(img.x), top: px(img.y), width: px(img.w), height: px(img.h), objectFit: "contain" });
+        imgStyle = toStyle({ x: pad + (boxW - f0.w) / 2, y: (H - f0.h) / 2, w: f0.w, h: f0.h });
+        imgStyle1 = toStyle({ x: pad + boxW + gap + (boxW - f1.w) / 2, y: (H - f1.h) / 2, w: f1.w, h: f1.h });
+      } else {
+        const boxW = W - 2 * pad, boxH = H - 2 * pad;
+        const fitW = ar > boxW / boxH ? boxW : boxH * ar;
+        const fitH = ar > boxW / boxH ? boxW / ar : boxH;
+        imgStyle = { position: "absolute", left: px((W - fitW) / 2), top: px((H - fitH) / 2), width: px(fitW), height: px(fitH), objectFit: "contain" };
+      }
     } else {
-      // Has question text — aspect-ratio based layout (same as question slides)
+      // Single image with question text — aspect-ratio based layout
       const layout = computeImageLayout(imgEntry.width / imgEntry.height);
       deW = layout.deW;
       enW = layout.enW;
@@ -68,6 +88,7 @@ export function QuestionSlide({ desc, onRerender }) {
   const ansEnRaw = q?.answers?.en || "";
   const ansEn = ansEnRaw !== ansDe ? ansEnRaw : "";
 
+  const ansImg1Ref = useRef(null);
   // Answer slide image layout: fill space between number and answer bar
   useLayoutEffect(() => {
     if (!answerImgLayout || !ansBarRef.current || !ansImgRef.current) return;
@@ -75,16 +96,29 @@ export function QuestionSlide({ desc, onRerender }) {
     const ansBarH = ansBarRef.current.offsetHeight / PX;
     const imgTop = pad + 0.5; // below number
     const imgBottom = H - ansBarH;
-    const boxW = W - 2 * pad;
     const boxH = imgBottom - imgTop - pad;
     if (boxH <= 0) return;
-    const ar = imgEntry.width / imgEntry.height;
-    const { w, h } = fit(boxW, boxH, ar);
-    const el = ansImgRef.current;
-    el.style.left = px((W - w) / 2);
-    el.style.top = px(imgTop);
-    el.style.width = px(w);
-    el.style.height = px(h);
+    if (hasTwoImages && ansImg1Ref.current) {
+      const layout = computeTwoImageLayout(imgEntry.width / imgEntry.height, imgEntry1.width / imgEntry1.height);
+      // Adjust vertical position to fit between number and answer bar
+      const scale = boxH / (H * 0.45);
+      for (const [el, img] of [[ansImgRef.current, layout.img0], [ansImg1Ref.current, layout.img1]]) {
+        const { w, h } = fit((W - 2 * pad - pad) / 2, boxH, img.w / img.h);
+        el.style.left = px(img.x);
+        el.style.top = px(imgTop + (boxH - h) / 2);
+        el.style.width = px(w);
+        el.style.height = px(h);
+      }
+    } else {
+      const boxW = W - 2 * pad;
+      const ar = imgEntry.width / imgEntry.height;
+      const { w, h } = fit(boxW, boxH, ar);
+      const el = ansImgRef.current;
+      el.style.left = px((W - w) / 2);
+      el.style.top = px(imgTop);
+      el.style.width = px(w);
+      el.style.height = px(h);
+    }
   });
 
   // Measure answer bar height and store for PPTX export
@@ -134,11 +168,11 @@ export function QuestionSlide({ desc, onRerender }) {
     // Write to slideOverrides signal — used by debug inputs (ImageActions) and PPTX export
     if (result) {
       const prev = slideOverrides.value[slideKey];
-      if (!prev || prev.fontSize !== result.fontSize || prev.lineSpacing !== result.lineSpacing || prev.enY !== result.enY) {
+      if (!prev || prev.fontSize !== result.fontSize || prev.lineSpacing !== result.lineSpacing || prev.enY !== result.enY || prev.twoImageFrac !== result.twoImageFrac) {
         slideOverrides.value = { ...slideOverrides.value, [slideKey]: result };
       }
     }
-  }, [imgEntry, slideKey, style.fontSize, style.lineSpacing, q?.text?.de, q?.text?.en]);
+  }, [imgEntry, imgEntry1, slideKey, style.fontSize, style.lineSpacing, q?.text?.de, q?.text?.en]);
 
   return html`
     <div class="slide" ref=${slideRef} style="background-color:${bg};color:${style.textColor || '#000'}"
@@ -250,8 +284,14 @@ export function QuestionSlide({ desc, onRerender }) {
           <text x="4" y="12" fill=${SLIDE_STYLE.answer.color} font-size="10" font-weight="bold">A</text>
         </svg>
       `}
-      ${answerImgLayout && html`<img ref=${ansImgRef} src=${imgEntry.data} style="position:absolute;object-fit:contain" />`}
-      ${imgStyle && html`<img src=${imgEntry.data} style=${imgStyle} />`}
+      ${answerImgLayout && html`<${SlideImage} src=${imgEntry.data} imgRef=${ansImgRef} slideKey=${slideKey} imgIdx=${0}
+           isSource=${!withAnswers} linkKey=${`${id}:${withAnswers ? 0 : 1}`} onRerender=${onRerender} />`}
+      ${answerImgLayout && hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} imgRef=${ansImg1Ref} slideKey=${slideKey} imgIdx=${1}
+           isSource=${!withAnswers} linkKey=${`${id}:${withAnswers ? 0 : 1}`} onRerender=${onRerender} />`}
+      ${imgStyle && html`<${SlideImage} src=${imgEntry.data} style=${imgStyle} slideKey=${slideKey} imgIdx=${0}
+           isSource=${!withAnswers} linkKey=${`${id}:${withAnswers ? 0 : 1}`} onRerender=${onRerender} />`}
+      ${imgStyle1 && html`<${SlideImage} src=${imgEntry1.data} style=${imgStyle1} slideKey=${slideKey} imgIdx=${1}
+           isSource=${!withAnswers} linkKey=${`${id}:${withAnswers ? 0 : 1}`} onRerender=${onRerender} />`}
       ${slideKey && slideAudio.value[slideKey] && html`
         <div class="slide-audio" style="background:${bg}e0">
           <audio controls preload="none" src=${slideAudio.value[slideKey].data} />

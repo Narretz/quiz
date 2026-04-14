@@ -1,11 +1,12 @@
 import { h } from "preact";
 import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
-import { SLIDE_STYLE, computeImageLayout } from "../quiz-core.js";
+import { SLIDE_STYLE, computeImageLayout, computeTwoImageLayout, getSlideImages } from "../quiz-core.js";
 import { PT_SCALE, PX, px } from "../lib/utils.js";
 import { slideStyle, slideImages, slideAudio, slideOverrides, slideDescriptors, scheduleSave } from "../lib/state.js";
 import { fitSlideText } from "../lib/fitting.js";
 import { ImageActions } from "./image-actions.js";
+import { SlideImage } from "./slide-image.js";
 
 const html = htm.bind(h);
 
@@ -31,17 +32,24 @@ export function DescriptionSlide({ desc, onRerender }) {
   const slideRef = useRef(null);
   const id = desc.id;
   const slideKey = id ? `${id}:0` : null;
-  const imgEntry = slideKey && slideImages.value[slideKey];
+  const [imgEntry, imgEntry1] = slideKey ? getSlideImages(slideImages.value, slideKey) : [null, null];
+  const hasTwoImages = imgEntry && imgEntry1;
   const audioEntry = slideKey && slideAudio.value[slideKey];
 
   let deW = fullW, enW = fullW;
-  let imgStyle = null;
-  if (imgEntry) {
+  let imgStyle = null, imgStyle1 = null;
+  const toStyle = (img) => ({ position: "absolute", left: px(img.x), top: px(img.y), width: px(img.w), height: px(img.h), objectFit: "contain" });
+  if (hasTwoImages) {
+    const layout = computeTwoImageLayout(imgEntry.width / imgEntry.height, imgEntry1.width / imgEntry1.height);
+    deW = layout.deW;
+    enW = layout.enW;
+    imgStyle = toStyle(layout.img0);
+    imgStyle1 = toStyle(layout.img1);
+  } else if (imgEntry) {
     const layout = computeImageLayout(imgEntry.width / imgEntry.height);
     deW = layout.deW;
     enW = layout.enW;
-    const { img } = layout;
-    imgStyle = { position: "absolute", left: px(img.x), top: px(img.y), width: px(img.w), height: px(img.h), objectFit: "contain" };
+    imgStyle = toStyle(layout.img);
   }
 
   function updateText(lang, text) {
@@ -68,7 +76,7 @@ export function DescriptionSlide({ desc, onRerender }) {
   }, [desc.text.en]);
 
   useLayoutEffect(() => {
-    if (imgEntry && slideRef.current) {
+    if ((imgEntry || hasTwoImages) && slideRef.current) {
       const result = fitSlideText(slideRef.current, slideImages.value);
       // Write to slideOverrides signal — used by debug inputs and PPTX export
       if (result) {
@@ -94,12 +102,15 @@ export function DescriptionSlide({ desc, onRerender }) {
         enRef.current.style.top = Math.round(enY * PX) + "px";
       }
     }
-  }, [desc.text.de, desc.text.en]);
+  }, [imgEntry, imgEntry1, desc.text.de, desc.text.en]);
 
   return html`
     <div class="slide" ref=${slideRef} style="background-color:${bg};color:${fg}"
          data-slide-id=${id} data-answers="0">
-      ${imgStyle && html`<img src=${imgEntry.data} style=${imgStyle} />`}
+      ${imgStyle && html`<${SlideImage} src=${imgEntry.data} style=${imgStyle} slideKey=${slideKey} imgIdx=${0}
+           isSource=${false} linkKey=${null} onRerender=${onRerender} />`}
+      ${imgStyle1 && html`<${SlideImage} src=${imgEntry1.data} style=${imgStyle1} slideKey=${slideKey} imgIdx=${1}
+           isSource=${false} linkKey=${null} onRerender=${onRerender} />`}
       <div ref=${deRef} lang="de" data-role="de" style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${fs}px;line-height:${lh};white-space:pre-line">
         <span ref=${deTextRef} contentEditable class="q-text__field"
              onBlur=${(e) => {

@@ -297,6 +297,40 @@
         opacity: 1;
     }
 
+    .slide-img-wrap {
+        overflow: visible;
+    }
+
+    .slide-img-btns {
+        position: absolute;
+        top: 16px;
+        right: 2px;
+        display: none;
+        gap: 3px;
+        z-index: 3;
+    }
+
+    .slide:hover .slide-img-btns {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+    }
+
+    .slide-img-btns button {
+        font-size: 1rem;
+        padding: 1px 5px;
+        border-radius: 3px;
+        background: rgba(0, 0, 0, 0.6);
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        line-height: 1.4;
+    }
+
+    .slide-img-btns button:hover {
+        background: rgba(0, 0, 0, 0.85);
+    }
+
     .slide .img-actions {
         position: absolute;
         top: 4px;

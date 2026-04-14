@@ -8,6 +8,9 @@ const html = htm.bind(h);
 
 export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKey, imgEntry, slideKey, onRerender }) {
   const images = slideImages.value;
+  const imgEntry1 = images[slideKey + ":1"] || null;
+  const hasAnyImage = imgEntry || imgEntry1;
+  const hasMaxImages = imgEntry && imgEntry1;
   const qKey = `${id}:0`;
   const ansKey = `${id}:1`;
   // linkKey = the paired slide for image sharing. isSource = this slide pushes images to linkKey.
@@ -33,18 +36,22 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
   }
 
   async function addImg(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const dataUrl = await readFileAsDataURL(file);
-    const dims = await loadImageDimensions(dataUrl);
-    const imgData = { data: dataUrl, ...dims };
-    const oldImg = images[slideKey];
-    setImage(slideKey, imgData);
-    // Auto-copy to linked slide only if this is the source side
-    if (isSource && linkKey) {
-      const linkedImg = images[linkKey];
-      if (!linkedImg || linkedImg.data === oldImg?.data) {
-        setImage(linkKey, { ...imgData });
+    const freeSlots = [!images[slideKey] ? slideKey : null, !images[slideKey + ":1"] ? slideKey + ":1" : null].filter(Boolean);
+    const files = Array.from(e.target.files).slice(0, freeSlots.length);
+    if (!files.length) return;
+    for (let i = 0; i < files.length; i++) {
+      const dataUrl = await readFileAsDataURL(files[i]);
+      const dims = await loadImageDimensions(dataUrl);
+      const imgData = { data: dataUrl, ...dims };
+      const targetKey = freeSlots[i];
+      const oldImg = images[targetKey];
+      setImage(targetKey, imgData);
+      if (isSource && linkKey) {
+        const linkedTargetKey = targetKey === slideKey ? linkKey : linkKey + ":1";
+        const linkedImg = images[linkedTargetKey];
+        if (!linkedImg || linkedImg.data === oldImg?.data) {
+          setImage(linkedTargetKey, { ...imgData });
+        }
       }
     }
     e.target.value = "";
@@ -52,12 +59,32 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
     onRerender();
   }
 
-  function removeImg() {
-    if (isLinked) {
-      removeImage(slideKey);
+  function removeAllImages() {
+    removeImage(slideKey);
+    removeImage(slideKey + ":1");
+    if (isLinked || (linkKey && images[linkKey])) {
       removeImage(linkKey);
-    } else {
-      removeImage(slideKey);
+      removeImage(linkKey + ":1");
+    }
+    scheduleSave();
+    onRerender();
+  }
+
+  function removeSingleImage(idx) {
+    const key = idx === 0 ? slideKey : slideKey + ":1";
+    removeImage(key);
+    if (isSource && linkKey) {
+      const linkedKey = idx === 0 ? linkKey : linkKey + ":1";
+      if (images[linkedKey]?.data === images[key]?.data) removeImage(linkedKey);
+    }
+    // Promote image 1 to slot 0 if image 0 was removed
+    if (idx === 0 && images[slideKey + ":1"]) {
+      setImage(slideKey, images[slideKey + ":1"]);
+      removeImage(slideKey + ":1");
+      if (isSource && linkKey && images[linkKey + ":1"]) {
+        setImage(linkKey, images[linkKey + ":1"]);
+        removeImage(linkKey + ":1");
+      }
     }
     scheduleSave();
     onRerender();
@@ -65,6 +92,7 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
 
   function unlink() {
     removeImage(slideKey);
+    removeImage(slideKey + ":1");
     scheduleSave();
     onRerender();
   }
@@ -73,8 +101,9 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
     // For question answer slides: copy from question. For linked titles: copy from source.
     const sourceKey = isQuestion ? qKey : (linkedSlideKey || qKey);
     const sourceImg = images[sourceKey];
-    if (sourceImg) setImage(slideKey, { ...sourceImg });
-    else removeImage(slideKey);
+    const sourceImg1 = images[sourceKey + ":1"];
+    if (sourceImg) setImage(slideKey, { ...sourceImg }); else removeImage(slideKey);
+    if (sourceImg1) setImage(slideKey + ":1", { ...sourceImg1 }); else removeImage(slideKey + ":1");
     scheduleSave();
     onRerender();
   }
@@ -139,19 +168,21 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
                    onChange=${onOverrideChange} title="Line spacing %" />%
           </label>
         `}
-        <label>
-          <button type="button" onClick=${(e) => { e.preventDefault(); e.target.parentElement.querySelector("input").click(); }}>+img</button>
-          <input type="file" accept="image/*" onChange=${addImg} style="display:none" />
-        </label>
-        ${imgEntry && html`<button onClick=${removeImg}>remove img</button>`}
+        ${hasAnyImage && html`<button onClick=${removeAllImages}>remove ${hasMaxImages ? "all img" : "img"}</button>`}
         ${!isSource && isLinked && html`
-          <button onClick=${unlink}>unlink</button>
+          <button onClick=${unlink}>unlink ${hasMaxImages ? "all img" : "img"}</button>
         `}
-        ${!isSource && linkKey && !imgEntry && images[linkKey] && html`
+        ${!isSource && linkKey && !hasAnyImage && images[linkKey] && html`
           <button onClick=${relink}>relink</button>
         `}
         ${isSource && linkKey && imgEntry && images[linkKey]?.data === imgEntry.data && html`
-          <button onClick=${() => { removeImage(linkKey); scheduleSave(); onRerender(); }}>remove from linked</button>
+          <button onClick=${() => { removeImage(linkKey); removeImage(linkKey + ":1"); scheduleSave(); onRerender(); }}>remove from linked</button>
+        `}
+        ${!hasMaxImages && html`
+          <label>
+            <button type="button" onClick=${(e) => { e.preventDefault(); e.target.parentElement.querySelector("input").click(); }}>+img</button>
+            <input type="file" accept="image/*" multiple onChange=${addImg} style="display:none" />
+          </label>
         `}
         <label>
           <button type="button" onClick=${(e) => { e.preventDefault(); e.target.parentElement.querySelector("input").click(); }}>+audio</button>
