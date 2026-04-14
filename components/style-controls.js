@@ -1,6 +1,15 @@
 import { h } from "preact";
 import htm from "htm";
+import { SLIDE_STYLE } from "../quiz-core.js";
 import { slideStyle, scheduleSave } from "../lib/state.js";
+
+// Snapshot defaults before they get mutated by the slideStyle sync effect
+const DEFAULTS = {
+  fontSize: SLIDE_STYLE.question.fontSize,
+  lineSpacing: SLIDE_STYLE.question.lineSpacing,
+  backgroundColor: SLIDE_STYLE.backgroundColor,
+  textColor: SLIDE_STYLE.textColor,
+};
 
 const html = htm.bind(h);
 
@@ -26,5 +35,10 @@ export function StyleControls({ onStyleChange }) {
     <label>Text color <input type="color"
       value=${style.textColor}
       onInput=${(e) => update("textColor", e.target.value)} /></label>
+    <button onClick=${() => {
+      slideStyle.value = { ...DEFAULTS };
+      if (onStyleChange) onStyleChange();
+      scheduleSave();
+    }}>Reset</button>
   `;
 }
