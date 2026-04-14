@@ -427,10 +427,17 @@
     }
 
     .slide-audio__name {
-        font-size: 12px;
-        color: #333;
+        font-size: 0.9rem;
+        height: 24px;
+        padding: 1px 5px;
+        color: white;
         max-width: 280px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
     }
