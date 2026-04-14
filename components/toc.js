@@ -1,4 +1,5 @@
 import { h } from "preact";
+import { useEffect } from "preact/hooks";
 import htm from "htm";
 import { currentQuiz } from "../lib/state.js";
 import { slugify } from "../lib/utils.js";
@@ -38,6 +39,47 @@ function buildTocEntries(quiz) {
 export function TOC() {
   const quiz = currentQuiz.value;
   const entries = buildTocEntries(quiz);
+
+  useEffect(() => {
+    if (!entries.length) return;
+    const anchors = entries.map(e => e.anchor);
+    let raf = 0;
+    function update() {
+      raf = 0;
+      const anchorSet = new Set(anchors);
+      const slides = document.querySelectorAll(".slide");
+      const vh = window.innerHeight;
+      const visible = new Map();
+      const rowsSeen = new Set();
+      let section = anchors[0];
+      for (const slide of slides) {
+        if (slide.id && anchorSet.has(slide.id)) section = slide.id;
+        const rect = slide.getBoundingClientRect();
+        const rowKey = Math.round(rect.top);
+        if (rowsSeen.has(rowKey)) continue;
+        rowsSeen.add(rowKey);
+        const v = Math.max(0, Math.min(rect.bottom, vh) - Math.max(rect.top, 0));
+        if (v > 0) visible.set(section, (visible.get(section) || 0) + v);
+      }
+      let current = anchors[0];
+      let max = 0;
+      for (const [id, v] of visible) {
+        if (v > max) { max = v; current = id; }
+      }
+      if (`#${current}` !== location.hash) {
+        history.replaceState(null, "", `#${current}`);
+      }
+    }
+    function onScroll() {
+      if (!raf) raf = requestAnimationFrame(update);
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, [entries.map(e => e.anchor).join("|")]);
+
   if (!entries.length) return null;
 
   function handleClick(e, anchor) {
