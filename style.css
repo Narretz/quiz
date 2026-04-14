@@ -268,7 +268,7 @@
         min-width: 1em;
     }
 
-    .q-text__field:focus {
+    [data-role]:focus-within {
         outline: 1.5px solid rgba(255, 255, 255, 0.35);
         outline-offset: 2px;
     }
