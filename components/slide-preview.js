@@ -103,6 +103,15 @@ export function SlidePreview() {
           tocIdx++;
         }
         elements.push(html`<${TitleSlide} key=${"t-" + i} desc=${desc} anchor=${anchor} onRerender=${onRerender} />`);
+        // Align answer-phase slides with question-phase column: insert a placeholder
+        // where the description slide sits in the question phase.
+        const ansMatch = desc.id && desc.id.match(/^title-r(\d+)-ans$/);
+        if (ansMatch) {
+          const ri = Number(ansMatch[1]);
+          if (quiz.rounds[ri]?.description?.de) {
+            elements.push(html`<div class="slide placeholder" key=${"ph-" + i} />`);
+          }
+        }
       } else if (desc.type === "intro") {
         let anchor = null;
         if (desc.introIndex === 0 && tocIdx < tocEntries.length) {

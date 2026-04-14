@@ -182,6 +182,10 @@
         flex-shrink: 0;
     }
 
+    .slide.placeholder {
+        visibility: hidden;
+    }
+
     .slide.title-slide {
         display: flex;
         flex-direction: column;
