@@ -176,7 +176,7 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
           <button onClick=${relink}>relink</button>
         `}
         ${isSource && linkKey && imgEntry && images[linkKey]?.data === imgEntry.data && html`
-          <button onClick=${() => { removeImage(linkKey); removeImage(linkKey + ":1"); scheduleSave(); onRerender(); }}>remove from linked</button>
+          <button onClick=${() => { removeImage(linkKey); removeImage(linkKey + ":1"); scheduleSave(); onRerender(); }}>remove ${hasMaxImages ? "all img" : "img"} from linked</button>
         `}
         ${!hasMaxImages && html`
           <label>
@@ -184,10 +184,11 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
             <input type="file" accept="image/*" multiple onChange=${addImg} style="display:none" />
           </label>
         `}
-        <label>
+        ${!audioEntry && html`<label>
           <button type="button" onClick=${(e) => { e.preventDefault(); e.target.parentElement.querySelector("input").click(); }}>+audio</button>
           <input type="file" accept="audio/*" onChange=${addAudioFile} style="display:none" />
         </label>
+        `}
         ${audioEntry && html`<button onClick=${removeAudioFile}>remove audio</button>`}
       </div>
     </div>
