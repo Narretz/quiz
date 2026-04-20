@@ -1,4 +1,4 @@
-Feedback
+# Feedback
 
 - Frage-Nummer auch in den Englischen Block
 - Video
@@ -12,6 +12,46 @@ Feedback
 - Bold formatting
 - Feld für Jackpot-Summe
 - Feld für Email-Adresse
+
+# Bilingual round titles (de/en)
+
+Currently `desc.text` for title slides is a plain string. To support separate DE/EN:
+
+- [ ] Change descriptor format: `text: { de, en }` instead of `text: "string"`
+- [ ] Migration for old saved quizzes: normalize plain string to `{ de: str, en: "" }` on load
+- [ ] Update `buildSlideDescriptors()` / `addTitle()` to emit `{ de, en }`
+- [ ] Update `title-slide.js` preview to render both languages
+- [ ] Update `buildPptx()` title slide rendering to handle `{ de, en }`
+- [ ] Parsing: either split `round.name` by `⬧` separator or let EN be added manually via editing
+
+
+# Video:
+
+Video can reuse the image layout system directly. A video has width/height just like an image, so computeImageLayout(ar) and
+computeTwoImageLayout() work as-is. A video could occupy one of the two image slots, with an image in the other — the side-by-side
+layout handles it naturally.
+
+Key design decisions:
+
+1. Storage: Video as data URL in IndexedDB is problematic — a 30s 720p clip is 5-15 MB (base64 makes it ~20 MB), and Chrome's IndexedDB
+quota is ~50 MB per origin. Options: enforce a ~5 MB file size limit, or store as Blob references. For now a size limit is simplest.
+2. Data model: Two clean options:
+  - Add type field to slideImages entries: { data, width, height, type: "video", mimeType: "video/mp4", durationMs }. Video occupies an
+image slot, all existing layout/linking works.
+  - Separate slideVideos signal: Cleaner separation but doubles the lookup logic everywhere.
+
+I'd recommend option A (type field in slideImages) since video genuinely shares positioning/layout with images.
+3. PPTX generation: pptxgenjs natively supports slide.addMedia({ type: "video", data, x, y, w, h }). The tricky part is
+pptx-audio-fix.js — it currently converts all a:videoFile to a:audioFile. It would need to distinguish real videos from
+audio-disguised-as-video (check MIME type in the relationship or file extension).
+4. Audio vs video mutual exclusion: If they're mutually exclusive per slide, adding a video would remove existing audio and vice versa.
+Simple enforcement in the UI.
+5. Preview: SlideImage component just renders <video controls> instead of <img> when the entry type is "video". Minimal change.
+6. Click order in PPTX: With video replacing audio, it's one click to play — no conflict. If you ever wanted both, you'd need two
+clickEffect entries in the timing XML.
+
+Effort estimate: Medium. The layout reuse makes positioning free. The main work is the PPTX post-processing fix, the file size guard,
+and persistence migration for old saves (entries without type default to "image").
 
 
 MVP
