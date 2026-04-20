@@ -51,7 +51,7 @@ program
 program
   .command("web")
   .description("Start a local web UI for uploading XLSX and downloading PPTX")
-  .option("-p, --port <number>", "port number", "3000")
+  .option("-p, --port <number>", "port number", "3003")
   .action(async (opts) => {
     const http = await import("http");
     const fs = await import("fs");
