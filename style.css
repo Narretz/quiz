@@ -307,7 +307,7 @@
 
     .slide-img-btns {
         position: absolute;
-        top: 16px;
+        top: 4px;
         right: 2px;
         display: none;
         gap: 3px;
@@ -335,53 +335,54 @@
         background: rgba(0, 0, 0, 0.85);
     }
 
-    .slide .img-actions {
+    .slide-outer {
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .slide-outer .img-actions {
         position: absolute;
-        top: 4px;
-        right: 4px;
+        bottom: 100%;
+        left: -10px;
+        right: 0;
         display: none;
         gap: 6px;
         justify-content: space-between;
         z-index: 2;
         font-size: 1rem;
-        left: 4px;
-        pointer-events: none;
+        padding: 15px 10px 3px;
+        width: calc(100% + 20px);
     }
 
-    .slide:hover .img-actions {
+    .slide-outer:hover .img-actions {
         display: flex;
     }
 
-    .slide .img-actions .img-actions__left {
-      pointer-events: all;
-    }
-
-    .slide .img-actions .img-actions__right {
+    .slide-outer .img-actions .img-actions__right {
       margin-left: auto;
       display: flex;
       gap: 3px;
-      pointer-events: all;
     }
 
-    .slide .img-actions button {
+    .slide-outer .img-actions button {
         font-size: 1rem;
         padding: 2px 6px;
         border-radius: 3px;
-        background: rgba(0, 0, 0, 0.6);
+        background: rgba(0, 0, 0, 0.8);
         color: #fff;
         border: none;
         cursor: pointer;
     }
 
-    .slide .img-actions button:hover {
-        background: rgba(0, 0, 0, 0.8);
+    .slide-outer .img-actions button:hover {
+        background: rgba(0, 0, 0, 0.95);
     }
 
-    .slide .img-actions input[type="file"] {
+    .slide-outer .img-actions input[type="file"] {
         display: none;
     }
 
-    .slide .img-actions label.override-label {
+    .slide-outer .img-actions label.override-label {
         display: flex;
         align-items: center;
         gap: 2px;
@@ -393,7 +394,7 @@
         font-size: inherit;
     }
 
-    .slide .img-actions input[type="number"] {
+    .slide-outer .img-actions input[type="number"] {
         width: 3.5rem;
         padding: 1px 3px;
         border-radius: 3px;

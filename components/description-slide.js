@@ -105,6 +105,7 @@ export function DescriptionSlide({ desc, onRerender }) {
   }, [imgEntry, imgEntry1, desc.text.de, desc.text.en]);
 
   return html`
+    <div class="slide-outer">
     <div class="slide" ref=${slideRef} style="background-color:${bg};color:${fg}"
          data-slide-id=${id} data-answers="0">
       ${imgStyle && html`<${SlideImage} src=${imgEntry.data} style=${imgStyle} slideKey=${slideKey} imgIdx=${0}
@@ -147,8 +148,9 @@ export function DescriptionSlide({ desc, onRerender }) {
           <span class="slide-audio__name">${audioEntry.name}</span>
         </div>
       `}
-      ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} imgEntry=${imgEntry}
-                     slideKey=${slideKey} onRerender=${onRerender} />`}
+    </div>
+    ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} imgEntry=${imgEntry}
+                   slideKey=${slideKey} onRerender=${onRerender} />`}
     </div>
   `;
 }

@@ -175,6 +175,7 @@ export function QuestionSlide({ desc, onRerender }) {
   }, [imgEntry, imgEntry1, slideKey, style.fontSize, style.lineSpacing, q?.text?.de, q?.text?.en]);
 
   return html`
+    <div class="slide-outer">
     <div class="slide" ref=${slideRef} style="background-color:${bg};color:${style.textColor || '#000'}"
          data-slide-id=${id} data-answers=${withAnswers ? "1" : "0"}>
       ${q ? html`
@@ -298,8 +299,9 @@ export function QuestionSlide({ desc, onRerender }) {
           <span class="slide-audio__name">${slideAudio.value[slideKey].name}</span>
         </div>
       `}
-      ${id && html`<${ImageActions} id=${id} withAnswers=${withAnswers} imgEntry=${imgEntry}
-                     slideKey=${slideKey} onRerender=${onRerender} />`}
+    </div>
+    ${id && html`<${ImageActions} id=${id} withAnswers=${withAnswers} imgEntry=${imgEntry}
+                   slideKey=${slideKey} onRerender=${onRerender} />`}
     </div>
   `;
 }
