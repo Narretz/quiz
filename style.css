@@ -454,7 +454,6 @@
     .slide-outer {
         position: relative;
         flex-shrink: 0;
-        scroll-margin-top: 80px;
     }
 
     .slide-outer .img-actions {
@@ -630,6 +629,7 @@
         color: #fff;
         text-transform: uppercase;
         letter-spacing: 0.03em;
+        cursor: pointer;
     }
 
     .vb-pill--danger { background: #dc2626; }

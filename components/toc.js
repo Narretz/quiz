@@ -2,7 +2,7 @@ import { h } from "preact";
 import { useEffect } from "preact/hooks";
 import htm from "htm";
 import { currentQuiz } from "../lib/state.js";
-import { slugify } from "../lib/utils.js";
+import { slugify, scrollToElement } from "../lib/utils.js";
 
 const html = htm.bind(h);
 
@@ -86,7 +86,7 @@ export function TOC() {
     e.preventDefault();
     const target = document.getElementById(anchor);
     if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToElement(target);
       history.replaceState(null, "", `#${anchor}`);
     }
   }

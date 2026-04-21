@@ -2,22 +2,13 @@ import { h } from "preact";
 import { useState, useEffect } from "preact/hooks";
 import htm from "htm";
 import { validateQuiz } from "../lib/validation.js";
+import { scrollToElement } from "../lib/utils.js";
 import {
   currentQuiz, slideDescriptors, quizQuestions, slideImages,
   jackpotSize, quizEmail, showValidation, scheduleSave,
 } from "../lib/state.js";
 
 const html = htm.bind(h);
-
-function barOffset() {
-  const bar = document.querySelector(".validation-bar");
-  return bar ? bar.getBoundingClientRect().height + 8 : 0;
-}
-
-function scrollTo(el, offset) {
-  const top = el.getBoundingClientRect().top + window.scrollY - offset;
-  window.scrollTo({ top, behavior: "smooth" });
-}
 
 function flashAfterScroll(el, cls) {
   let done = false;
@@ -43,13 +34,13 @@ function scrollToIssue(issue) {
   if (issue.target) {
     const el = document.querySelector(issue.target);
     if (!el) return;
-    scrollTo(el, barOffset() + (window.innerHeight - barOffset()) / 2 - el.getBoundingClientRect().height / 2);
+    scrollToElement(el, { center: true });
     flashAfterScroll(el, "vb-flash");
     return;
   }
   const el = document.querySelector(`.slide-outer[data-desc-idx="${issue.descIdx}"]`);
   if (!el) return;
-  scrollTo(el, barOffset());
+  scrollToElement(el);
   flashAfterScroll(el, "slide-outer--flash");
 }
 
@@ -86,6 +77,15 @@ export function ValidationBar() {
     scrollToIssue(issues[idx]);
   }
 
+  function jumpToSeverity(sev) {
+    const idx = issues.findIndex((i) => i.severity === sev);
+    if (idx === -1) return;
+    setCursor(idx);
+    scrollToIssue(issues[idx]);
+    const li = document.querySelectorAll(".validation-bar__list .vb-issue")[idx];
+    if (li) li.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+
   function onDismiss() {
     showValidation.value = false;
     scheduleSave();
@@ -104,9 +104,9 @@ export function ValidationBar() {
         </span>
         ${issues.length > 0 && html`
           <span class="validation-bar__counts">
-            ${counts.danger > 0 && html`<span class="vb-pill vb-pill--danger">${counts.danger} danger</span>`}
-            ${counts.warning > 0 && html`<span class="vb-pill vb-pill--warning">${counts.warning} warning</span>`}
-            ${counts.info > 0 && html`<span class="vb-pill vb-pill--info">${counts.info} info</span>`}
+            ${counts.danger > 0 && html`<span class="vb-pill vb-pill--danger" onClick=${() => jumpToSeverity("danger")}>${counts.danger} danger</span>`}
+            ${counts.warning > 0 && html`<span class="vb-pill vb-pill--warning" onClick=${() => jumpToSeverity("warning")}>${counts.warning} warning</span>`}
+            ${counts.info > 0 && html`<span class="vb-pill vb-pill--info" onClick=${() => jumpToSeverity("info")}>${counts.info} info</span>`}
           </span>
           <div class="validation-bar__nav">
             <button onClick=${() => jump(-1)} title="Previous issue">↑</button>
