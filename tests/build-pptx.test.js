@@ -1,0 +1,215 @@
+import { describe, it, beforeEach } from "node:test";
+import assert from "node:assert/strict";
+import { buildPptx, buildSlideDescriptors, SLIDE_STYLE } from "../quiz-core.js";
+import { INTRO_SLIDES } from "../lib/intro-slides.js";
+
+// --- PptxGenJS spy ---
+
+class SlideSpy {
+  constructor() {
+    this.background = null;
+    this.texts = [];
+    this.images = [];
+    this.media = [];
+  }
+  addText(content, opts) { this.texts.push({ content, opts }); }
+  addImage(opts) { this.images.push(opts); }
+  addMedia(opts) { this.media.push(opts); }
+}
+
+class PptxSpy {
+  constructor() {
+    this.layout = null;
+    this.theme = null;
+    this.slides = [];
+  }
+  addSlide() {
+    const s = new SlideSpy();
+    this.slides.push(s);
+    return s;
+  }
+}
+
+// --- Fixtures ---
+
+function makeQuiz() {
+  return {
+    date: "2026-01-01",
+    rounds: [
+      { name: "Round 1", description: { de: "", en: "" }, questions: [
+        { text: { de: "Frage 1", en: "Question 1" }, answers: { de: "Antwort 1", en: "Answer 1" } },
+        { text: { de: "Frage 2", en: "Question 2" }, answers: { de: "Antwort 2", en: "Answer 2" } },
+      ] },
+      { name: "Round 2", description: { de: "", en: "" }, questions: [
+        { text: { de: "F3", en: "Q3" }, answers: { de: "A3", en: "A3" } },
+      ] },
+      { name: "Round 3", description: { de: "", en: "" }, questions: [
+        { text: { de: "F", en: "Q" }, answers: { de: "A", en: "A" } },
+      ] },
+      { name: "Round 4", description: { de: "", en: "" }, questions: [
+        { text: { de: "F", en: "Q" }, answers: { de: "A", en: "A" } },
+      ] },
+      { name: "Name 10", description: { de: "", en: "" }, questions: [
+        { text: { de: "F", en: "Q" }, answers: { de: "A", en: "A" } },
+      ] },
+      { name: "Jackpot!", description: { de: "", en: "" }, questions: [
+        { text: { de: "J1", en: "J1" }, answers: { de: "JA1", en: "JA1" } },
+        { text: { de: "J2", en: "J2" }, answers: { de: "JA2", en: "JA2" } },
+        { text: { de: "J3", en: "J3" }, answers: { de: "JA3", en: "JA3" } },
+        { text: { de: "J4", en: "J4" }, answers: { de: "JA4", en: "JA4" } },
+      ] },
+    ],
+  };
+}
+
+// --- Tests ---
+
+describe("buildPptx", () => {
+  let quiz, descriptors, questions;
+
+  beforeEach(() => {
+    quiz = makeQuiz();
+    descriptors = buildSlideDescriptors(quiz);
+    questions = {};
+    quiz.rounds.forEach((round, ri) => {
+      round.questions.forEach((q, qi) => {
+        questions[`r${ri}q${qi}`] = { text: { ...q.text }, answers: { ...q.answers } };
+      });
+    });
+  });
+
+  it("creates one slide per descriptor", () => {
+    const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+    assert.strictEqual(pptx.slides.length, descriptors.length);
+  });
+
+  it("sets background color on every slide", () => {
+    const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+    const bgColor = SLIDE_STYLE.backgroundColor.replace("#", "");
+    for (const slide of pptx.slides) {
+      assert.deepStrictEqual(slide.background, { color: bgColor });
+    }
+  });
+
+  it("renders title slide text", () => {
+    const titleIdx = descriptors.findIndex((d) => d.type === "title" && d.text === "Round 1");
+    const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+    const slide = pptx.slides[titleIdx];
+    const titleText = slide.texts.find((t) => t.content === "Round 1");
+    assert.ok(titleText, "title text should be present");
+    assert.ok(titleText.opts.bold);
+  });
+
+  it("renders question text with number prefix", () => {
+    const qIdx = descriptors.findIndex((d) => d.type === "question" && d.id === "r0q0" && !d.withAnswers);
+    const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+    const slide = pptx.slides[qIdx];
+    const deText = slide.texts.find((t) => Array.isArray(t.content) && t.content.some((r) => r.text?.includes("Frage 1")));
+    assert.ok(deText, "DE question text should be present");
+    const numRun = deText.content.find((r) => r.text?.includes("1"));
+    assert.ok(numRun?.options?.bold, "number should be bold");
+  });
+
+  it("renders EN text block for questions", () => {
+    const qIdx = descriptors.findIndex((d) => d.type === "question" && d.id === "r0q0" && !d.withAnswers);
+    const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+    const slide = pptx.slides[qIdx];
+    const enText = slide.texts.find((t) => t.content === "Question 1");
+    assert.ok(enText, "EN question text should be present");
+  });
+
+  it("renders answer bar on answer slides", () => {
+    const aIdx = descriptors.findIndex((d) => d.type === "question" && d.id === "r0q0" && d.withAnswers);
+    const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+    const slide = pptx.slides[aIdx];
+    const answerText = slide.texts.find((t) => typeof t.content === "string" && t.content.includes("Antwort 1"));
+    assert.ok(answerText, "answer bar should be present");
+    assert.ok(answerText.opts.fill, "answer bar should have fill color");
+  });
+
+  it("places image on slide when provided", () => {
+    const images = { "r0q0:0": { data: "data:image/png;base64,abc", width: 800, height: 600 } };
+    const pptx = buildPptx(descriptors, PptxSpy, images, {}, {}, {}, questions);
+    const qIdx = descriptors.findIndex((d) => d.type === "question" && d.id === "r0q0" && !d.withAnswers);
+    const slide = pptx.slides[qIdx];
+    assert.ok(slide.images.length > 0, "question slide should have an image");
+  });
+
+  it("embeds audio as media when provided", () => {
+    const audio = { "r0q0:0": { data: "data:audio/mpeg;base64,abc", name: "clip.mp3", durationMs: 5000 } };
+    const pptx = buildPptx(descriptors, PptxSpy, {}, {}, audio, {}, questions);
+    const qIdx = descriptors.findIndex((d) => d.type === "question" && d.id === "r0q0" && !d.withAnswers);
+    const slide = pptx.slides[qIdx];
+    assert.strictEqual(slide.media.length, 1);
+    assert.strictEqual(slide.media[0].type, "audio");
+  });
+
+  it("normalizes audio/mpeg to audio/mp3 for pptxgenjs", () => {
+    const audio = { "r0q0:0": { data: "data:audio/mpeg;base64,abc", name: "clip.mp3", durationMs: 5000 } };
+    const pptx = buildPptx(descriptors, PptxSpy, {}, {}, audio, {}, questions);
+    const qIdx = descriptors.findIndex((d) => d.type === "question" && d.id === "r0q0" && !d.withAnswers);
+    const slide = pptx.slides[qIdx];
+    assert.ok(slide.media[0].data.startsWith("audio/mp3"), "should normalize MIME type");
+    assert.ok(!slide.media[0].data.startsWith("data:"), "should strip data: prefix");
+  });
+
+  describe("backwards compatibility", () => {
+    it("reads question from desc.q when questions map has no entry", () => {
+      const descs = descriptors.map((d) => {
+        if (d.type === "question" && d.id === "r0q0") {
+          return { ...d, q: { text: { de: "Alt-Frage", en: "Old-Question" }, answers: { de: "Alt-A", en: "Old-A" } } };
+        }
+        return d;
+      });
+      // Pass empty questions map — should fall back to desc.q
+      const pptx = buildPptx(descs, PptxSpy, {}, {}, {}, {}, {});
+      const qIdx = descs.findIndex((d) => d.type === "question" && d.id === "r0q0" && !d.withAnswers);
+      const slide = pptx.slides[qIdx];
+      const deText = slide.texts.find((t) => Array.isArray(t.content) && t.content.some((r) => r.text?.includes("Alt-Frage")));
+      assert.ok(deText, "should fall back to desc.q for DE text");
+    });
+
+    it("prefers questions map over desc.q", () => {
+      const descs = descriptors.map((d) => {
+        if (d.type === "question" && d.id === "r0q0") {
+          return { ...d, q: { text: { de: "Alt-Frage", en: "Old-Question" }, answers: { de: "Alt-A", en: "Old-A" } } };
+        }
+        return d;
+      });
+      const pptx = buildPptx(descs, PptxSpy, {}, {}, {}, {}, questions);
+      const qIdx = descs.findIndex((d) => d.type === "question" && d.id === "r0q0" && !d.withAnswers);
+      const slide = pptx.slides[qIdx];
+      const deText = slide.texts.find((t) => Array.isArray(t.content) && t.content.some((r) => r.text?.includes("Frage 1")));
+      assert.ok(deText, "should use questions map, not desc.q");
+    });
+
+    it("renders intro slide when descriptor has id but no style field", () => {
+      const oldIntroDesc = {
+        type: "intro",
+        introIndex: 0,
+        data: { ...INTRO_SLIDES[0], style: undefined },
+        id: "intro-0",
+      };
+      // data.id = "welcome" should be used as style fallback
+      assert.strictEqual(oldIntroDesc.data.id, "welcome");
+      const pptx = buildPptx([oldIntroDesc], PptxSpy, {}, {}, {}, {}, {});
+      const slide = pptx.slides[0];
+      const titleText = slide.texts.find((t) => t.content === "Pub Quiz");
+      assert.ok(titleText, "welcome intro should render via data.id fallback");
+    });
+
+    it("renders intro slide normally when style field is present", () => {
+      const introDesc = {
+        type: "intro",
+        introIndex: 0,
+        data: INTRO_SLIDES[0],
+        id: "intro-0",
+      };
+      assert.strictEqual(introDesc.data.style, "welcome");
+      const pptx = buildPptx([introDesc], PptxSpy, {}, {}, {}, {}, {});
+      const slide = pptx.slides[0];
+      const titleText = slide.texts.find((t) => t.content === "Pub Quiz");
+      assert.ok(titleText, "welcome intro should render via data.style");
+    });
+  });
+});

@@ -18,7 +18,8 @@
       "Bash(npm view:*)",
       "Bash(npm info:*)",
       "Bash(sed 's/<a:t>//g')",
-      "Bash(node --test tests/*)"
+      "Bash(node --test tests/*)",
+      "Bash(npm test *)"
     ]
   },
   "enabledMcpjsonServers": [
