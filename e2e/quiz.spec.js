@@ -47,13 +47,17 @@ test.describe("quiz loaded", () => {
     await expect(page.locator(".status")).toContainText("rounds");
   });
 
-  test("shows download button", async ({ page }) => {
+  test("shows download button disabled until validated", async ({ page }) => {
     const downloadBtn = page.locator("button", { hasText: "Download .pptx" });
     await expect(downloadBtn).toBeVisible();
+    await expect(downloadBtn).toBeDisabled();
+
+    await page.locator("button", { hasText: "Validate" }).click();
     await expect(downloadBtn).toBeEnabled();
   });
 
   test("downloads PPTX file", async ({ page }) => {
+    await page.locator("button", { hasText: "Validate" }).click();
     const downloadPromise = page.waitForEvent("download", {timeout: 45000});
     await page.locator("button", { hasText: "Download .pptx" }).click();
     const download = await downloadPromise;

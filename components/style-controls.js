@@ -35,13 +35,13 @@ export function StyleControls({ onStyleChange }) {
     <label>Text color <input type="color"
       value=${style.textColor}
       onInput=${(e) => update("textColor", e.target.value)} /></label>
+    <label><input type="checkbox"
+      checked=${showValidation.value}
+      onChange=${(e) => { showValidation.value = e.target.checked; scheduleSave(); }} /> Validate</label>
     <button onClick=${() => {
       slideStyle.value = { ...DEFAULTS };
       if (onStyleChange) onStyleChange();
       scheduleSave();
     }}>Reset</button>
-    <label><input type="checkbox"
-      checked=${showValidation.value}
-      onChange=${(e) => { showValidation.value = e.target.checked; scheduleSave(); }} /> Validate</label>
   `;
 }

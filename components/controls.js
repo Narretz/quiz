@@ -12,9 +12,12 @@ export function Controls() {
   const quizId = currentQuizId.value;
   const statusText = status.value;
 
-  async function onDownload() {
+  function onValidate() {
     showValidation.value = true;
     scheduleSave();
+  }
+
+  async function onDownload() {
     try {
       await downloadPptx();
     } catch (err) {
@@ -40,7 +43,9 @@ export function Controls() {
   return html`
     <div class="controls">
       ${quizId && html`
-        <button disabled=${!quiz || status.value === 'Generating PPTX...'} onClick=${onDownload}>Download .pptx</button>
+        <button disabled=${!quiz || showValidation.value} onClick=${onValidate}>Validate</button>
+        <span class="controls__arrow">→</span>
+        <button disabled=${!quiz || !showValidation.value || status.value === 'Generating PPTX...'} onClick=${onDownload}>Download .pptx</button>
       `}
       <span class="status">${statusText}</span>
       ${quizId && html`

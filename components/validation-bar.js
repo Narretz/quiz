@@ -100,7 +100,7 @@ export function ValidationBar() {
         <span class="validation-bar__title">
           ${issues.length === 0
             ? "No validation issues — good to go"
-            : `${issues.length} issue${issues.length === 1 ? "" : "s"}`}
+            : `${issues.length} issue${issues.length === 1 ? "" : "s"}.`}
         </span>
         ${issues.length > 0 && html`
           <span class="validation-bar__counts">
@@ -108,6 +108,7 @@ export function ValidationBar() {
             ${counts.warning > 0 && html`<span class="vb-pill vb-pill--warning" onClick=${() => jumpToSeverity("warning")}>${counts.warning} warning</span>`}
             ${counts.info > 0 && html`<span class="vb-pill vb-pill--info" onClick=${() => jumpToSeverity("info")}>${counts.info} info</span>`}
           </span>
+          <span>You can still download, but quiz might be incomplete.</span>
           <div class="validation-bar__nav">
             <button onClick=${() => jump(-1)} title="Previous issue">↑</button>
             <span class="validation-bar__cursor">${Math.min(cursor + 1, issues.length)} / ${issues.length}</span>
