@@ -105,6 +105,36 @@ export function computeTwoImageLayout(ar0, ar1, heightFrac = 0.45) {
   };
 }
 
+export function extractQuestions(quiz) {
+  const questions = {};
+  quiz.rounds.forEach((round, ri) => {
+    round.questions.forEach((q, qi) => {
+      questions[`r${ri}q${qi}`] = { text: { ...q.text }, answers: { ...q.answers } };
+    });
+  });
+  return questions;
+}
+
+export function normalizeSavedQuiz(saved) {
+  const questions = saved.questions || extractQuestions(saved.quiz);
+  const descriptors = saved.descriptors || buildSlideDescriptors(saved.quiz);
+  const style = saved.style ? {
+    fontSize: saved.style.fontSize,
+    lineSpacing: saved.style.lineSpacing,
+    backgroundColor: saved.style.backgroundColor || "#FFFFFF",
+    textColor: saved.style.textColor || "#000000",
+  } : null;
+  return {
+    quiz: saved.quiz,
+    images: saved.images || {},
+    audio: saved.audio || {},
+    questions,
+    manualOverrides: saved.manualOverrides || {},
+    descriptors,
+    style,
+  };
+}
+
 export function astToQuiz(ast) {
   const sheet =
     ast.content.find((s) => s.metadata.sheetName === "Tabelle1") ??
