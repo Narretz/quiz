@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { buildSlideDescriptors, extractQuestions } from "../quiz-core.js";
-import { validateQuiz } from "../lib/validation.js";
+import { validateQuiz, messages } from "../lib/validation.js";
 
 function fullQuiz(overrides = {}) {
   const base = {
@@ -49,7 +49,7 @@ describe("validateQuiz", () => {
         answers: { de: "Paris", en: "Paris" },
       };
       const issues = validateQuiz(inputs(quiz));
-      const issue = findIssue(issues, "Answer appears in question text");
+      const issue = findIssue(issues, messages.ANSWER_IN_QUESTION);
       assert.ok(issue, "should flag answer leak");
       assert.equal(issue.severity, "danger");
     });
@@ -63,7 +63,7 @@ describe("validateQuiz", () => {
       // EN answer 'France' doesn't appear. Swap:
       quiz.rounds[0].questions[0].answers = { de: "Paris", en: "Paris" };
       const issues = validateQuiz(inputs(quiz));
-      assert.ok(findIssue(issues, "Answer appears in question text"));
+      assert.ok(findIssue(issues, messages.ANSWER_IN_QUESTION));
     });
 
     it("does not flag short (<3 char) answers to avoid multiple-choice false positives", () => {
@@ -73,7 +73,7 @@ describe("validateQuiz", () => {
         answers: { de: "A", en: "A" },
       };
       const issues = validateQuiz(inputs(quiz));
-      assert.equal(findIssue(issues, "Answer appears in question text"), undefined);
+      assert.equal(findIssue(issues, messages.ANSWER_IN_QUESTION), undefined);
     });
 
     it("still flags 3-letter answers that appear in the question", () => {
@@ -83,7 +83,7 @@ describe("validateQuiz", () => {
         answers: { de: "EDV", en: "EDV" },
       };
       const issues = validateQuiz(inputs(quiz));
-      assert.ok(findIssue(issues, "Answer appears in question text"));
+      assert.ok(findIssue(issues, messages.ANSWER_IN_QUESTION));
     });
 
     it("does not flag substring matches inside other words", () => {
@@ -93,7 +93,7 @@ describe("validateQuiz", () => {
         answers: { de: "Berlin", en: "Berlin" },
       };
       const issues = validateQuiz(inputs(quiz));
-      assert.equal(findIssue(issues, "Answer appears in question text"), undefined);
+      assert.equal(findIssue(issues, messages.ANSWER_IN_QUESTION), undefined);
     });
 
     it("flags answer leak only once and links to the answer slide", () => {
@@ -111,7 +111,7 @@ describe("validateQuiz", () => {
         jackpotSize: 50,
         email: "me@example.com",
       });
-      const leaks = issues.filter((i) => i.message.includes("Answer appears"));
+      const leaks = issues.filter((i) => i.message.includes(messages.ANSWER_IN_QUESTION));
       assert.equal(leaks.length, 1);
       const target = descriptors[leaks[0].descIdx];
       assert.equal(target.type, "question");
@@ -126,7 +126,7 @@ describe("validateQuiz", () => {
       const quiz = fullQuiz();
       quiz.rounds[0].questions[0] = { text: { de: "", en: "" }, answers: { de: "A", en: "A" } };
       const issues = validateQuiz(inputs(quiz));
-      assert.ok(findIssue(issues, "Question slide has no text or media"));
+      assert.ok(findIssue(issues, messages.QUESTION_NO_CONTENT));
     });
 
     it("does not flag question slide when it has media", () => {
@@ -134,7 +134,7 @@ describe("validateQuiz", () => {
       quiz.rounds[0].questions[0] = { text: { de: "", en: "" }, answers: { de: "A", en: "A" } };
       const images = { "r0q0:0": { data: "x", width: 10, height: 10 } };
       const issues = validateQuiz(inputs(quiz, { images }));
-      assert.equal(findIssue(issues, "Question slide has no text or media"), undefined);
+      assert.equal(findIssue(issues, messages.QUESTION_NO_CONTENT), undefined);
     });
 
     it("flags answer slide with no answer and same media as question", () => {
@@ -145,7 +145,7 @@ describe("validateQuiz", () => {
         "r0q0:1": { data: "same", width: 10, height: 10 },
       };
       const issues = validateQuiz(inputs(quiz, { images }));
-      assert.ok(findIssue(issues, "Answer slide has no answer text"));
+      assert.ok(findIssue(issues, messages.ANSWER_NO_TEXT_NO_DISTINCT_MEDIA));
     });
 
     it("does not flag answer slide with distinct media", () => {
@@ -156,22 +156,33 @@ describe("validateQuiz", () => {
         "r0q0:1": { data: "a", width: 10, height: 10 },
       };
       const issues = validateQuiz(inputs(quiz, { images }));
-      assert.equal(findIssue(issues, "Answer slide has no answer text"), undefined);
+      assert.equal(findIssue(issues, messages.ANSWER_NO_TEXT_NO_DISTINCT_MEDIA), undefined);
+      assert.equal(findIssue(issues, messages.ANSWER_NO_TEXT_OR_MEDIA), undefined);
+    });
+
+    it("does not say 'distinct from the question' when question has text but no media", () => {
+      const quiz = fullQuiz();
+      quiz.rounds[0].questions[0] = { text: { de: "Frage lang genug hier", en: "Long question here" }, answers: { de: "", en: "" } };
+      const issues = validateQuiz(inputs(quiz));
+      assert.ok(findIssue(issues, messages.ANSWER_NO_TEXT_OR_MEDIA));
+      assert.equal(findIssue(issues, messages.ANSWER_NO_TEXT_NO_DISTINCT_MEDIA), undefined);
     });
 
     it("uses a simpler message for answer slide when the question is also empty", () => {
       const quiz = fullQuiz();
       quiz.rounds[0].questions[0] = { text: { de: "", en: "" }, answers: { de: "", en: "" } };
       const issues = validateQuiz(inputs(quiz));
-      assert.ok(findIssue(issues, "Answer slide has no answer text or media"));
-      assert.equal(findIssue(issues, "no media distinct from the question"), undefined);
-      assert.ok(findIssue(issues, "Question slide has no text or media"));
+      assert.ok(findIssue(issues, messages.ANSWER_NO_TEXT_OR_MEDIA));
+      assert.equal(findIssue(issues, messages.ANSWER_NO_TEXT_NO_DISTINCT_MEDIA), undefined);
+      assert.ok(findIssue(issues, messages.QUESTION_NO_CONTENT));
     });
 
     it("skips Name 10 answer-empty warnings", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz));
-      const emptyAns = issues.filter((i) => i.message.includes("Answer slide has no answer text"));
+      const emptyAns = issues.filter((i) =>
+        i.message === messages.ANSWER_NO_TEXT_OR_MEDIA || i.message === messages.ANSWER_NO_TEXT_NO_DISTINCT_MEDIA
+      );
       assert.equal(emptyAns.length, 0);
     });
   });
@@ -181,21 +192,21 @@ describe("validateQuiz", () => {
       const quiz = fullQuiz();
       quiz.rounds[0].questions[0] = { text: { de: "Eine Frage hier", en: "" }, answers: { de: "A", en: "A" } };
       const issues = validateQuiz(inputs(quiz));
-      assert.ok(findIssue(issues, "English translation missing"));
+      assert.ok(findIssue(issues, messages.EN_TRANSLATION_MISSING));
     });
 
     it("flags when EN is present but DE is missing", () => {
       const quiz = fullQuiz();
       quiz.rounds[0].questions[0] = { text: { de: "", en: "A question here" }, answers: { de: "A", en: "A" } };
       const issues = validateQuiz(inputs(quiz));
-      assert.ok(findIssue(issues, "German translation missing"));
+      assert.ok(findIssue(issues, messages.DE_TRANSLATION_MISSING));
     });
 
     it("does not flag answer slides for missing language in question", () => {
       const quiz = fullQuiz();
       quiz.rounds[0].questions[0] = { text: { de: "Frage hier lang", en: "" }, answers: { de: "A", en: "A" } };
       const issues = validateQuiz(inputs(quiz));
-      const missing = issues.filter((i) => i.message.includes("translation missing"));
+      const missing = issues.filter((i) => i.message === messages.EN_TRANSLATION_MISSING || i.message === messages.DE_TRANSLATION_MISSING);
       assert.equal(missing.length, 1);
     });
   });
@@ -204,7 +215,7 @@ describe("validateQuiz", () => {
     it("flags missing jackpot size", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz, { jackpotSize: 0 }));
-      const issue = findIssue(issues, "Jackpot size is not set");
+      const issue = findIssue(issues, messages.JACKPOT_NOT_SET);
       assert.ok(issue);
       assert.equal(issue.severity, "info");
       assert.equal(issue.target, '.setting-input[type="number"]');
@@ -213,7 +224,7 @@ describe("validateQuiz", () => {
     it("flags missing email", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz, { email: "" }));
-      const issue = findIssue(issues, "Email is not set");
+      const issue = findIssue(issues, messages.EMAIL_NOT_SET);
       assert.ok(issue);
       assert.equal(issue.target, ".setting-input--email");
     });
@@ -221,7 +232,7 @@ describe("validateQuiz", () => {
     it("flags invalid email format", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz, { email: "not-an-email" }));
-      const issue = findIssue(issues, "Email format looks invalid");
+      const issue = findIssue(issues, messages.EMAIL_INVALID);
       assert.ok(issue);
       assert.equal(issue.target, ".setting-input--email");
     });
@@ -229,7 +240,7 @@ describe("validateQuiz", () => {
     it("does not flag valid email", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz, { email: "foo@bar.baz" }));
-      assert.equal(findIssue(issues, "Email format looks invalid"), undefined);
+      assert.equal(findIssue(issues, messages.EMAIL_INVALID), undefined);
     });
   });
 
@@ -237,14 +248,14 @@ describe("validateQuiz", () => {
     it("flags round title slides without images", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz));
-      const titleIssues = issues.filter((i) => i.message === "Title slide has no image");
+      const titleIssues = issues.filter((i) => i.message === messages.TITLE_NO_IMAGE);
       assert.ok(titleIssues.length > 0);
     });
 
     it("flags extra slides without images", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz));
-      const extraIssues = issues.filter((i) => i.message === "Extra slide has no image");
+      const extraIssues = issues.filter((i) => i.message === messages.SPECIAL_SLIDE_NO_IMAGE);
       // break-1, points, break-2, prizes, no-phones, goodbye + intro-3 (golden-rules), intro-4 (begin) = 8
       assert.ok(extraIssues.length >= 6);
     });
@@ -252,7 +263,7 @@ describe("validateQuiz", () => {
     it("uses the configured label for fixed slides", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz));
-      const labels = issues.filter((i) => i.message === "Extra slide has no image").map((i) => i.label);
+      const labels = issues.filter((i) => i.message === messages.SPECIAL_SLIDE_NO_IMAGE).map((i) => i.label);
       assert.ok(labels.includes("2 Golden Rules"));
       assert.ok(labels.includes("Let us begin"));
       assert.ok(labels.includes("Break 1"));
@@ -267,7 +278,7 @@ describe("validateQuiz", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz));
       const intro012 = issues.filter((i) =>
-        i.message === "Extra slide has no image" && ["welcome", "rules", "format"].includes(i.label)
+        i.message === messages.SPECIAL_SLIDE_NO_IMAGE && ["welcome", "rules", "format"].includes(i.label)
       );
       assert.equal(intro012.length, 0);
     });
@@ -279,14 +290,14 @@ describe("validateQuiz", () => {
         "title-r0-ans:0": { data: "x", width: 10, height: 10 },
       };
       const issues = validateQuiz(inputs(quiz, { images }));
-      const forR0 = issues.filter((i) => i.message === "Title slide has no image" && /Round 1/.test(i.label));
+      const forR0 = issues.filter((i) => i.message === messages.TITLE_NO_IMAGE && /Round 1/.test(i.label));
       assert.equal(forR0.length, 0);
     });
 
     it("labels Antworten divider slides as Answers 1 and Answers 2", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz));
-      const labels = issues.filter((i) => i.message === "Title slide has no image").map((i) => i.label);
+      const labels = issues.filter((i) => i.message === messages.TITLE_NO_IMAGE).map((i) => i.label);
       assert.ok(labels.includes("Answers 1"));
       assert.ok(labels.includes("Answers 2"));
     });
@@ -294,7 +305,7 @@ describe("validateQuiz", () => {
     it("shows round name string (not [object Object]) for bilingual title descriptors", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz));
-      const titleIssues = issues.filter((i) => i.message === "Title slide has no image");
+      const titleIssues = issues.filter((i) => i.message === messages.TITLE_NO_IMAGE);
       for (const issue of titleIssues) {
         assert.ok(!issue.label.includes("[object"), `label should not contain [object: got "${issue.label}"`);
         assert.ok(issue.label.length > 0, "label should not be empty");
@@ -307,7 +318,7 @@ describe("validateQuiz", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz));
       const answerTitleIssues = issues.filter((i) =>
-        i.message === "Title slide has no image" && /\(answers\)/.test(i.label)
+        i.message === messages.TITLE_NO_IMAGE && /\(answers\)/.test(i.label)
       );
       assert.equal(answerTitleIssues.length, 0);
     });
@@ -318,7 +329,7 @@ describe("validateQuiz", () => {
       const quiz = fullQuiz();
       quiz.rounds[0].description = { de: "Nur Deutsch", en: "" };
       const issues = validateQuiz(inputs(quiz));
-      assert.ok(findIssue(issues, "English description missing"));
+      assert.ok(findIssue(issues, messages.EN_DESCRIPTION_MISSING));
     });
 
     it("flags description with EN only (after user edits DE to empty)", () => {
@@ -337,13 +348,13 @@ describe("validateQuiz", () => {
         jackpotSize: 50,
         email: "me@example.com",
       });
-      assert.ok(findIssue(issues, "German description missing"));
+      assert.ok(findIssue(issues, messages.DE_DESCRIPTION_MISSING));
     });
 
     it("does not flag rounds without any description", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz));
-      const descIssues = issues.filter((i) => /description missing/.test(i.message));
+      const descIssues = issues.filter((i) => i.message === messages.EN_DESCRIPTION_MISSING || i.message === messages.DE_DESCRIPTION_MISSING);
       assert.equal(descIssues.length, 0);
     });
   });
@@ -354,7 +365,7 @@ describe("validateQuiz", () => {
       quiz.rounds[5].questions[0] = { text: { de: "", en: "" }, answers: { de: "Gold0", en: "Gold0" } };
       const images = { "r5q0:0": { data: "x", width: 10, height: 10 } };
       const issues = validateQuiz(inputs(quiz, { images }));
-      const issue = findIssue(issues, "Jackpot question has media but no text");
+      const issue = findIssue(issues, messages.JACKPOT_NO_TEXT);
       assert.ok(issue);
       assert.equal(issue.severity, "warning");
     });
@@ -363,7 +374,7 @@ describe("validateQuiz", () => {
       const quiz = fullQuiz();
       const images = { "r5q0:0": { data: "x", width: 10, height: 10 } };
       const issues = validateQuiz(inputs(quiz, { images }));
-      assert.equal(findIssue(issues, "Jackpot question has media but no text"), undefined);
+      assert.equal(findIssue(issues, messages.JACKPOT_NO_TEXT), undefined);
     });
 
     it("does not flag non-jackpot question with media but no text", () => {
@@ -371,15 +382,15 @@ describe("validateQuiz", () => {
       quiz.rounds[0].questions[0] = { text: { de: "", en: "" }, answers: { de: "A", en: "A" } };
       const images = { "r0q0:0": { data: "x", width: 10, height: 10 } };
       const issues = validateQuiz(inputs(quiz, { images }));
-      assert.equal(findIssue(issues, "Jackpot question has media but no text"), undefined);
+      assert.equal(findIssue(issues, messages.JACKPOT_NO_TEXT), undefined);
     });
 
     it("does not flag jackpot question without media (already caught by no-content)", () => {
       const quiz = fullQuiz();
       quiz.rounds[5].questions[0] = { text: { de: "", en: "" }, answers: { de: "Gold0", en: "Gold0" } };
       const issues = validateQuiz(inputs(quiz));
-      assert.equal(findIssue(issues, "Jackpot question has media but no text"), undefined);
-      assert.ok(findIssue(issues, "Question slide has no text or media"));
+      assert.equal(findIssue(issues, messages.JACKPOT_NO_TEXT), undefined);
+      assert.ok(findIssue(issues, messages.QUESTION_NO_CONTENT));
     });
   });
 
