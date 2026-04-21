@@ -33,14 +33,12 @@ layout handles it naturally.
 
 Key design decisions:
 
-1. Storage: Video as data URL in IndexedDB is problematic — a 30s 720p clip is 5-15 MB (base64 makes it ~20 MB), and Chrome's IndexedDB
-quota is ~50 MB per origin. Options: enforce a ~5 MB file size limit, or store as Blob references. For now a size limit is simplest.
-2. Data model: Two clean options:
+1. Storage: Video as data URL in IndexedDB is problematic — a 30s 720p clip is 5-15 MB (base64 makes it ~20 MB), but browsers allow almost
+2. unlimited storage in IndexedDB, so that should not be a problem. Still we should limit the video input file size to 30MB
+2. Data model:
   - Add type field to slideImages entries: { data, width, height, type: "video", mimeType: "video/mp4", durationMs }. Video occupies an
 image slot, all existing layout/linking works.
-  - Separate slideVideos signal: Cleaner separation but doubles the lookup logic everywhere.
 
-I'd recommend option A (type field in slideImages) since video genuinely shares positioning/layout with images.
 3. PPTX generation: pptxgenjs natively supports slide.addMedia({ type: "video", data, x, y, w, h }). The tricky part is
 pptx-audio-fix.js — it currently converts all a:videoFile to a:audioFile. It would need to distinguish real videos from
 audio-disguised-as-video (check MIME type in the relationship or file extension).
@@ -49,6 +47,9 @@ Simple enforcement in the UI.
 5. Preview: SlideImage component just renders <video controls> instead of <img> when the entry type is "video". Minimal change.
 6. Click order in PPTX: With video replacing audio, it's one click to play — no conflict. If you ever wanted both, you'd need two
 clickEffect entries in the timing XML.
+
+The positioning logic should also be used for audio files. That makes it easier for the user to see where
+the audio icon will be, and audio/video use the same path for adding themselves.
 
 Effort estimate: Medium. The layout reuse makes positioning free. The main work is the PPTX post-processing fix, the file size guard,
 and persistence migration for old saves (entries without type default to "image").
