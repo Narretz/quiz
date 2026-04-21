@@ -291,6 +291,18 @@ describe("validateQuiz", () => {
       assert.ok(labels.includes("Answers 2"));
     });
 
+    it("shows round name string (not [object Object]) for bilingual title descriptors", () => {
+      const quiz = fullQuiz();
+      const issues = validateQuiz(inputs(quiz));
+      const titleIssues = issues.filter((i) => i.message === "Title slide has no image");
+      for (const issue of titleIssues) {
+        assert.ok(!issue.label.includes("[object"), `label should not contain [object: got "${issue.label}"`);
+        assert.ok(issue.label.length > 0, "label should not be empty");
+      }
+      const r1 = titleIssues.find((i) => i.label === "Round 1");
+      assert.ok(r1, "should use DE text from bilingual title as label");
+    });
+
     it("never flags round title answer slides (mirror the question-phase title)", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz));
