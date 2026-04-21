@@ -86,12 +86,12 @@ test.describe("validation bar", () => {
     if (total < 2) test.skip(true, "needs at least 2 issues");
 
     await expect(cursor).toContainText(`1 / ${total}`);
-    await bar.locator(".validation-bar__nav button", { hasText: "↓" }).click();
+    await bar.locator(".validation-bar__nav button", { hasText: "Next" }).click();
     await expect(cursor).toContainText(`2 / ${total}`);
-    await bar.locator(".validation-bar__nav button", { hasText: "↑" }).click();
+    await bar.locator(".validation-bar__nav button", { hasText: "Prev" }).click();
     await expect(cursor).toContainText(`1 / ${total}`);
     // Wraps around: prev on first should go to last
-    await bar.locator(".validation-bar__nav button", { hasText: "↑" }).click();
+    await bar.locator(".validation-bar__nav button", { hasText: "Prev" }).click();
     await expect(cursor).toContainText(`${total} / ${total}`);
   });
 

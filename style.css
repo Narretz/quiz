@@ -650,15 +650,9 @@
     }
 
     .validation-bar__nav button {
-        padding: 2px 10px;
-        font-size: 0.85rem;
-        background: #f3f4f6;
-        color: #333;
-        border: 1px solid #ddd;
-    }
-
-    .validation-bar__nav button:hover:not(:disabled) {
-        background: #e5e7eb;
+        padding: 4px 8px;
+        font-size: 0.9rem;
+        line-height: 1;
     }
 
     .validation-bar__cursor {
@@ -669,17 +663,9 @@
     }
 
     .validation-bar__dismiss {
-        padding: 2px 8px;
-        background: transparent;
-        color: #999;
-        border: none;
-        font-size: 1.1rem;
+        padding: 4px 8px;
+        font-size: 0.9rem;
         line-height: 1;
-    }
-
-    .validation-bar__dismiss:hover {
-        background: #f3f4f6;
-        color: #333;
     }
 
     .validation-bar__list {

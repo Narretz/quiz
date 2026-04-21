@@ -110,12 +110,12 @@ export function ValidationBar() {
           </span>
           <span>You can still download, but quiz might be incomplete.</span>
           <div class="validation-bar__nav">
-            <button onClick=${() => jump(-1)} title="Previous issue">↑</button>
+            <button onClick=${() => jump(-1)} title="Previous issue">Prev</button>
             <span class="validation-bar__cursor">${Math.min(cursor + 1, issues.length)} / ${issues.length}</span>
-            <button onClick=${() => jump(1)} title="Next issue">↓</button>
+            <button onClick=${() => jump(1)} title="Next issue">Next</button>
           </div>
         `}
-        <button class="validation-bar__dismiss" onClick=${onDismiss} title="Hide validation">×</button>
+        <button class="validation-bar__dismiss" onClick=${onDismiss} title="Hide validation">× Hide</button>
       </div>
       ${issues.length > 0 && html`
         <ul class="validation-bar__list">
