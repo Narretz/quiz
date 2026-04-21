@@ -114,8 +114,10 @@ describe("buildPptx", () => {
     const qIdx = descriptors.findIndex((d) => d.type === "question" && d.id === "r0q0" && !d.withAnswers);
     const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
     const slide = pptx.slides[qIdx];
-    const enText = slide.texts.find((t) => t.content === "Question 1");
+    const enText = slide.texts.find((t) => Array.isArray(t.content) && t.content.some((r) => r.text?.includes("Question 1")));
     assert.ok(enText, "EN question text should be present");
+    const numRun = enText.content.find((r) => r.text?.includes("1"));
+    assert.ok(numRun?.options?.bold, "number should be bold");
   });
 
   it("renders answer bar on answer slides", () => {

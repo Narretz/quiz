@@ -742,8 +742,11 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
         lineSpacing: qFontSize * qLineSpacing / 100,
       });
       if (q.text.en) {
-        slide.addText(q.text.en, {
-          x: pad, y: enY, w: enW, h: enH, fontSize: qFontSize, valign: "top", color: fgColor,
+        slide.addText([
+          { text: `${num}  `, options: { fontSize: SLIDE_STYLE.num.fontSize, bold: true, color: fgColor } },
+          { text: q.text.en, options: { fontSize: qFontSize, color: fgColor } },
+        ], {
+          x: pad, y: enY, w: enW, h: enH, valign: "top",
           lineSpacing: qFontSize * qLineSpacing / 100,
         });
       }

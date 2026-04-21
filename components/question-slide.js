@@ -206,7 +206,7 @@ export function QuestionSlide({ desc, onRerender }) {
           <span class="q-text__tag q-text__tag--de" onClick=${(e) => { e.stopPropagation(); focusEnd(deTextRef.current); }}>de</span>
         </div>
         <div lang="en" data-role="en" style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${qFs}px;line-height:${qLh}">
-          <span ref=${enTextRef} contentEditable class="q-text__field"
+          <span style="font-size:${numFs}px;font-weight:bold">${num}</span>${" "}<span ref=${enTextRef} contentEditable class="q-text__field"
                onBlur=${(e) => {
                  const text = e.target.textContent.trim();
                  if (text === (q.text.en || "")) return;
