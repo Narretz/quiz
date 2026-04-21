@@ -204,9 +204,6 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
                    onChange=${onOverrideChange} title="Line spacing %" />%
           </label>
         `}
-        ${isAnswerSlide && html`<button onClick=${toggleReveal} class="reveal-toggle ${revealOn ? "reveal-toggle--on" : ""}" title="Click-to-reveal answer in PPTX">
-          ${revealOn ? "▸ reveal: click" : "reveal: off"}
-        </button>`}
         ${hasAnyMedia && html`<button onClick=${removeAllImages}>remove ${hasMaxSlots ? "all" : "media"}</button>`}
         ${!isSource && isLinked && html`
           <button onClick=${unlink}>unlink ${hasMaxSlots ? "all" : "media"}</button>

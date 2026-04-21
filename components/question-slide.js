@@ -224,7 +224,7 @@ export function QuestionSlide({ desc, onRerender }) {
         <div style="position:absolute;left:${px(pad)};top:${px(pad)};font-size:${numFs}px;font-weight:bold">${num}</div>
       `}
       ${withAnswers && html`
-        <div ref=${ansBarRef} class="answer-bar ${(ansDe || ansEn) ? 'answer-bar--filled' : ''} ${isRevealEffective(slideReveals.value, desc) ? 'answer-bar--reveal' : ''}"
+        <div ref=${ansBarRef} class="answer-bar ${(ansDe || ansEn) ? 'answer-bar--filled' : ''}"
              style="font-size:${ansFs}px;background:${SLIDE_STYLE.answer.backgroundColor};color:${SLIDE_STYLE.answer.color}"
              onClick=${(e) => {
                if (e.target === ansBarRef.current && ansDeRef.current) ansDeRef.current.focus();
