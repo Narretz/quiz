@@ -3,7 +3,7 @@ import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { SLIDE_STYLE, getSlideImages } from "../quiz-core.js";
 import { PT_SCALE, PX, px, layoutImageBelowText, layoutTwoImagesBelowText } from "../lib/utils.js";
-import { slideStyle, slideImages, slideAudio } from "../lib/state.js";
+import { slideStyle, slideImages } from "../lib/state.js";
 import { ImageActions } from "./image-actions.js";
 import { SlideImage } from "./slide-image.js";
 
@@ -21,7 +21,6 @@ export function TitleSlide({ desc, anchor, onRerender }) {
   const slideKey = id ? `${id}:0` : null;
   const [imgEntry, imgEntry1] = slideKey ? getSlideImages(slideImages.value, slideKey) : [null, null];
   const hasTwoImages = imgEntry && imgEntry1;
-  const audioEntry = slideKey && slideAudio.value[slideKey];
   // Link round question titles ↔ answer titles
   let linkedSlideKey = null;
   if (titleForQuestions) {
@@ -55,16 +54,10 @@ export function TitleSlide({ desc, anchor, onRerender }) {
               <div style="margin-top:8px;font-size:${subtitleFs}px;white-space:pre-line">${desc.subtitle}</div>
             `}
           </div>
-          <${SlideImage} src=${imgEntry.data} imgRef=${imgRef} slideKey=${slideKey} imgIdx=${0}
+          <${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} imgRef=${imgRef} slideKey=${slideKey} imgIdx=${0}
                isSource=${titleForQuestions} linkKey=${linkedSlideKey} onRerender=${onRerender} />
-          ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} imgRef=${img1Ref} slideKey=${slideKey} imgIdx=${1}
+          ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} type=${imgEntry1.type} name=${imgEntry1.name} imgRef=${img1Ref} slideKey=${slideKey} imgIdx=${1}
                isSource=${titleForQuestions} linkKey=${linkedSlideKey} onRerender=${onRerender} />`}
-          ${audioEntry && html`
-            <div class="slide-audio" style="background:${bg}e0">
-              <audio controls preload="none" src=${audioEntry.data} />
-              <span class="slide-audio__name">${audioEntry.name}</span>
-            </div>
-          `}
         </div>
         ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} linkedSlideKey=${linkedSlideKey}
                        imgEntry=${imgEntry} slideKey=${slideKey} onRerender=${onRerender} />`}
@@ -81,12 +74,6 @@ export function TitleSlide({ desc, anchor, onRerender }) {
         <span class="title-text" style="font-size:${titleFs}px">${desc.text}</span>
         ${desc.subtitle && html`
           <div style="margin-top:12px;font-size:${subtitleFs}px;white-space:pre-line">${desc.subtitle}</div>
-        `}
-        ${audioEntry && html`
-          <div class="slide-audio" style="background:${bg}e0">
-            <audio controls preload="none" src=${audioEntry.data} />
-            <span class="slide-audio__name">${audioEntry.name}</span>
-          </div>
         `}
       </div>
       ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} linkedSlideKey=${linkedSlideKey}

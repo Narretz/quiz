@@ -3,7 +3,7 @@ import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { SLIDE_STYLE, computeImageLayout, computeTwoImageLayout, getSlideImages } from "../quiz-core.js";
 import { PT_SCALE, PX, px } from "../lib/utils.js";
-import { slideStyle, slideImages, slideAudio, slideOverrides, slideDescriptors, scheduleSave } from "../lib/state.js";
+import { slideStyle, slideImages, slideOverrides, slideDescriptors, scheduleSave } from "../lib/state.js";
 import { fitSlideText } from "../lib/fitting.js";
 import { ImageActions } from "./image-actions.js";
 import { SlideImage } from "./slide-image.js";
@@ -34,8 +34,6 @@ export function DescriptionSlide({ desc, onRerender }) {
   const slideKey = id ? `${id}:0` : null;
   const [imgEntry, imgEntry1] = slideKey ? getSlideImages(slideImages.value, slideKey) : [null, null];
   const hasTwoImages = imgEntry && imgEntry1;
-  const audioEntry = slideKey && slideAudio.value[slideKey];
-
   let deW = fullW, enW = fullW;
   let imgStyle = null, imgStyle1 = null;
   const toStyle = (img) => ({ position: "absolute", left: px(img.x), top: px(img.y), width: px(img.w), height: px(img.h), objectFit: "contain" });
@@ -108,9 +106,9 @@ export function DescriptionSlide({ desc, onRerender }) {
     <div class="slide-outer">
     <div class="slide" ref=${slideRef} style="background-color:${bg};color:${fg}"
          data-slide-id=${id} data-answers="0">
-      ${imgStyle && html`<${SlideImage} src=${imgEntry.data} style=${imgStyle} slideKey=${slideKey} imgIdx=${0}
+      ${imgStyle && html`<${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} style=${imgStyle} slideKey=${slideKey} imgIdx=${0}
            isSource=${false} linkKey=${null} onRerender=${onRerender} />`}
-      ${imgStyle1 && html`<${SlideImage} src=${imgEntry1.data} style=${imgStyle1} slideKey=${slideKey} imgIdx=${1}
+      ${imgStyle1 && html`<${SlideImage} src=${imgEntry1.data} type=${imgEntry1.type} name=${imgEntry1.name} style=${imgStyle1} slideKey=${slideKey} imgIdx=${1}
            isSource=${false} linkKey=${null} onRerender=${onRerender} />`}
       <div ref=${deRef} lang="de" data-role="de" style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${fs}px;line-height:${lh};white-space:pre-line">
         <span ref=${deTextRef} contentEditable class="q-text__field"
@@ -142,12 +140,6 @@ export function DescriptionSlide({ desc, onRerender }) {
              }}></span>
         <span class="q-text__tag q-text__tag--en" onClick=${(e) => { e.stopPropagation(); focusEnd(enTextRef.current); }}>en</span>
       </div>
-      ${audioEntry && html`
-        <div class="slide-audio" style="background:${bg}e0">
-          <audio controls preload="none" src=${audioEntry.data} />
-          <span class="slide-audio__name">${audioEntry.name}</span>
-        </div>
-      `}
     </div>
     ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} imgEntry=${imgEntry}
                    slideKey=${slideKey} onRerender=${onRerender} />`}

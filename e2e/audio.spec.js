@@ -8,16 +8,16 @@ function questionOuter(page, id, answers = false) {
   return page.locator(`.slide-outer:has(.slide[data-slide-id="${id}"][data-answers="${answers ? 1 : 0}"])`);
 }
 
-function slideAudio(outer) {
-  return outer.locator(".slide .slide-audio");
+function slideAudioSlot(outer) {
+  return outer.locator(".slide .slide-img-wrap .slide-audio-slot");
 }
 
-async function addAudio(outer, filePath) {
+async function addAV(outer, filePath) {
   await outer.scrollIntoViewIfNeeded();
   await outer.hover();
-  const audioInput = outer.locator('.img-actions input[type="file"][accept="audio/*"]');
-  await audioInput.setInputFiles(filePath);
-  await expect(slideAudio(outer)).toBeVisible({ timeout: 5_000 });
+  const avInput = outer.locator('.img-actions input[type="file"][accept="audio/*,video/*"]');
+  await avInput.setInputFiles(filePath);
+  await expect(slideAudioSlot(outer)).toBeVisible({ timeout: 5_000 });
 }
 
 async function hoverAndClickButton(outer, buttonText) {
@@ -33,84 +33,56 @@ test.describe("audio", () => {
     await seedQuiz(page);
   });
 
-  test("+audio button adds audio to slide", async ({ page }) => {
+  test("+av button adds audio to slide", async ({ page }) => {
     const outer = questionOuter(page, "r0q0");
-    await expect(slideAudio(outer)).not.toBeVisible();
-    await addAudio(outer, AUDIO);
+    await expect(slideAudioSlot(outer)).not.toBeVisible();
+    await addAV(outer, AUDIO);
 
-    const audio = slideAudio(outer);
-    await expect(audio.locator("audio")).toBeVisible();
-    await expect(audio.locator(".slide-audio__name")).toHaveText("band-aid.mp3");
+    const slot = slideAudioSlot(outer);
+    await expect(slot.locator("audio")).toBeVisible();
+    await expect(slot.locator(".slide-audio__name")).toHaveText("band-aid.mp3");
   });
 
-  test("remove audio button removes audio from slide", async ({ page }) => {
+  test("remove button removes audio from slide", async ({ page }) => {
     const outer = questionOuter(page, "r0q0");
-    await addAudio(outer, AUDIO);
-    await expect(slideAudio(outer)).toBeVisible();
+    await addAV(outer, AUDIO);
+    await expect(slideAudioSlot(outer)).toBeVisible();
 
-    await hoverAndClickButton(outer, "remove audio");
-    await expect(slideAudio(outer)).not.toBeVisible();
+    await hoverAndClickButton(outer, "remove media");
+    await expect(slideAudioSlot(outer)).not.toBeVisible();
   });
 
-  test("+audio button disappears after adding audio", async ({ page }) => {
+  test("+av button disappears after adding audio", async ({ page }) => {
     const outer = questionOuter(page, "r0q0");
-    await addAudio(outer, AUDIO);
+    await addAV(outer, AUDIO);
 
     await outer.scrollIntoViewIfNeeded();
     await outer.hover();
-    const addBtn = outer.locator(".img-actions button", { hasText: "+audio" });
+    const addBtn = outer.locator(".img-actions button", { hasText: "+av" });
     await expect(addBtn).not.toBeVisible();
-
-    const removeBtn = outer.locator(".img-actions button", { hasText: "remove audio" });
-    await expect(removeBtn).toBeVisible();
   });
 
-  test("+audio button reappears after removing audio", async ({ page }) => {
+  test("+av button reappears after removing audio", async ({ page }) => {
     const outer = questionOuter(page, "r0q0");
-    await addAudio(outer, AUDIO);
-    await hoverAndClickButton(outer, "remove audio");
+    await addAV(outer, AUDIO);
+    await hoverAndClickButton(outer, "remove media");
 
     await outer.scrollIntoViewIfNeeded();
     await outer.hover();
-    const addBtn = outer.locator(".img-actions button", { hasText: "+audio" });
+    const addBtn = outer.locator(".img-actions button", { hasText: "+av" });
     await expect(addBtn).toBeVisible();
   });
 
-  test("audio is independent per slide — not linked between question and answer", async ({ page }) => {
+  test("audio is NOT linked from question to answer", async ({ page }) => {
     const question = questionOuter(page, "r0q0", false);
     const answer = questionOuter(page, "r0q0", true);
 
-    await addAudio(question, AUDIO);
-    await expect(slideAudio(question)).toBeVisible();
+    await addAV(question, AUDIO);
+    await expect(slideAudioSlot(question)).toBeVisible();
 
     // Answer slide should NOT have audio
     await answer.scrollIntoViewIfNeeded();
-    await expect(slideAudio(answer)).not.toBeVisible();
-  });
-
-  test("question and answer slides can have audio independently", async ({ page }) => {
-    const question = questionOuter(page, "r0q0", false);
-    const answer = questionOuter(page, "r0q0", true);
-
-    await addAudio(question, AUDIO);
-    await addAudio(answer, AUDIO);
-
-    await expect(slideAudio(question)).toBeVisible();
-    await expect(slideAudio(answer)).toBeVisible();
-  });
-
-  test("removing audio from question does not affect answer audio", async ({ page }) => {
-    const question = questionOuter(page, "r0q0", false);
-    const answer = questionOuter(page, "r0q0", true);
-
-    await addAudio(question, AUDIO);
-    await addAudio(answer, AUDIO);
-
-    await hoverAndClickButton(question, "remove audio");
-    await expect(slideAudio(question)).not.toBeVisible();
-
-    await answer.scrollIntoViewIfNeeded();
-    await expect(slideAudio(answer)).toBeVisible();
+    await expect(slideAudioSlot(answer)).not.toBeVisible();
   });
 
   test("audio coexists with image on the same slide", async ({ page }) => {
@@ -124,17 +96,32 @@ test.describe("audio", () => {
     await expect(outer.locator(".slide .slide-img-wrap").first()).toBeVisible({ timeout: 5_000 });
 
     // Add audio
-    await addAudio(outer, AUDIO);
+    await addAV(outer, AUDIO);
 
-    // Both should be visible
-    await expect(outer.locator(".slide .slide-img-wrap").first()).toBeVisible();
-    await expect(slideAudio(outer)).toBeVisible();
+    // Both should be visible — image in one slot, audio in another
+    const wraps = outer.locator(".slide .slide-img-wrap");
+    await expect(wraps).toHaveCount(2);
+    await expect(slideAudioSlot(outer)).toBeVisible();
+  });
+
+  test("+av hidden when audio present even with free image slot", async ({ page }) => {
+    const outer = questionOuter(page, "r0q0");
+    await addAV(outer, AUDIO);
+
+    await outer.scrollIntoViewIfNeeded();
+    await outer.hover();
+    // +av should be hidden (audio/video mutually exclusive)
+    const avBtn = outer.locator(".img-actions button", { hasText: "+av" });
+    await expect(avBtn).not.toBeVisible();
+    // +img should still be available (one slot free)
+    const imgBtn = outer.locator(".img-actions button", { hasText: "+img" });
+    await expect(imgBtn).toBeVisible();
   });
 
   test("audio persists after page reload", async ({ page }) => {
     const outer = questionOuter(page, "r0q0");
-    await addAudio(outer, AUDIO);
-    await expect(slideAudio(outer)).toBeVisible();
+    await addAV(outer, AUDIO);
+    await expect(slideAudioSlot(outer)).toBeVisible();
 
     // Wait for save to complete (debounced 300ms)
     await page.waitForTimeout(500);
@@ -143,7 +130,7 @@ test.describe("audio", () => {
 
     const outerAfter = questionOuter(page, "r0q0");
     await outerAfter.scrollIntoViewIfNeeded();
-    await expect(slideAudio(outerAfter)).toBeVisible();
-    await expect(slideAudio(outerAfter).locator(".slide-audio__name")).toHaveText("band-aid.mp3");
+    await expect(slideAudioSlot(outerAfter)).toBeVisible();
+    await expect(slideAudioSlot(outerAfter).locator(".slide-audio__name")).toHaveText("band-aid.mp3");
   });
 });

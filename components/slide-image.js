@@ -16,8 +16,9 @@ const html = htm.bind(h);
  *   linkKey    - paired slide's base key (e.g. "r0q0:1"), or null
  *   onRerender - callback after mutation
  */
-export function SlideImage({ src, style, imgRef, slideKey, imgIdx, isSource, linkKey, onRerender }) {
+export function SlideImage({ src, type, name, style, imgRef, slideKey, imgIdx, isSource, linkKey, onRerender }) {
   if (!src) return null;
+  const mediaType = type || "image";
   const images = slideImages.value;
   const myKey = imgIdx === 0 ? slideKey : slideKey + ":1";
   const linkedKey = linkKey ? (imgIdx === 0 ? linkKey : linkKey + ":1") : null;
@@ -58,19 +59,36 @@ export function SlideImage({ src, style, imgRef, slideKey, imgIdx, isSource, lin
     ? { position: "absolute" }
     : { ...style, objectFit: undefined };
 
+  const actionBtns = html`
+    <div class="slide-img-btns">
+      <button onClick=${remove}>remove ×</button>
+      ${!isSource && isLinked && html`<button onClick=${unlinkImg}>unlink ✂</button>`}
+      ${isSource && isLinked && html`<button onClick=${(e) => {
+        e.stopPropagation();
+        removeImage(linkedKey);
+        scheduleSave();
+        onRerender();
+      }}>remove from linked ✂</button>`}
+    </div>
+  `;
+
+  if (mediaType === "audio") {
+    return html`
+      <div ref=${imgRef || undefined} style=${wrapStyle} class="slide-img-wrap slide-img-wrap--audio">
+        <div class="slide-audio-slot">
+          ${actionBtns}
+          <audio controls preload="none" src=${src} />
+          <span class="slide-audio__name">${name || ""}</span>
+        </div>
+      </div>
+    `;
+  }
+
   return html`
     <div ref=${imgRef || undefined} style=${wrapStyle} class="slide-img-wrap">
-      <img src=${src} style="width:100%;height:100%;object-fit:contain" />
-      <div class="slide-img-btns">
-        <button onClick=${remove}>remove ×</button>
-        ${!isSource && isLinked && html`<button onClick=${unlinkImg}>unlink ✂</button>`}
-        ${isSource && isLinked && html`<button onClick=${(e) => {
-          e.stopPropagation();
-          removeImage(linkedKey);
-          scheduleSave();
-          onRerender();
-        }}>remove from linked ✂</button>`}
-      </div>
+      ${mediaType === "video" && html`<video src=${src} controls style="width:100%;height:100%;object-fit:contain" />`}
+      ${mediaType === "image" && html`<img src=${src} style="width:100%;height:100%;object-fit:contain" />`}
+      ${actionBtns}
     </div>
   `;
 }

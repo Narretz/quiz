@@ -1,16 +1,17 @@
 import { h } from "preact";
 import htm from "htm";
 import { SLIDE_STYLE } from "../quiz-core.js";
-import { readFileAsDataURL, loadImageDimensions } from "../lib/utils.js";
-import { slideImages, setImage, removeImage, setManualOverride, slideAudio, setAudio, removeAudio, slideOverrides, scheduleSave, debug } from "../lib/state.js";
+import { loadMediaFile } from "../lib/utils.js";
+import { slideImages, setImage, removeImage, setManualOverride, slideOverrides, scheduleSave, debug } from "../lib/state.js";
 
 const html = htm.bind(h);
 
 export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKey, imgEntry, slideKey, onRerender }) {
   const images = slideImages.value;
   const imgEntry1 = images[slideKey + ":1"] || null;
-  const hasAnyImage = imgEntry || imgEntry1;
-  const hasMaxImages = imgEntry && imgEntry1;
+  const hasAnyMedia = imgEntry || imgEntry1;
+  const hasMaxSlots = imgEntry && imgEntry1;
+  const hasAV = [imgEntry, imgEntry1].some((e) => e?.type === "audio" || e?.type === "video");
   const qKey = `${id}:0`;
   const ansKey = `${id}:1`;
   // linkKey = the paired slide for image sharing. isSource = this slide pushes images to linkKey.
@@ -40,19 +41,38 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
     const files = Array.from(e.target.files).slice(0, freeSlots.length);
     if (!files.length) return;
     for (let i = 0; i < files.length; i++) {
-      const dataUrl = await readFileAsDataURL(files[i]);
-      const dims = await loadImageDimensions(dataUrl);
-      const imgData = { data: dataUrl, ...dims };
-      const targetKey = freeSlots[i];
-      const oldImg = images[targetKey];
-      setImage(targetKey, imgData);
-      if (isSource && linkKey) {
-        const linkedTargetKey = targetKey === slideKey ? linkKey : linkKey + ":1";
-        const linkedImg = images[linkedTargetKey];
-        if (!linkedImg || linkedImg.data === oldImg?.data) {
-          setImage(linkedTargetKey, { ...imgData });
+      try {
+        const imgData = await loadMediaFile(files[i]);
+        const targetKey = freeSlots[i];
+        const oldImg = images[targetKey];
+        setImage(targetKey, imgData);
+        if (isSource && linkKey) {
+          const linkedTargetKey = targetKey === slideKey ? linkKey : linkKey + ":1";
+          const linkedImg = images[linkedTargetKey];
+          if (!linkedImg || linkedImg.data === oldImg?.data) {
+            setImage(linkedTargetKey, { ...imgData });
+          }
         }
+      } catch (err) {
+        alert(err.message);
+        break;
       }
+    }
+    e.target.value = "";
+    scheduleSave();
+    onRerender();
+  }
+
+  async function addAV(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const entry = await loadMediaFile(file);
+      const freeSlot = !images[slideKey] ? slideKey : (!images[slideKey + ":1"] ? slideKey + ":1" : null);
+      if (!freeSlot) return;
+      setImage(freeSlot, entry);
+    } catch (err) {
+      alert(err.message);
     }
     e.target.value = "";
     scheduleSave();
@@ -77,7 +97,6 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
       const linkedKey = idx === 0 ? linkKey : linkKey + ":1";
       if (images[linkedKey]?.data === images[key]?.data) removeImage(linkedKey);
     }
-    // Promote image 1 to slot 0 if image 0 was removed
     if (idx === 0 && images[slideKey + ":1"]) {
       setImage(slideKey, images[slideKey + ":1"]);
       removeImage(slideKey + ":1");
@@ -98,7 +117,6 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
   }
 
   function relink() {
-    // For question answer slides: copy from question. For linked titles: copy from source.
     const sourceKey = isQuestion ? qKey : (linkedSlideKey || qKey);
     const sourceImg = images[sourceKey];
     const sourceImg1 = images[sourceKey + ":1"];
@@ -116,33 +134,6 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
       fontSize: Number(fs.value),
       lineSpacing: Number(ls.value),
     });
-    scheduleSave();
-    onRerender();
-  }
-
-  const audioEntry = slideAudio.value[slideKey];
-
-  async function addAudioFile(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const dataUrl = await readFileAsDataURL(file);
-    // Get duration in ms by loading into an audio element
-    const durationMs = await new Promise((resolve) => {
-      const audio = new Audio();
-      audio.addEventListener("loadedmetadata", () => {
-        resolve(Math.round(audio.duration * 1000));
-      });
-      audio.addEventListener("error", () => resolve(0));
-      audio.src = dataUrl;
-    });
-    setAudio(slideKey, { data: dataUrl, name: file.name, durationMs });
-    e.target.value = "";
-    scheduleSave();
-    onRerender();
-  }
-
-  function removeAudioFile() {
-    removeAudio(slideKey);
     scheduleSave();
     onRerender();
   }
@@ -168,28 +159,28 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
                    onChange=${onOverrideChange} title="Line spacing %" />%
           </label>
         `}
-        ${hasAnyImage && html`<button onClick=${removeAllImages}>remove ${hasMaxImages ? "all img" : "img"}</button>`}
+        ${hasAnyMedia && html`<button onClick=${removeAllImages}>remove ${hasMaxSlots ? "all" : "media"}</button>`}
         ${!isSource && isLinked && html`
-          <button onClick=${unlink}>unlink ${hasMaxImages ? "all img" : "img"}</button>
+          <button onClick=${unlink}>unlink ${hasMaxSlots ? "all" : "media"}</button>
         `}
-        ${!isSource && linkKey && !hasAnyImage && images[linkKey] && html`
+        ${!isSource && linkKey && !hasAnyMedia && images[linkKey] && html`
           <button onClick=${relink}>relink</button>
         `}
         ${isSource && linkKey && imgEntry && images[linkKey]?.data === imgEntry.data && html`
-          <button onClick=${() => { removeImage(linkKey); removeImage(linkKey + ":1"); scheduleSave(); onRerender(); }}>remove ${hasMaxImages ? "all img" : "img"} from linked</button>
+          <button onClick=${() => { removeImage(linkKey); removeImage(linkKey + ":1"); scheduleSave(); onRerender(); }}>remove ${hasMaxSlots ? "all" : "media"} from linked</button>
         `}
-        ${!hasMaxImages && html`
+        ${!hasMaxSlots && html`
           <label>
             <button type="button" onClick=${(e) => { e.preventDefault(); e.target.parentElement.querySelector("input").click(); }}>+img</button>
             <input type="file" accept="image/*" multiple onChange=${addImg} style="display:none" />
           </label>
         `}
-        ${!audioEntry && html`<label>
-          <button type="button" onClick=${(e) => { e.preventDefault(); e.target.parentElement.querySelector("input").click(); }}>+audio</button>
-          <input type="file" accept="audio/*" onChange=${addAudioFile} style="display:none" />
-        </label>
+        ${!hasAV && !hasMaxSlots && html`
+          <label>
+            <button type="button" onClick=${(e) => { e.preventDefault(); e.target.parentElement.querySelector("input").click(); }}>+av</button>
+            <input type="file" accept="audio/*,video/*" onChange=${addAV} style="display:none" />
+          </label>
         `}
-        ${audioEntry && html`<button onClick=${removeAudioFile}>remove audio</button>`}
       </div>
     </div>
   `;

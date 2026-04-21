@@ -425,24 +425,42 @@
         border-radius: 4px;
     }
 
-    .slide-audio audio {
-        height: 24px;
-        width: 270px;
-        opacity: 0.8;
-    }
-
     .slide-audio__name {
         font-size: 0.9rem;
         height: 24px;
         padding: 1px 5px;
         color: white;
-        max-width: 280px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
         background: rgba(0, 0, 0, 0.6);
+        max-width: 100%;
+    }
+
+    .slide-img-wrap--audio {
         display: flex;
         align-items: center;
         justify-content: center;
-        text-align: center;
+    }
+
+    .slide-audio-slot {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        max-width: 100%;
+    }
+
+    .slide-audio-slot audio {
+        max-width: 100%;
+        height: 28px;
+    }
+
+    .slide-audio-slot .slide-img-btns {
+        position: absolute;
+        bottom: 100%;
+        right: 0;
+        top: auto;
+        margin-bottom: 2px;
     }

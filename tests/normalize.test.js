@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { extractQuestions, normalizeSavedQuiz, buildSlideDescriptors } from "../quiz-core.js";
+import { extractQuestions, normalizeSavedQuiz, mergeAudioIntoImages, buildSlideDescriptors, AUDIO_DIMENSIONS } from "../quiz-core.js";
 
 function makeQuiz(overrides) {
   return {
@@ -75,8 +75,10 @@ describe("normalizeSavedQuiz", () => {
     assert.strictEqual(result.quiz, quiz);
     assert.deepStrictEqual(result.questions, saved.questions);
     assert.deepStrictEqual(result.descriptors, saved.descriptors);
-    assert.deepStrictEqual(result.images, saved.images);
-    assert.deepStrictEqual(result.audio, saved.audio);
+    // Audio merged into images: "r0q0:0" already occupied by image, so audio goes to "r0q0:0:1"
+    assert.deepStrictEqual(result.images["r0q0:0"], { data: "img" });
+    assert.deepStrictEqual(result.images["r0q0:0:1"], { data: "aud", ...AUDIO_DIMENSIONS, type: "audio" });
+    assert.strictEqual(result.audio, undefined);
     assert.deepStrictEqual(result.manualOverrides, saved.manualOverrides);
     assert.deepStrictEqual(result.style, saved.style);
   });
@@ -124,13 +126,12 @@ describe("normalizeSavedQuiz", () => {
       assert.deepStrictEqual(result.descriptors, expected);
     });
 
-    it("defaults missing images/audio/manualOverrides to empty objects", () => {
+    it("defaults missing images/manualOverrides to empty objects", () => {
       const quiz = makeQuiz();
       const saved = { quiz, descriptors: [] };
       const result = normalizeSavedQuiz(saved);
 
       assert.deepStrictEqual(result.images, {});
-      assert.deepStrictEqual(result.audio, {});
       assert.deepStrictEqual(result.manualOverrides, {});
     });
 
@@ -157,5 +158,70 @@ describe("normalizeSavedQuiz", () => {
 
       assert.strictEqual(result.style.textColor, "#000000");
     });
+
+    it("migrates audio from separate field into images as type audio", () => {
+      const quiz = makeQuiz();
+      const saved = { quiz, descriptors: [], audio: { "r0q0:0": { data: "aud", name: "test.mp3", durationMs: 1000 } } };
+      const result = normalizeSavedQuiz(saved);
+
+      assert.deepStrictEqual(result.images["r0q0:0"], {
+        data: "aud", name: "test.mp3", durationMs: 1000,
+        ...AUDIO_DIMENSIONS, type: "audio",
+      });
+    });
+
+    it("places migrated audio in second slot when first is occupied by image", () => {
+      const quiz = makeQuiz();
+      const saved = {
+        quiz, descriptors: [],
+        images: { "r0q0:0": { data: "img", width: 100, height: 100 } },
+        audio: { "r0q0:0": { data: "aud", name: "test.mp3", durationMs: 500 } },
+      };
+      const result = normalizeSavedQuiz(saved);
+
+      assert.deepStrictEqual(result.images["r0q0:0"], { data: "img", width: 100, height: 100 });
+      assert.strictEqual(result.images["r0q0:0:1"].type, "audio");
+      assert.strictEqual(result.images["r0q0:0:1"].data, "aud");
+    });
+
+    it("treats image entries without type field as images", () => {
+      const quiz = makeQuiz();
+      const saved = {
+        quiz, descriptors: [],
+        images: { "r0q0:0": { data: "img", width: 200, height: 150 } },
+      };
+      const result = normalizeSavedQuiz(saved);
+
+      assert.strictEqual(result.images["r0q0:0"].type, undefined);
+      assert.strictEqual(result.images["r0q0:0"].data, "img");
+    });
+  });
+});
+
+describe("mergeAudioIntoImages", () => {
+  it("returns images unchanged when no audio", () => {
+    const images = { "r0q0:0": { data: "img" } };
+    assert.deepStrictEqual(mergeAudioIntoImages(images, {}), images);
+    assert.deepStrictEqual(mergeAudioIntoImages(images, null), images);
+  });
+
+  it("merges audio into empty slot", () => {
+    const result = mergeAudioIntoImages({}, { "r0q0:0": { data: "aud" } });
+    assert.deepStrictEqual(result["r0q0:0"], { data: "aud", ...AUDIO_DIMENSIONS, type: "audio" });
+  });
+
+  it("puts audio in second slot when first is taken", () => {
+    const images = { "r0q0:0": { data: "img" } };
+    const result = mergeAudioIntoImages(images, { "r0q0:0": { data: "aud" } });
+    assert.strictEqual(result["r0q0:0"].data, "img");
+    assert.strictEqual(result["r0q0:0:1"].data, "aud");
+    assert.strictEqual(result["r0q0:0:1"].type, "audio");
+  });
+
+  it("does not overwrite existing second slot", () => {
+    const images = { "r0q0:0": { data: "img1" }, "r0q0:0:1": { data: "img2" } };
+    const result = mergeAudioIntoImages(images, { "r0q0:0": { data: "aud" } });
+    assert.strictEqual(result["r0q0:0"].data, "img1");
+    assert.strictEqual(result["r0q0:0:1"].data, "img2");
   });
 });

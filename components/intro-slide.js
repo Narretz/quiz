@@ -4,7 +4,7 @@ import htm from "htm";
 import { INTRO_SLIDES, DEFAULT_MONEY } from "../lib/intro-slides.js";
 import { SLIDE_STYLE, getSlideImages } from "../quiz-core.js";
 import { PT_SCALE, px, PX, layoutImageBelowText, layoutTwoImagesBelowText } from "../lib/utils.js";
-import { slideStyle, slideImages, slideAudio } from "../lib/state.js";
+import { slideStyle, slideImages } from "../lib/state.js";
 import { ImageActions } from "./image-actions.js";
 import { SlideImage } from "./slide-image.js";
 
@@ -27,8 +27,6 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
   const slideKey = id ? `${id}:0` : null;
   const [imgEntry, imgEntry1] = slideKey ? getSlideImages(slideImages.value, slideKey) : [null, null];
   const hasTwoImages = imgEntry && imgEntry1;
-  const audioEntry = slideKey && slideAudio.value[slideKey];
-
   if (style === "welcome") {
     const t = data.toucan;
     return html`
@@ -77,9 +75,9 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
                 </div>
               `)}
             </div>
-            <${SlideImage} src=${imgEntry.data} imgRef=${imgElRef} slideKey=${slideKey} imgIdx=${0}
+            <${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} imgRef=${imgElRef} slideKey=${slideKey} imgIdx=${0}
                  isSource=${false} linkKey=${null} onRerender=${onRerender} />
-            ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} imgRef=${img1ElRef} slideKey=${slideKey} imgIdx=${1}
+            ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} type=${imgEntry1.type} name=${imgEntry1.name} imgRef=${img1ElRef} slideKey=${slideKey} imgIdx=${1}
                  isSource=${false} linkKey=${null} onRerender=${onRerender} />`}
             ${mediaOverlay()}
           </div>
@@ -157,9 +155,9 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
                 <div style="font-size:${data.ruleFontSize * PT_SCALE}px;color:${c(data.ruleColor)};margin-top:4px">${rule}</div>
               `)}
             </div>
-            <${SlideImage} src=${imgEntry.data} imgRef=${imgElRef} slideKey=${slideKey} imgIdx=${0}
+            <${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} imgRef=${imgElRef} slideKey=${slideKey} imgIdx=${0}
                  isSource=${false} linkKey=${null} onRerender=${onRerender} />
-            ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} imgRef=${img1ElRef} slideKey=${slideKey} imgIdx=${1}
+            ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} type=${imgEntry1.type} name=${imgEntry1.name} imgRef=${img1ElRef} slideKey=${slideKey} imgIdx=${1}
                  isSource=${false} linkKey=${null} onRerender=${onRerender} />`}
             ${mediaOverlay()}
           </div>
@@ -207,9 +205,9 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
                 <div style="font-size:${l.fontSize * PT_SCALE}px;${l.bold ? 'font-weight:bold;' : ''}color:${c(l.color)};${l.marginTop ? `margin-top:${l.marginTop * PX}px;` : ''}">${l.text}</div>
               `)}
             </div>
-            <${SlideImage} src=${imgEntry.data} imgRef=${imgElRef} slideKey=${slideKey} imgIdx=${0}
+            <${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} imgRef=${imgElRef} slideKey=${slideKey} imgIdx=${0}
                  isSource=${false} linkKey=${null} onRerender=${onRerender} />
-            ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} imgRef=${img1ElRef} slideKey=${slideKey} imgIdx=${1}
+            ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} type=${imgEntry1.type} name=${imgEntry1.name} imgRef=${img1ElRef} slideKey=${slideKey} imgIdx=${1}
                  isSource=${false} linkKey=${null} onRerender=${onRerender} />`}
             ${mediaOverlay()}
           </div>
@@ -234,14 +232,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
   return null;
 
   function mediaOverlay() {
-    return html`
-      ${audioEntry && html`
-        <div class="slide-audio" style="background:${bg}e0">
-          <audio controls preload="none" src=${audioEntry.data} />
-          <span class="slide-audio__name">${audioEntry.name}</span>
-        </div>
-      `}
-    `;
+    return null;
   }
 
   function actionsOverlay() {

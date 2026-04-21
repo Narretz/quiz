@@ -21,6 +21,8 @@ export const SLIDE_STYLE = {
   answer:   { fontSize: 20, color: '#FFFFFF', backgroundColor: '#CC0000' },
 };
 
+export const AUDIO_DIMENSIONS = { width: 280, height: 80 };
+
 export function formatAnswer(q) {
   const de = (q.answers.de || "").trim();
   const en = (q.answers.en || "").trim();
@@ -115,6 +117,19 @@ export function extractQuestions(quiz) {
   return questions;
 }
 
+export function mergeAudioIntoImages(images, audio) {
+  if (!audio || !Object.keys(audio).length) return images;
+  const merged = { ...images };
+  for (const [key, audioData] of Object.entries(audio)) {
+    if (!merged[key]) {
+      merged[key] = { ...audioData, ...AUDIO_DIMENSIONS, type: "audio" };
+    } else if (!merged[key + ":1"]) {
+      merged[key + ":1"] = { ...audioData, ...AUDIO_DIMENSIONS, type: "audio" };
+    }
+  }
+  return merged;
+}
+
 export function normalizeSavedQuiz(saved) {
   const questions = saved.questions || extractQuestions(saved.quiz);
   const descriptors = saved.descriptors || buildSlideDescriptors(saved.quiz);
@@ -124,10 +139,10 @@ export function normalizeSavedQuiz(saved) {
     backgroundColor: saved.style.backgroundColor || "#FFFFFF",
     textColor: saved.style.textColor || "#000000",
   } : null;
+  const images = mergeAudioIntoImages(saved.images || {}, saved.audio);
   return {
     quiz: saved.quiz,
-    images: saved.images || {},
-    audio: saved.audio || {},
+    images,
     questions,
     manualOverrides: saved.manualOverrides || {},
     descriptors,
@@ -503,6 +518,7 @@ function renderIntroSlide(slide, data, assets, desc, images) {
  * @param {Record<string, {text:{de:string,en:string}, answers:{de:string,en:string}}>} [questions]
  */
 export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, audio = {}, introAssets = {}, questions = {}) {
+  images = mergeAudioIntoImages(images, audio);
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
   pptx.theme = { headFontFace: "Arial", bodyFontFace: "Arial" };
@@ -512,27 +528,29 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
   const bgColor = backgroundColor.replace("#", "");
   const fgColor = SLIDE_STYLE.textColor.replace("#", "");
 
-  // Add image/audio to any slide by its ID
+  function addMediaEntry(slide, entry, x, y, w, h) {
+    const type = entry.type || "image";
+    if (type === "audio") {
+      const audioData = entry.data.replace(/^data:/, "").replace(/^audio\/mpeg/, "audio/mp3");
+      slide.addMedia({
+        type: "audio", data: audioData,
+        x: x + (w - 0.5) / 2, y: y + (h - 0.5) / 2, w: 0.5, h: 0.5,
+      });
+    } else if (type === "video") {
+      const videoData = entry.data.replace(/^data:/, "");
+      slide.addMedia({ type: "video", data: videoData, x, y, w, h });
+    } else {
+      slide.addImage({ data: entry.data, x, y, w, h, sizing: { type: "contain", w, h } });
+    }
+  }
+
   function addSlideMedia(slide, desc, { skipImage = false } = {}) {
     const slideKey = desc.id ? `${desc.id}:0` : null;
     if (!slideKey) return;
+    const [entry0, entry1] = getSlideImages(images, slideKey);
     if (!skipImage) {
-      const imgEntry = images[slideKey];
-      if (imgEntry) {
-        slide.addImage({
-          data: imgEntry.data,
-          x: 0, y: 0, w: W, h: H,
-          sizing: { type: "contain", w: W, h: H },
-        });
-      }
-    }
-    const audioEntry = audio[slideKey];
-    if (audioEntry) {
-      const audioData = audioEntry.data.replace(/^data:/, "").replace(/^audio\/mpeg/, "audio/mp3");
-      slide.addMedia({
-        type: "audio", data: audioData,
-        x: (W - 0.5) / 2, y: (H - 0.5) / 2, w: 0.5, h: 0.5,
-      });
+      if (entry0) addMediaEntry(slide, entry0, 0, 0, W, H);
+      if (entry1) addMediaEntry(slide, entry1, W / 2, 0, W / 2, H);
     }
   }
 
@@ -636,16 +654,12 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
         for (const [entry, xOff] of [[imgEntry, pad], [imgEntry1, pad + boxW + gap]]) {
           const ar = entry.width / entry.height;
           const { w: iw, h: ih } = fit(boxW, boxH, ar);
-          slide.addImage({ data: entry.data, x: xOff + (boxW - iw) / 2, y: (H - ih) / 2, w: iw, h: ih, sizing: { type: "contain", w: iw, h: ih } });
+          addMediaEntry(slide, entry, xOff + (boxW - iw) / 2, (H - ih) / 2, iw, ih);
         }
       } else {
         const ar = imgEntry.width / imgEntry.height;
         const { w, h } = fit(W - 2 * pad, H - 2 * pad, ar);
-        slide.addImage({
-          data: imgEntry.data,
-          x: (W - w) / 2, y: (H - h) / 2, w, h,
-          sizing: { type: "contain", w, h },
-        });
+        addMediaEntry(slide, imgEntry, (W - w) / 2, (H - h) / 2, w, h);
       }
       slide.addText(String(num), {
         x: pad, y: pad, w: 0.8, h: 0.5, fontSize: SLIDE_STYLE.num.fontSize, bold: true, color: fgColor,
@@ -670,18 +684,14 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
         enW = layout.enW;
         bottomLimit = Math.min(bottomLimit, layout.textBottomLimit);
         for (const [entry, img] of [[imgEntry, layout.img0], [imgEntry1, layout.img1]]) {
-          slide.addImage({ data: entry.data, x: img.x, y: img.y, w: img.w, h: img.h, sizing: { type: "contain", w: img.w, h: img.h } });
+          addMediaEntry(slide, entry, img.x, img.y, img.w, img.h);
         }
       } else if (override?.imgLayout) {
         // Compact layout from browser fitting pass
         deW = override.deW ?? fullW;
         enW = override.enW ?? fullW;
         const il = override.imgLayout;
-        slide.addImage({
-          data: imgEntry.data,
-          x: il.x, y: il.y, w: il.w, h: il.h,
-          sizing: { type: "contain", w: il.w, h: il.h },
-        });
+        addMediaEntry(slide, imgEntry, il.x, il.y, il.w, il.h);
       } else {
         const layout = computeImageLayout(imgEntry.width / imgEntry.height);
         deW = layout.deW;
@@ -689,12 +699,7 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
         if (layout.mode === "ultrawide") {
           bottomLimit = Math.min(bottomLimit, layout.img.y - pad);
         }
-        slide.addImage({
-          data: imgEntry.data,
-          x: layout.img.x, y: layout.img.y,
-          w: layout.img.w, h: layout.img.h,
-          sizing: { type: "contain", w: layout.img.w, h: layout.img.h },
-        });
+        addMediaEntry(slide, imgEntry, layout.img.x, layout.img.y, layout.img.w, layout.img.h);
       }
     }
     const qFontSize = override?.fontSize ?? SLIDE_STYLE.question.fontSize;
@@ -746,16 +751,12 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
               for (const [entry, xOff] of [[imgEntry, pad], [imgEntry1, pad + boxW + gap]]) {
                 const ar = entry.width / entry.height;
                 const { w: iw, h: ih } = fit(boxW, imgBoxH, ar);
-                slide.addImage({ data: entry.data, x: xOff + (boxW - iw) / 2, y: imgTop + (imgBoxH - ih) / 2, w: iw, h: ih, sizing: { type: "contain", w: iw, h: ih } });
+                addMediaEntry(slide, entry, xOff + (boxW - iw) / 2, imgTop + (imgBoxH - ih) / 2, iw, ih);
               }
             } else {
               const ar = imgEntry.width / imgEntry.height;
               const { w: iw, h: ih } = fit(fullW, imgBoxH, ar);
-              slide.addImage({
-                data: imgEntry.data,
-                x: (W - iw) / 2, y: imgTop, w: iw, h: ih,
-                sizing: { type: "contain", w: iw, h: ih },
-              });
+              addMediaEntry(slide, imgEntry, (W - iw) / 2, imgTop, iw, ih);
             }
           }
         }
@@ -767,31 +768,16 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
           for (const [entry, xOff] of [[imgEntry, pad], [imgEntry1, pad + boxW + gap]]) {
             const ar = entry.width / entry.height;
             const { w: iw, h: ih } = fit(boxW, boxH, ar);
-            slide.addImage({ data: entry.data, x: xOff + (boxW - iw) / 2, y: (H - ih) / 2, w: iw, h: ih, sizing: { type: "contain", w: iw, h: ih } });
+            addMediaEntry(slide, entry, xOff + (boxW - iw) / 2, (H - ih) / 2, iw, ih);
           }
         } else {
           const ar = imgEntry.width / imgEntry.height;
           const { w: iw, h: ih } = fit(W - 2 * pad, H - 2 * pad, ar);
-          slide.addImage({
-            data: imgEntry.data,
-            x: (W - iw) / 2, y: (H - ih) / 2, w: iw, h: ih,
-            sizing: { type: "contain", w: iw, h: ih },
-          });
+          addMediaEntry(slide, imgEntry, (W - iw) / 2, (H - ih) / 2, iw, ih);
         }
       }
     }
 
-    // Embed audio if present
-    const audioEntry = slideKey && audio[slideKey];
-    if (audioEntry) {
-      // Strip "data:" prefix and normalize MIME — pptxgenjs derives extension from subtype
-      const audioData = audioEntry.data.replace(/^data:/, "").replace(/^audio\/mpeg/, "audio/mp3");
-      slide.addMedia({
-        type: "audio",
-        data: audioData,
-        x: (W - 0.5) / 2, y: (H - 0.5) / 2, w: 0.5, h: 0.5,
-      });
-    }
   }
 
   return pptx;

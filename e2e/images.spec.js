@@ -269,11 +269,11 @@ test.describe("multiple images", () => {
     await addImage(outer, IMG.portrait);
     await expect(slideImg(outer)).toHaveCount(2, { timeout: 5_000 });
 
-    await hoverAndClickButton(outer, "remove all img");
+    await hoverAndClickButton(outer, "remove all");
     await expect(slideImg(outer)).toHaveCount(0);
   });
 
-  test("slide-level remove all img also removes from linked slide", async ({ page }) => {
+  test("slide-level remove all also removes from linked slide", async ({ page }) => {
     const question = questionOuter(page, "r0q0", false);
     const answer = questionOuter(page, "r0q0", true);
 
@@ -285,7 +285,7 @@ test.describe("multiple images", () => {
     await expect(slideImg(answer)).toHaveCount(2, { timeout: 5_000 });
 
     // Remove all from question (source)
-    await hoverAndClickButton(question, "remove all img");
+    await hoverAndClickButton(question, "remove all");
     await expect(slideImg(question)).toHaveCount(0);
 
     await answer.scrollIntoViewIfNeeded();
@@ -317,7 +317,7 @@ test.describe("image linking", () => {
     await expect(slideImg(answer).first()).toBeVisible({ timeout: 5_000 });
 
     // Unlink from answer slide
-    await hoverAndClickButton(answer, "unlink img");
+    await hoverAndClickButton(answer, "unlink media");
 
     // Answer should no longer have an image
     await expect(slideImg(answer)).toHaveCount(0);
@@ -335,7 +335,7 @@ test.describe("image linking", () => {
     await expect(slideImg(answer).first()).toBeVisible({ timeout: 5_000 });
 
     // Unlink
-    await hoverAndClickButton(answer, "unlink img");
+    await hoverAndClickButton(answer, "unlink media");
     await expect(slideImg(answer)).toHaveCount(0);
 
     // Relink
@@ -352,7 +352,7 @@ test.describe("image linking", () => {
     await expect(slideImg(answer).first()).toBeVisible({ timeout: 5_000 });
 
     // Unlink answer, then add a different image
-    await hoverAndClickButton(answer, "unlink img");
+    await hoverAndClickButton(answer, "unlink media");
     await expect(slideImg(answer)).toHaveCount(0);
     await addImage(answer, IMG.portrait);
 
@@ -377,7 +377,7 @@ test.describe("image action buttons", () => {
     await expect(slideImg(outer)).toHaveCount(1);
   });
 
-  test("remove img button removes image from slide and linked slide", async ({ page }) => {
+  test("remove media button removes image from slide and linked slide", async ({ page }) => {
     const question = questionOuter(page, "r0q0", false);
     const answer = questionOuter(page, "r0q0", true);
 
@@ -385,21 +385,21 @@ test.describe("image action buttons", () => {
     await expect(slideImg(answer).first()).toBeVisible({ timeout: 5_000 });
 
     // Remove from question (source) — should remove from both
-    await hoverAndClickButton(question, "remove img");
+    await hoverAndClickButton(question, "remove media");
     await expect(slideImg(question)).toHaveCount(0);
     await answer.scrollIntoViewIfNeeded();
     await expect(slideImg(answer)).toHaveCount(0);
   });
 
-  test("remove img from linked button only removes from answer", async ({ page }) => {
+  test("remove media from linked button only removes from answer", async ({ page }) => {
     const question = questionOuter(page, "r0q0", false);
     const answer = questionOuter(page, "r0q0", true);
 
     await addImage(question, IMG.landscape);
     await expect(slideImg(answer).first()).toBeVisible({ timeout: 5_000 });
 
-    // Use "remove img from linked" on question slide
-    await hoverAndClickButton(question, "remove img from linked");
+    // Use "remove media from linked" on question slide
+    await hoverAndClickButton(question, "remove media from linked");
 
     // Question should still have its image
     await question.scrollIntoViewIfNeeded();

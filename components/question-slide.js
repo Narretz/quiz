@@ -3,7 +3,7 @@ import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { SLIDE_STYLE, computeImageLayout, computeTwoImageLayout, getSlideImages, fit } from "../quiz-core.js";
 import { PT_SCALE, PX, px } from "../lib/utils.js";
-import { slideImages, slideAudio, quizQuestions, manualOverrides, slideStyle, slideOverrides, scheduleSave } from "../lib/state.js";
+import { slideImages, quizQuestions, manualOverrides, slideStyle, slideOverrides, scheduleSave } from "../lib/state.js";
 import { fitSlideText } from "../lib/fitting.js";
 import { ImageActions } from "./image-actions.js";
 import { SlideImage } from "./slide-image.js";
@@ -285,20 +285,14 @@ export function QuestionSlide({ desc, onRerender }) {
           <text x="4" y="12" fill=${SLIDE_STYLE.answer.color} font-size="10" font-weight="bold">A</text>
         </svg>
       `}
-      ${answerImgLayout && html`<${SlideImage} src=${imgEntry.data} imgRef=${ansImgRef} slideKey=${slideKey} imgIdx=${0}
+      ${answerImgLayout && html`<${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} imgRef=${ansImgRef} slideKey=${slideKey} imgIdx=${0}
            isSource=${!withAnswers} linkKey=${`${id}:${withAnswers ? 0 : 1}`} onRerender=${onRerender} />`}
-      ${answerImgLayout && hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} imgRef=${ansImg1Ref} slideKey=${slideKey} imgIdx=${1}
+      ${answerImgLayout && hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} type=${imgEntry1.type} name=${imgEntry1.name} imgRef=${ansImg1Ref} slideKey=${slideKey} imgIdx=${1}
            isSource=${!withAnswers} linkKey=${`${id}:${withAnswers ? 0 : 1}`} onRerender=${onRerender} />`}
-      ${imgStyle && html`<${SlideImage} src=${imgEntry.data} style=${imgStyle} slideKey=${slideKey} imgIdx=${0}
+      ${imgStyle && html`<${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} style=${imgStyle} slideKey=${slideKey} imgIdx=${0}
            isSource=${!withAnswers} linkKey=${`${id}:${withAnswers ? 0 : 1}`} onRerender=${onRerender} />`}
-      ${imgStyle1 && html`<${SlideImage} src=${imgEntry1.data} style=${imgStyle1} slideKey=${slideKey} imgIdx=${1}
+      ${imgStyle1 && html`<${SlideImage} src=${imgEntry1.data} type=${imgEntry1.type} name=${imgEntry1.name} style=${imgStyle1} slideKey=${slideKey} imgIdx=${1}
            isSource=${!withAnswers} linkKey=${`${id}:${withAnswers ? 0 : 1}`} onRerender=${onRerender} />`}
-      ${slideKey && slideAudio.value[slideKey] && html`
-        <div class="slide-audio" style="background:${bg}e0">
-          <audio controls preload="none" src=${slideAudio.value[slideKey].data} />
-          <span class="slide-audio__name">${slideAudio.value[slideKey].name}</span>
-        </div>
-      `}
     </div>
     ${id && html`<${ImageActions} id=${id} withAnswers=${withAnswers} imgEntry=${imgEntry}
                    slideKey=${slideKey} onRerender=${onRerender} />`}
