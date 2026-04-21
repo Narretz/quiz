@@ -187,7 +187,7 @@ describe("astToQuiz", () => {
   });
 
   describe("Name 10 round", () => {
-    it("clears answers and sets noAnswerText on penultimate round matching 'Name 10'", () => {
+    it("clears answers on penultimate round matching 'Name 10'", () => {
       const ast = sheet([
         row(cell(0, "R1", { bold: true })),
         row(cell(0, "F"), cell(1, "Q"), cell(2, "A")),
@@ -198,7 +198,6 @@ describe("astToQuiz", () => {
       ]);
       const quiz = astToQuiz(ast);
       const name10 = quiz.rounds[1];
-      assert.strictEqual(name10.noAnswerText, true);
       assert.deepStrictEqual(name10.questions[0].answers, { de: "", en: "" });
     });
 
@@ -207,12 +206,12 @@ describe("astToQuiz", () => {
         row(cell(0, "R1", { bold: true })),
         row(cell(0, "F"), cell(1, "Q"), cell(2, "A")),
         row(cell(0, "NAME 10", { bold: true })),
-        row(cell(0, "F"), cell(1, "Q"), cell(2, "A")),
+        row(cell(0, "F"), cell(1, "Q"), cell(2, "should be cleared")),
         row(cell(0, "Last", { bold: true })),
         row(cell(0, "F"), cell(1, "Q"), cell(2, "A")),
       ]);
       const quiz = astToQuiz(ast);
-      assert.strictEqual(quiz.rounds[1].noAnswerText, true);
+      assert.deepStrictEqual(quiz.rounds[1].questions[0].answers, { de: "", en: "" });
     });
 
     it("tolerates missing space: 'Name10'", () => {
@@ -220,15 +219,15 @@ describe("astToQuiz", () => {
         row(cell(0, "R1", { bold: true })),
         row(cell(0, "F"), cell(1, "Q"), cell(2, "A")),
         row(cell(0, "Name10", { bold: true })),
-        row(cell(0, "F"), cell(1, "Q"), cell(2, "A")),
+        row(cell(0, "F"), cell(1, "Q"), cell(2, "should be cleared")),
         row(cell(0, "Last", { bold: true })),
         row(cell(0, "F"), cell(1, "Q"), cell(2, "A")),
       ]);
       const quiz = astToQuiz(ast);
-      assert.strictEqual(quiz.rounds[1].noAnswerText, true);
+      assert.deepStrictEqual(quiz.rounds[1].questions[0].answers, { de: "", en: "" });
     });
 
-    it("does not flag non-penultimate rounds", () => {
+    it("does not clear answers on non-penultimate rounds", () => {
       const ast = sheet([
         row(cell(0, "Name 10", { bold: true })),
         row(cell(0, "F"), cell(1, "Q"), cell(2, "original answer")),
@@ -238,7 +237,6 @@ describe("astToQuiz", () => {
         row(cell(0, "F"), cell(1, "Q"), cell(2, "A")),
       ]);
       const quiz = astToQuiz(ast);
-      assert.strictEqual(quiz.rounds[0].noAnswerText, undefined);
       assert.strictEqual(quiz.rounds[0].questions[0].answers.de, "original answer");
     });
   });

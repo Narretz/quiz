@@ -203,7 +203,6 @@ export function astToQuiz(ast) {
   if (rounds.length >= 2) {
     const penultimate = rounds[rounds.length - 2];
     if (/^name\s*10$/i.test(penultimate.name)) {
-      penultimate.noAnswerText = true;
       for (const q of penultimate.questions) {
         q.answers = { de: "", en: "" };
       }
@@ -241,7 +240,7 @@ export function buildSlideDescriptors(quiz) {
       }
       const count = round.questions.length === 0 ? 10 : round.questions.length;
       for (let i = 0; i < count; i++) {
-        slides.push({ type: "question", id: `r${ri}q${i}`, num: i + 1, withAnswers, noAnswerText: !!round.noAnswerText });
+        slides.push({ type: "question", id: `r${ri}q${i}`, num: i + 1, withAnswers });
       }
     }
   }
@@ -622,8 +621,8 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
       continue;
     }
 
-    const { num, withAnswers, id, noAnswerText } = desc;
-    const q = (noAnswerText && withAnswers) ? null : (questions[id] || desc.q); // desc.q fallback for old saves
+    const { num, withAnswers, id } = desc;
+    const q = questions[id] || desc.q; // desc.q fallback for old saves
     const slideKey = id ? `${id}:${withAnswers ? 1 : 0}` : null;
     const [imgEntry, imgEntry1] = slideKey ? getSlideImages(images, slideKey) : [null, null];
     const hasTwoImages = imgEntry && imgEntry1;

@@ -19,8 +19,8 @@ function focusEnd(el) {
 }
 
 export function QuestionSlide({ desc, onRerender }) {
-  const { num, withAnswers, id, noAnswerText } = desc;
-  const q = (noAnswerText && withAnswers) ? null : (quizQuestions.value[id] || desc.q); // desc.q fallback for old saves
+  const { num, withAnswers, id } = desc;
+  const q = quizQuestions.value[id] || desc.q; // desc.q fallback for old saves
   const slideKey = id ? `${id}:${withAnswers ? 1 : 0}` : null;
   const [imgEntry, imgEntry1] = slideKey ? getSlideImages(slideImages.value, slideKey) : [null, null];
   const hasTwoImages = imgEntry && imgEntry1;
