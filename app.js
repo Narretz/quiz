@@ -43,7 +43,7 @@ function App() {
         <li>You can set the jackpot size and the email shown in the very last slide. Saved in the browser.</li>
         <li>You can up to 2 media elements: 2 images or 1 audio/video + an image to all slides, except the first 3. Text will automatically be repositioned. Adding an image to a question will automatically add it to the answer, but you can also add distinct images to questions/answers</li>
         <li>If you add a video to the question, the first frame of it will be added as an image to the answer</li>
-        <li>Questions, answers, and round descriptions can be edited per language by clicking into the text. Answers can only be edited in the answer slide.</li>
+        <li>Questions, answers, and round descriptions can be edited per language by clicking into the text.</li>
         <li>Your changes will be saved locally in this browser and you can load quizzes later and continue editing.</li>
         <li>Downloading the quiz as .pptx will include all media and text changes and create very similar output, but you should check for text overflow specifically.</li>
       </ul>
