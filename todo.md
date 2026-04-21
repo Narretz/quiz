@@ -1,16 +1,25 @@
+# Validation
+
+- check if answer(s) are in either text block
+- check if all question slides have at least some content: questions have either text or media, answers have either extra image or answer text
+- check if jackpot and email are set
+- check if title slides and extra slides have images
+
 # Feedback
 
-- Frage-Nummer auch in den Englischen Block
+- Frage-Nummer auch in den Englischen Block ✅
 - Lasst uns beginnen - Text unten
-- Zwei Bilder
-- Name Ten: Text drin lassen
-- Jackpot-Antworten zeigen nach click
-
+- Zwei Bilder ✅
+- Name Ten: Text drin lassen ✅
+- Jackpot-Antworten zeigen nach click ✅
 - Zwischenstand Folie ✅
-- More bottom padding for answer block
+
+# More nice to have:
+
+- More bottom padding for answer block ✅
 - Bold formatting
-- Feld für Jackpot-Summe
-- Feld für Email-Adresse
+- Feld für Jackpot-Summe ✅
+- Feld für Email-Adresse ✅
 
 # Bilingual round titles (de/en)
 
@@ -76,7 +85,7 @@ pptx:
 
 feature parity for full quiz
 
-- edit text
+- edit text ✅
 - switch between normal theme and edit theme
 - special case name 10 ✅
 - add/edit answer in slides ✅
@@ -87,10 +96,9 @@ feature parity for full quiz
 nice to have
 
 - remove backwards compat for old storage structure
-- editable jackpot value and display it in jackpot slide as well
+- editable jackpot value and display it in jackpot slide as well ✅
 - create quiz from scratch
 - inspect codebase to check for reuse of fitting logic
-- use quiz-name+round name hashes
 - validate quiz: warn when no content, answer in question, text overlaps/is cut off
 - strip question numbers from text
 - undo/redo stack
