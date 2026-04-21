@@ -121,6 +121,33 @@ test.describe("image positioning", () => {
   });
 });
 
+test.describe("compact layout (short text)", () => {
+  test("landscape image with short text is centered below the text", async ({ page }) => {
+    await seedQuiz(page, { questions: { r0q0: { text: { de: "Kurz?", en: "Short?" } } } });
+    const outer = questionOuter(page, "r0q0");
+    await addImage(outer, IMG.landscape);
+
+    const slide = outer.locator(".slide");
+    const img = slideImg(outer).first();
+    const enText = slide.locator('[lang="en"]');
+    const slideBox = await slide.boundingBox();
+    const imgBox = await img.boundingBox();
+    const enBox = await enText.boundingBox();
+
+    // Image should be horizontally centered (not pushed to the right)
+    const imgCenter = imgBox.x + imgBox.width / 2;
+    const slideCenter = slideBox.x + slideBox.width / 2;
+    expect(Math.abs(imgCenter - slideCenter)).toBeLessThan(slideBox.width * 0.02);
+
+    // Image should have padding on both sides (not flush with slide edges)
+    expect(imgBox.x - slideBox.x).toBeGreaterThan(5);
+    expect((slideBox.x + slideBox.width) - (imgBox.x + imgBox.width)).toBeGreaterThan(5);
+
+    // Image should sit below the EN text block
+    expect(imgBox.y).toBeGreaterThan(enBox.y + enBox.height - 2);
+  });
+});
+
 test.describe("full-screen image", () => {
   test.beforeEach(async ({ page }) => {
     await seedQuiz(page);

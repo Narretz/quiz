@@ -29,8 +29,21 @@ export async function buildSeedRecord() {
   return _cached;
 }
 
-export async function seedQuiz(page) {
-  const record = await buildSeedRecord();
+export async function seedQuiz(page, { questions: questionOverrides } = {}) {
+  const base = await buildSeedRecord();
+  let record = base;
+  if (questionOverrides) {
+    const questions = { ...base.questions };
+    for (const [id, patch] of Object.entries(questionOverrides)) {
+      const existing = questions[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
+      questions[id] = {
+        ...existing,
+        text: { ...existing.text, ...(patch.text || {}) },
+        answers: { ...existing.answers, ...(patch.answers || {}) },
+      };
+    }
+    record = { ...base, questions };
+  }
   // Navigate to origin first so we can access its IndexedDB
   await page.goto("/");
   await page.evaluate((rec) => {
