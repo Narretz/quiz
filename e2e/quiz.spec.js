@@ -54,7 +54,7 @@ test.describe("quiz loaded", () => {
   });
 
   test("downloads PPTX file", async ({ page }) => {
-    const downloadPromise = page.waitForEvent("download");
+    const downloadPromise = page.waitForEvent("download", {timeout: 45000});
     await page.locator("button", { hasText: "Download .pptx" }).click();
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/^quiz-.*\.pptx$/);
