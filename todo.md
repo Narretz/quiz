@@ -1,7 +1,6 @@
 # Feedback
 
 - Frage-Nummer auch in den Englischen Block
-- Video
 - Lasst uns beginnen - Text unten
 - Zwei Bilder
 - Name Ten: Text drin lassen
@@ -25,7 +24,7 @@ Currently `desc.text` for title slides is a plain string. To support separate DE
 - [ ] Parsing: either split `round.name` by `⬧` separator or let EN be added manually via editing
 
 
-# Video:
+# Video: ✅
 
 Video can reuse the image layout system directly. A video has width/height just like an image, so computeImageLayout(ar) and
 computeTwoImageLayout() work as-is. A video could occupy one of the two image slots, with an image in the other — the side-by-side
