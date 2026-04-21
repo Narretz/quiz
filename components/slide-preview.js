@@ -37,7 +37,7 @@ function buildSections(quiz, descriptors) {
   }
 
   // --- Section 1: Rounds 0-1 + break 1 ---
-  addStandardSection("Section 1", quiz.rounds.slice(0, 2), 1); // +1 for break
+  addStandardSection("Section 1", quiz.rounds.slice(0, 2), 2); // +2 for break + points
 
   // --- Section 2: Rounds 2-4 + jackpot break + prizes ---
   addStandardSection("Section 2", quiz.rounds.slice(2, 5), 2); // +2 for jackpot-break + prizes

@@ -106,6 +106,12 @@ test.describe("quiz loaded", () => {
     await expect(deField).toHaveText("Edited question text");
   });
 
+  test("goodbye slide is rendered after jackpot answers", async ({ page }) => {
+    const lastSlide = page.locator(".slide").last();
+    await lastSlide.scrollIntoViewIfNeeded();
+    await expect(lastSlide).toContainText("See you again next week");
+  });
+
   test("TOC navigation scrolls to round", async ({ page }) => {
     const tocLinks = page.locator(".toc a");
     const secondLink = tocLinks.nth(1);
