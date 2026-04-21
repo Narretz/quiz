@@ -84,6 +84,77 @@ test.describe("video", () => {
     await expect(slideVideo(answer)).not.toBeVisible();
   });
 
+  test("video frame is extracted as preview image on answer slide", async ({ page }) => {
+    const question = questionOuter(page, "r0q0", false);
+    const answer = questionOuter(page, "r0q0", true);
+
+    await addAV(question, VIDEO);
+
+    // Answer slide should get a still frame (an <img>, not a <video>)
+    await answer.scrollIntoViewIfNeeded();
+    await expect(answer.locator(".slide .slide-img-wrap img")).toBeVisible({ timeout: 5_000 });
+    await expect(slideVideo(answer)).not.toBeVisible();
+  });
+
+  test("removing video also removes frame from answer slide", async ({ page }) => {
+    const question = questionOuter(page, "r0q0", false);
+    const answer = questionOuter(page, "r0q0", true);
+
+    await addAV(question, VIDEO);
+    await answer.scrollIntoViewIfNeeded();
+    await expect(answer.locator(".slide .slide-img-wrap img")).toBeVisible({ timeout: 5_000 });
+
+    // Remove video from question
+    await hoverAndClickButton(question, "remove media");
+
+    // Frame should be removed from answer too
+    await answer.scrollIntoViewIfNeeded();
+    await expect(answer.locator(".slide .slide-img-wrap")).toHaveCount(0);
+  });
+
+  test("removing video preserves user-added image on answer slide", async ({ page }) => {
+    const question = questionOuter(page, "r0q0", false);
+    const answer = questionOuter(page, "r0q0", true);
+
+    // Add video to question (frame auto-extracted to answer slot 0)
+    await addAV(question, VIDEO);
+    await answer.scrollIntoViewIfNeeded();
+    await expect(answer.locator(".slide .slide-img-wrap img")).toBeVisible({ timeout: 5_000 });
+
+    // Add a separate image to answer slot 1
+    await answer.hover();
+    const imgInput = answer.locator('.img-actions input[type="file"][accept="image/*"]');
+    await imgInput.setInputFiles(path.resolve("tests/images/image-landscape.webp"));
+    await expect(answer.locator(".slide .slide-img-wrap")).toHaveCount(2, { timeout: 5_000 });
+
+    // Remove video from question
+    await hoverAndClickButton(question, "remove media");
+
+    // Frame removed, but user-added image should survive
+    await answer.scrollIntoViewIfNeeded();
+    await expect(answer.locator(".slide .slide-img-wrap")).toHaveCount(1);
+    await expect(answer.locator(".slide .slide-img-wrap img")).toBeVisible();
+  });
+
+  test("video frame is NOT added to answer when answer already has an image", async ({ page }) => {
+    const question = questionOuter(page, "r0q0", false);
+    const answer = questionOuter(page, "r0q0", true);
+
+    // Add image to answer first
+    await answer.scrollIntoViewIfNeeded();
+    await answer.hover();
+    const imgInput = answer.locator('.img-actions input[type="file"][accept="image/*"]');
+    await imgInput.setInputFiles(path.resolve("tests/images/image-landscape.webp"));
+    await expect(answer.locator(".slide .slide-img-wrap img")).toBeVisible({ timeout: 5_000 });
+
+    // Now add video to question
+    await addAV(question, VIDEO);
+
+    // Answer should still have exactly 1 image (the original, not the frame)
+    await answer.scrollIntoViewIfNeeded();
+    await expect(answer.locator(".slide .slide-img-wrap")).toHaveCount(1);
+  });
+
   test("video coexists with image in two slots", async ({ page }) => {
     const outer = questionOuter(page, "r0q0");
 
@@ -132,6 +203,9 @@ test.describe("video", () => {
     await addAV(outer, VIDEO);
     await expect(slideVideo(outer)).toBeVisible();
 
+    // Wait for frame extraction + save to complete
+    const answer = questionOuter(page, "r0q0", true);
+    await expect(answer.locator(".slide .slide-img-wrap img")).toBeVisible({ timeout: 5_000 });
     await page.waitForTimeout(500);
     await page.reload();
     await page.locator(".slide").first().waitFor({ timeout: 10_000 });

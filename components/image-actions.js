@@ -1,7 +1,7 @@
 import { h } from "preact";
 import htm from "htm";
 import { SLIDE_STYLE } from "../quiz-core.js";
-import { loadMediaFile } from "../lib/utils.js";
+import { loadMediaFile, extractVideoFrame } from "../lib/utils.js";
 import { slideImages, setImage, removeImage, setManualOverride, slideOverrides, scheduleSave, debug } from "../lib/state.js";
 
 const html = htm.bind(h);
@@ -71,6 +71,15 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
       const freeSlot = !images[slideKey] ? slideKey : (!images[slideKey + ":1"] ? slideKey + ":1" : null);
       if (!freeSlot) return;
       setImage(freeSlot, entry);
+      if (entry.type === "video" && isSource && linkKey && !images[linkKey] && !images[linkKey + ":1"]) {
+        extractVideoFrame(entry.data).then((frame) => {
+          if (!slideImages.value[linkKey] && !slideImages.value[linkKey + ":1"]) {
+            setImage(linkKey, { ...frame, videoFrame: true });
+            scheduleSave();
+            onRerender();
+          }
+        }).catch(() => {});
+      }
     } catch (err) {
       alert(err.message);
     }
@@ -82,21 +91,45 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
   function removeAllImages() {
     removeImage(slideKey);
     removeImage(slideKey + ":1");
-    if (isLinked || (linkKey && images[linkKey])) {
-      removeImage(linkKey);
-      removeImage(linkKey + ":1");
+    if (linkKey) {
+      for (const k of [linkKey, linkKey + ":1"]) {
+        const linked = images[k];
+        if (!linked) continue;
+        if (linked.videoFrame) { removeImage(k); continue; }
+        if (imgEntry && linked.data === imgEntry.data) { removeImage(k); continue; }
+        if (imgEntry1 && linked.data === imgEntry1.data) { removeImage(k); continue; }
+      }
+      if (!slideImages.value[linkKey] && slideImages.value[linkKey + ":1"]) {
+        setImage(linkKey, slideImages.value[linkKey + ":1"]);
+        removeImage(linkKey + ":1");
+      }
     }
     scheduleSave();
     onRerender();
   }
 
+  function removeLinkedVideoFrames() {
+    if (!linkKey) return;
+    const cur = slideImages.value;
+    const removed0 = cur[linkKey]?.videoFrame;
+    const removed1 = cur[linkKey + ":1"]?.videoFrame;
+    if (removed0) removeImage(linkKey);
+    if (removed1) removeImage(linkKey + ":1");
+    if (removed0 && !removed1 && slideImages.value[linkKey + ":1"]) {
+      setImage(linkKey, slideImages.value[linkKey + ":1"]);
+      removeImage(linkKey + ":1");
+    }
+  }
+
   function removeSingleImage(idx) {
     const key = idx === 0 ? slideKey : slideKey + ":1";
+    const wasVideo = images[key]?.type === "video";
     removeImage(key);
     if (isSource && linkKey) {
       const linkedKey = idx === 0 ? linkKey : linkKey + ":1";
       if (images[linkedKey]?.data === images[key]?.data) removeImage(linkedKey);
     }
+    if (wasVideo && isSource) removeLinkedVideoFrames();
     if (idx === 0 && images[slideKey + ":1"]) {
       setImage(slideKey, images[slideKey + ":1"]);
       removeImage(slideKey + ":1");

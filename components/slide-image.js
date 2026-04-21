@@ -27,9 +27,20 @@ export function SlideImage({ src, type, name, style, imgRef, slideKey, imgIdx, i
   function remove(e) {
     e.stopPropagation();
     const myData = images[myKey];
+    const wasVideo = myData?.type === "video";
     removeImage(myKey);
     if (isSource && linkedKey && images[linkedKey]?.data === myData?.data) {
       removeImage(linkedKey);
+    }
+    if (wasVideo && isSource && linkKey) {
+      const r0 = slideImages.value[linkKey]?.videoFrame;
+      const r1 = slideImages.value[linkKey + ":1"]?.videoFrame;
+      if (r0) removeImage(linkKey);
+      if (r1) removeImage(linkKey + ":1");
+      if (r0 && !r1 && slideImages.value[linkKey + ":1"]) {
+        setImage(linkKey, slideImages.value[linkKey + ":1"]);
+        removeImage(linkKey + ":1");
+      }
     }
     // Promote image 1 to slot 0 if removing image 0
     if (imgIdx === 0 && images[slideKey + ":1"]) {
