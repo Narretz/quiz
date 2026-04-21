@@ -29,6 +29,16 @@ export const SLIDE_STYLE = {
 
 export const AUDIO_DIMENSIONS = { width: 280, height: 80 };
 
+/**
+ * Effective click-to-reveal state for an answer slide.
+ * Jackpot answer descriptors default to on (desc.jackpot); user can override via `reveals[slideKey]`.
+ */
+export function isRevealEffective(reveals, desc) {
+  if (!desc || desc.type !== "question" || !desc.withAnswers) return false;
+  const explicit = reveals?.[`${desc.id}:1`];
+  return explicit == null ? !!desc.jackpot : !!explicit;
+}
+
 export function formatAnswer(q) {
   const de = (q.answers.de || "").trim();
   const en = (q.answers.en || "").trim();
@@ -138,7 +148,13 @@ export function mergeAudioIntoImages(images, audio) {
 
 export function normalizeSavedQuiz(saved) {
   const questions = saved.questions || extractQuestions(saved.quiz);
-  const descriptors = saved.descriptors || buildSlideDescriptors(saved.quiz);
+  const descriptors = saved.descriptors
+    ? saved.descriptors.map((d) =>
+        d.type === "question" && d.id?.startsWith("r5q") && !("jackpot" in d)
+          ? { ...d, jackpot: true }
+          : d,
+      )
+    : buildSlideDescriptors(saved.quiz);
   const style = saved.style ? {
     fontSize: saved.style.fontSize,
     lineSpacing: saved.style.lineSpacing,
@@ -151,6 +167,7 @@ export function normalizeSavedQuiz(saved) {
     images,
     questions,
     manualOverrides: saved.manualOverrides || {},
+    reveals: saved.reveals || {},
     descriptors,
     style,
     jackpotSize: saved.jackpotSize || 0,
@@ -299,12 +316,12 @@ export function buildSlideDescriptors(quiz) {
     addExtra("no-phones");
     const count = jr.questions.length || 4;
     for (let i = 0; i < count; i++) {
-      slides.push({ type: "question", id: `r${jri}q${i}`, num: i + 1, withAnswers: false });
+      slides.push({ type: "question", id: `r${jri}q${i}`, num: i + 1, withAnswers: false, jackpot: true });
     }
     // No Antworten divider for jackpot
     addTitle(jr.name, null, `title-r${jri}-ans`);
     for (let i = 0; i < count; i++) {
-      slides.push({ type: "question", id: `r${jri}q${i}`, num: i + 1, withAnswers: true });
+      slides.push({ type: "question", id: `r${jri}q${i}`, num: i + 1, withAnswers: true, jackpot: true });
     }
     addExtra("goodbye");
   }
@@ -526,11 +543,13 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
  * @param {Record<string, {data:string, name:string}>} [audio]
  * @param {object} [introAssets] - { logo: base64, toucan: base64 }
  * @param {Record<string, {text:{de:string,en:string}, answers:{de:string,en:string}}>} [questions]
+ * @param {Record<string, boolean>} [reveals] - per-slide-key explicit click-to-reveal toggle
  */
 export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, audio = {}, introAssets = {}, questions = {}, options = {}) {
   images = mergeAudioIntoImages(images, audio);
   const money = options.jackpotSize ?? 0;
   const email = options.email || "";
+  const reveals = options.reveals || {};
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
   pptx.theme = { headFontFace: "Arial", bodyFontFace: "Arial" };
@@ -762,13 +781,15 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
         const measuredH = override?.answerH;
         const answerH = measuredH || Math.max(0.5, Math.min(1.5, Math.ceil(answer.length / 40) * 0.35));
         const answerY = H - answerH;
-        slide.addText(answer, {
+        const answerOpts = {
           x: 0, y: answerY, w: W, h: answerH,
           fontSize: SLIDE_STYLE.answer.fontSize, bold: true, align: "center", valign: "top",
           color: SLIDE_STYLE.answer.color.replace("#", ""),
           fill: { color: SLIDE_STYLE.answer.backgroundColor.replace("#", "") },
           paraSpaceBefore: 5,
-        });
+        };
+        if (isRevealEffective(reveals, desc)) answerOpts.objectName = "reveal-answer";
+        slide.addText(answer, answerOpts);
         // Image above answer bar (only when no question text — otherwise already placed)
         if (imgEntry && !hasQuestionText) {
           const imgTop = pad + 0.5;

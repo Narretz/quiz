@@ -21,7 +21,8 @@
       "Bash(node --test tests/*)",
       "Bash(npm test *)",
       "Bash(npx playwright *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git diff *)"
     ]
   },
   "enabledMcpjsonServers": [

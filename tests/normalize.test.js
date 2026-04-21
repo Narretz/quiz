@@ -67,6 +67,7 @@ describe("normalizeSavedQuiz", () => {
       images: { "r0q0:0": { data: "img" } },
       audio: { "r0q0:0": { data: "aud" } },
       manualOverrides: { "r0q0:0": { fontSize: 18 } },
+      reveals: { "r0q0:1": true },
       style: { fontSize: 20, lineSpacing: 110, backgroundColor: "#11650b", textColor: "#FCFCFC" },
     };
 
@@ -80,6 +81,7 @@ describe("normalizeSavedQuiz", () => {
     assert.deepStrictEqual(result.images["r0q0:0:1"], { data: "aud", ...AUDIO_DIMENSIONS, type: "audio" });
     assert.strictEqual(result.audio, undefined);
     assert.deepStrictEqual(result.manualOverrides, saved.manualOverrides);
+    assert.deepStrictEqual(result.reveals, saved.reveals);
     assert.deepStrictEqual(result.style, saved.style);
   });
 
@@ -126,13 +128,31 @@ describe("normalizeSavedQuiz", () => {
       assert.deepStrictEqual(result.descriptors, expected);
     });
 
-    it("defaults missing images/manualOverrides to empty objects", () => {
+    it("defaults missing images/manualOverrides/reveals to empty objects", () => {
       const quiz = makeQuiz();
       const saved = { quiz, descriptors: [] };
       const result = normalizeSavedQuiz(saved);
 
       assert.deepStrictEqual(result.images, {});
       assert.deepStrictEqual(result.manualOverrides, {});
+      assert.deepStrictEqual(result.reveals, {});
+    });
+
+    it("backfills jackpot flag on old question descriptors", () => {
+      const quiz = makeQuiz();
+      // Simulate an old save where descriptors were persisted without jackpot flag.
+      const oldDescs = buildSlideDescriptors(quiz).map((d) => {
+        if (d.type === "question" && d.jackpot) {
+          const { jackpot, ...rest } = d;
+          return rest;
+        }
+        return d;
+      });
+      const saved = { quiz, descriptors: oldDescs };
+      const result = normalizeSavedQuiz(saved);
+      const jackpotDescs = result.descriptors.filter((d) => d.type === "question" && d.id?.startsWith("r5q"));
+      assert.ok(jackpotDescs.length > 0);
+      assert.ok(jackpotDescs.every((d) => d.jackpot === true), "jackpot descriptors should be backfilled");
     });
 
     it("returns null style when style field is missing", () => {

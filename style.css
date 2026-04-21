@@ -239,6 +239,16 @@
         display: block;
     }
 
+    .answer-bar--reveal::before {
+        content: "▸";
+        position: absolute;
+        left: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 0.7em;
+        opacity: 0.6;
+    }
+
     .slide:hover .answer-bar,
     .answer-bar:focus-within {
         display: block;
@@ -400,6 +410,14 @@
 
     .slide-outer .img-actions button:hover {
         background: rgba(0, 0, 0, 0.95);
+    }
+
+    .slide-outer .img-actions button.reveal-toggle--on {
+        background: rgba(160, 60, 140, 0.85);
+    }
+
+    .slide-outer .img-actions button.reveal-toggle--on:hover {
+        background: rgba(160, 60, 140, 1);
     }
 
     .slide-outer .img-actions input[type="file"] {

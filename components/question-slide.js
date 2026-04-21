@@ -1,9 +1,9 @@
 import { h } from "preact";
 import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
-import { SLIDE_STYLE, computeImageLayout, computeTwoImageLayout, getSlideImages, fit } from "../quiz-core.js";
+import { SLIDE_STYLE, computeImageLayout, computeTwoImageLayout, getSlideImages, fit, isRevealEffective } from "../quiz-core.js";
 import { PT_SCALE, PX, px } from "../lib/utils.js";
-import { slideImages, quizQuestions, manualOverrides, slideStyle, slideOverrides, scheduleSave } from "../lib/state.js";
+import { slideImages, quizQuestions, manualOverrides, slideStyle, slideOverrides, slideReveals, scheduleSave } from "../lib/state.js";
 import { fitSlideText } from "../lib/fitting.js";
 import { ImageActions } from "./image-actions.js";
 import { SlideImage } from "./slide-image.js";
@@ -224,7 +224,7 @@ export function QuestionSlide({ desc, onRerender }) {
         <div style="position:absolute;left:${px(pad)};top:${px(pad)};font-size:${numFs}px;font-weight:bold">${num}</div>
       `}
       ${withAnswers && html`
-        <div ref=${ansBarRef} class="answer-bar ${(ansDe || ansEn) ? 'answer-bar--filled' : ''}"
+        <div ref=${ansBarRef} class="answer-bar ${(ansDe || ansEn) ? 'answer-bar--filled' : ''} ${isRevealEffective(slideReveals.value, desc) ? 'answer-bar--reveal' : ''}"
              style="font-size:${ansFs}px;background:${SLIDE_STYLE.answer.backgroundColor};color:${SLIDE_STYLE.answer.color}"
              onClick=${(e) => {
                if (e.target === ansBarRef.current && ansDeRef.current) ansDeRef.current.focus();
@@ -295,7 +295,7 @@ export function QuestionSlide({ desc, onRerender }) {
            isSource=${!withAnswers} linkKey=${`${id}:${withAnswers ? 0 : 1}`} onRerender=${onRerender} />`}
     </div>
     ${id && html`<${ImageActions} id=${id} withAnswers=${withAnswers} imgEntry=${imgEntry}
-                   slideKey=${slideKey} onRerender=${onRerender} />`}
+                   slideKey=${slideKey} jackpot=${desc.jackpot} onRerender=${onRerender} />`}
     </div>
   `;
 }

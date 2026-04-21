@@ -2,11 +2,11 @@ import { h } from "preact";
 import htm from "htm";
 import { SLIDE_STYLE } from "../quiz-core.js";
 import { loadMediaFile, extractVideoFrame } from "../lib/utils.js";
-import { slideImages, setImage, removeImage, setManualOverride, slideOverrides, scheduleSave, debug } from "../lib/state.js";
+import { slideImages, setImage, removeImage, setManualOverride, slideOverrides, slideReveals, setSlideReveal, scheduleSave, debug } from "../lib/state.js";
 
 const html = htm.bind(h);
 
-export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKey, imgEntry, slideKey, onRerender }) {
+export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKey, imgEntry, slideKey, jackpot = false, onRerender }) {
   const images = slideImages.value;
   const imgEntry1 = images[slideKey + ":1"] || null;
   const hasAnyMedia = imgEntry || imgEntry1;
@@ -175,6 +175,18 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
   const displayFs = effective?.fontSize ?? SLIDE_STYLE.question.fontSize;
   const displayLs = effective?.lineSpacing ?? SLIDE_STYLE.question.lineSpacing;
 
+  const isAnswerSlide = isQuestion && withAnswers;
+  const explicitReveal = slideReveals.value[slideKey];
+  const revealOn = explicitReveal == null ? jackpot : !!explicitReveal;
+
+  function toggleReveal() {
+    const next = !revealOn;
+    // Store explicit value only when it differs from the descriptor default.
+    setSlideReveal(slideKey, next === jackpot ? null : next);
+    scheduleSave();
+    onRerender();
+  }
+
   return html`
     <div class="img-actions">
       <div class="img-actions__left">
@@ -192,6 +204,9 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
                    onChange=${onOverrideChange} title="Line spacing %" />%
           </label>
         `}
+        ${isAnswerSlide && html`<button onClick=${toggleReveal} class="reveal-toggle ${revealOn ? "reveal-toggle--on" : ""}" title="Click-to-reveal answer in PPTX">
+          ${revealOn ? "▸ reveal: click" : "reveal: off"}
+        </button>`}
         ${hasAnyMedia && html`<button onClick=${removeAllImages}>remove ${hasMaxSlots ? "all" : "media"}</button>`}
         ${!isSource && isLinked && html`
           <button onClick=${unlink}>unlink ${hasMaxSlots ? "all" : "media"}</button>

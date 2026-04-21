@@ -227,6 +227,40 @@ describe("buildPptx", () => {
     });
   });
 
+  describe("reveal (click-to-show answer)", () => {
+    it("tags jackpot answer slides with objectName=reveal-answer by default", () => {
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const jackpotIdx = descriptors.findIndex((d) => d.type === "question" && d.id === "r5q0" && d.withAnswers);
+      const slide = pptx.slides[jackpotIdx];
+      const answerText = slide.texts.find((t) => t.opts.objectName === "reveal-answer");
+      assert.ok(answerText, "jackpot answer slide should tag its answer bar");
+    });
+
+    it("does not tag non-jackpot answer slides by default", () => {
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const aIdx = descriptors.findIndex((d) => d.type === "question" && d.id === "r0q0" && d.withAnswers);
+      const slide = pptx.slides[aIdx];
+      const tagged = slide.texts.find((t) => t.opts.objectName === "reveal-answer");
+      assert.ok(!tagged, "non-jackpot answer bar should not be tagged");
+    });
+
+    it("respects explicit reveal=true for a non-jackpot answer slide", () => {
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions, { reveals: { "r0q0:1": true } });
+      const aIdx = descriptors.findIndex((d) => d.type === "question" && d.id === "r0q0" && d.withAnswers);
+      const slide = pptx.slides[aIdx];
+      const tagged = slide.texts.find((t) => t.opts.objectName === "reveal-answer");
+      assert.ok(tagged, "explicit reveal should tag the answer bar");
+    });
+
+    it("respects explicit reveal=false for a jackpot answer slide", () => {
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions, { reveals: { "r5q0:1": false } });
+      const jackpotIdx = descriptors.findIndex((d) => d.type === "question" && d.id === "r5q0" && d.withAnswers);
+      const slide = pptx.slides[jackpotIdx];
+      const tagged = slide.texts.find((t) => t.opts.objectName === "reveal-answer");
+      assert.ok(!tagged, "explicit reveal=false should un-tag the jackpot answer bar");
+    });
+  });
+
   describe("backwards compatibility", () => {
     it("reads question from desc.q when questions map has no entry", () => {
       const descs = descriptors.map((d) => {
