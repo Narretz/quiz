@@ -106,6 +106,47 @@ test.describe("quiz loaded", () => {
     await expect(deField).toHaveText("Edited question text");
   });
 
+  test("empty question slots are editable", async ({ page }) => {
+    // r1 (Weihnachtslieder) has 0 questions in XLSX → 10 empty descriptor slots
+    const slide = page.locator('.slide[data-slide-id="r1q0"][data-answers="0"]');
+    await slide.scrollIntoViewIfNeeded();
+    await slide.hover();
+
+    // DE field should be visible and editable
+    const deField = slide.locator('[lang="de"] .q-text__field');
+    await deField.click();
+    await page.keyboard.type("New question");
+    await deField.press("Enter");
+    await expect(deField).toHaveText("New question");
+
+    // EN field should appear on hover and be editable
+    const enBlock = slide.locator('[lang="en"]');
+    await expect(enBlock).toBeVisible();
+    const enField = slide.locator('[lang="en"] .q-text__field');
+    await enField.click();
+    await page.keyboard.type("English question");
+    await enField.press("Enter");
+    await expect(enField).toHaveText("English question");
+  });
+
+  test("ghost answer bar hides when question text is focused", async ({ page }) => {
+    const slide = page.locator('.slide[data-slide-id="r0q0"][data-answers="0"]');
+    await slide.scrollIntoViewIfNeeded();
+    await slide.hover();
+
+    const ghostBar = slide.locator(".answer-bar--ghost");
+    await expect(ghostBar).toBeVisible();
+
+    // Focus DE question text — ghost bar should hide
+    const deField = slide.locator('[lang="de"] .q-text__field');
+    await deField.click();
+    await expect(ghostBar).not.toBeVisible();
+
+    // Click outside to blur, then hover slide — ghost bar should reappear
+    await page.mouse.click(0, 0);
+    await slide.hover();
+    await expect(ghostBar).toBeVisible();
+  });
 
   test("can edit answer from question slide ghost bar", async ({ page }) => {
     const questionSlide = page.locator('.slide[data-slide-id="r0q0"][data-answers="0"]');

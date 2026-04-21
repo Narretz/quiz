@@ -20,7 +20,7 @@ function focusEnd(el) {
 
 export function QuestionSlide({ desc, onRerender }) {
   const { num, withAnswers, id } = desc;
-  const q = quizQuestions.value[id] || desc.q; // desc.q fallback for old saves
+  const q = quizQuestions.value[id] || desc.q || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
   const slideKey = id ? `${id}:${withAnswers ? 1 : 0}` : null;
   const [imgEntry, imgEntry1] = slideKey ? getSlideImages(slideImages.value, slideKey) : [null, null];
   const hasTwoImages = imgEntry && imgEntry1;
@@ -264,7 +264,7 @@ export function QuestionSlide({ desc, onRerender }) {
                }}></span>
           <span class="q-text__tag q-text__tag--de" onClick=${(e) => { e.stopPropagation(); focusEnd(deTextRef.current); }}>de</span>
         </div>
-        <div lang="en" data-role="en" style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${qFs}px;line-height:${qLh}">
+        <div lang="en" data-role="en" class=${q.text.en ? '' : 'q-block--empty'} style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${qFs}px;line-height:${qLh}">
           <span style="font-size:${numFs}px;font-weight:bold">${num}</span>${" "}<span ref=${enTextRef} contentEditable class="q-text__field"
                onBlur=${(e) => {
                  const text = e.target.textContent.trim();

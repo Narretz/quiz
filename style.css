@@ -310,6 +310,10 @@
         background: rgba(0, 0, 0, 0.55) !important;
     }
 
+    .slide:has([data-role]:focus-within) .answer-bar--ghost {
+        display: none;
+    }
+
     .title-bar {
         text-align: center;
     }
@@ -362,8 +366,26 @@
     }
 
     .q-text__field {
+        display: inline-block;
         outline: none;
         min-width: 1em;
+        min-height: 1.2em;
+        vertical-align: middle;
+    }
+
+    .q-block--empty {
+        display: none;
+    }
+
+    .slide:hover .q-block--empty,
+    .q-block--empty:focus-within {
+        display: block;
+        opacity: 0.45;
+    }
+
+    .slide:hover .q-block--empty:focus-within,
+    .q-block--empty:focus-within {
+        opacity: 1;
     }
 
     [data-role]:focus-within {
