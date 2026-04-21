@@ -761,10 +761,11 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
         const answerY = H - answerH;
         slide.addText(answer, {
           x: 0, y: answerY, w: W, h: answerH,
-          fontSize: SLIDE_STYLE.answer.fontSize, bold: true, align: "center", valign: "middle",
+          fontSize: SLIDE_STYLE.answer.fontSize, bold: true, align: "center", valign: "top",
           color: SLIDE_STYLE.answer.color.replace("#", ""),
           fill: { color: SLIDE_STYLE.answer.backgroundColor.replace("#", "") },
-                 });
+          paraSpaceBefore: 5,
+        });
         // Image above answer bar (only when no question text — otherwise already placed)
         if (imgEntry && !hasQuestionText) {
           const imgTop = pad + 0.5;
