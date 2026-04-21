@@ -18,7 +18,7 @@ function focusEnd(el) {
   sel.collapseToEnd();
 }
 
-export function QuestionSlide({ desc, onRerender }) {
+export function QuestionSlide({ desc, descIdx, onRerender }) {
   const { num, withAnswers, id } = desc;
   const q = quizQuestions.value[id] || desc.q || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
   const slideKey = id ? `${id}:${withAnswers ? 1 : 0}` : null;
@@ -234,7 +234,7 @@ export function QuestionSlide({ desc, onRerender }) {
   }
 
   return html`
-    <div class="slide-outer">
+    <div class="slide-outer" data-desc-idx=${descIdx}>
     <div class="slide" ref=${slideRef} style="background-color:${bg};color:${style.textColor || '#000'}"
          data-slide-id=${id} data-answers=${withAnswers ? "1" : "0"}>
       ${q ? html`

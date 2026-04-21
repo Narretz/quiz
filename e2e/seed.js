@@ -2,7 +2,7 @@ import { OfficeParser } from "officeparser";
 import { astToQuiz, buildSlideDescriptors, extractQuestions, SLIDE_STYLE } from "../quiz-core.js";
 import path from "path";
 
-const XLSX_PATH = path.resolve("0112.xlsx");
+const XLSX_PATH = path.resolve("tests/files/basic.xlsx");
 let _cached = null;
 
 export async function buildSeedRecord() {

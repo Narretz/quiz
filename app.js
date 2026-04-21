@@ -3,10 +3,12 @@ import { effect } from "@preact/signals";
 import htm from "htm";
 import {
   currentQuiz, currentQuizId, slideDescriptors, slideImages, quizQuestions, manualOverrides,
-  slideStyle, savedList, status, debug, jackpotSize, quizEmail, refreshSavedList, uploadQuiz, loadSavedQuiz,
+  slideStyle, savedList, status, debug, jackpotSize, quizEmail, showValidation,
+  refreshSavedList, uploadQuiz, loadSavedQuiz,
 } from "./lib/state.js";
 import { SavedQuizBar } from "./components/saved-quiz-bar.js";
 import { Controls } from "./components/controls.js";
+import { ValidationBar } from "./components/validation-bar.js";
 import { TOC } from "./components/toc.js";
 import { StyleControls } from "./components/style-controls.js";
 import { SlidePreview } from "./components/slide-preview.js";
@@ -17,7 +19,7 @@ function App() {
   // Touch all signals so App re-renders when any change
   currentQuiz.value; currentQuizId.value; slideDescriptors.value; slideImages.value;
   quizQuestions.value; manualOverrides.value; slideStyle.value; savedList.value; status.value;
-  jackpotSize.value; quizEmail.value;
+  jackpotSize.value; quizEmail.value; showValidation.value;
 
   async function onUpload(e) {
     const file = e.target.files[0];
@@ -54,6 +56,7 @@ function App() {
       Stored quizzes:<${SavedQuizBar} onLoad=${loadSavedQuiz} />
     </div>
     <${Controls} />
+    <${ValidationBar} />
     <nav class="toc"><${TOC} /></nav>
     ${debug && html`<div class="style-controls"><${StyleControls} /></div>`}
     <${SlidePreview} />
@@ -74,6 +77,6 @@ render(html`<${App} />`, document.getElementById("app"));
 effect(() => {
   currentQuiz.value; currentQuizId.value; slideDescriptors.value; slideImages.value;
   quizQuestions.value; manualOverrides.value; slideStyle.value; savedList.value; status.value;
-  jackpotSize.value; quizEmail.value;
+  jackpotSize.value; quizEmail.value; showValidation.value;
   render(html`<${App} />`, document.getElementById("app"));
 });

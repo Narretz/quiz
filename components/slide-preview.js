@@ -101,7 +101,7 @@ export function SlidePreview() {
           anchor = tocEntries[tocIdx].anchor;
           tocIdx++;
         }
-        elements.push(html`<${TitleSlide} key=${"t-" + i} desc=${desc} anchor=${anchor} onRerender=${onRerender} />`);
+        elements.push(html`<${TitleSlide} key=${"t-" + i} desc=${desc} descIdx=${i} anchor=${anchor} onRerender=${onRerender} />`);
         // Align answer-phase slides with question-phase column: insert a placeholder
         // where the description slide sits in the question phase.
         const ansMatch = desc.id && desc.id.match(/^title-r(\d+)-ans$/);
@@ -119,11 +119,11 @@ export function SlidePreview() {
         }
         // Intro slides 0-2 have no media support (id=null); intro 3+ and extra slides do
         const introId = desc.introIndex != null ? (desc.introIndex >= 3 ? desc.id : null) : desc.id;
-        elements.push(html`<${IntroSlide} key=${"i-" + i} introIndex=${desc.introIndex} desc=${desc} anchor=${anchor} id=${introId} onRerender=${onRerender} />`);
+        elements.push(html`<${IntroSlide} key=${"i-" + i} introIndex=${desc.introIndex} desc=${desc} descIdx=${i} anchor=${anchor} id=${introId} onRerender=${onRerender} />`);
       } else if (desc.type === "description") {
-        elements.push(html`<${DescriptionSlide} key=${"d-" + i} desc=${desc} onRerender=${onRerender} />`);
+        elements.push(html`<${DescriptionSlide} key=${"d-" + i} desc=${desc} descIdx=${i} onRerender=${onRerender} />`);
       } else {
-        elements.push(html`<${QuestionSlide} key=${"q-" + i} desc=${desc} onRerender=${onRerender} />`);
+        elements.push(html`<${QuestionSlide} key=${"q-" + i} desc=${desc} descIdx=${i} onRerender=${onRerender} />`);
       }
     }
   }

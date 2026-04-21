@@ -1,7 +1,7 @@
 import { h } from "preact";
 import htm from "htm";
 import { SLIDE_STYLE } from "../quiz-core.js";
-import { slideStyle, scheduleSave } from "../lib/state.js";
+import { slideStyle, scheduleSave, showValidation } from "../lib/state.js";
 
 // Snapshot defaults before they get mutated by the slideStyle sync effect
 const DEFAULTS = {
@@ -40,5 +40,8 @@ export function StyleControls({ onStyleChange }) {
       if (onStyleChange) onStyleChange();
       scheduleSave();
     }}>Reset</button>
+    <label><input type="checkbox"
+      checked=${showValidation.value}
+      onChange=${(e) => { showValidation.value = e.target.checked; scheduleSave(); }} /> Validate</label>
   `;
 }

@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import path from "path";
 import { seedQuiz } from "./seed.js";
 
-const XLSX_PATH = path.resolve("0112.xlsx");
+const XLSX_PATH = path.resolve("tests/files/basic.xlsx");
 
 test.describe("upload", () => {
   test("loads the page with upload button", async ({ page }) => {

@@ -17,7 +17,7 @@ function focusEnd(el) {
   sel.collapseToEnd();
 }
 
-export function TitleSlide({ desc, anchor, onRerender }) {
+export function TitleSlide({ desc, descIdx, anchor, onRerender }) {
   const bg = slideStyle.value.backgroundColor;
   const fg = slideStyle.value.textColor || '#000';
   const titleFs = SLIDE_STYLE.title.fontSize * PT_SCALE;
@@ -137,7 +137,7 @@ export function TitleSlide({ desc, anchor, onRerender }) {
   if (imgEntry) {
     const { pad } = SLIDE_STYLE;
     return html`
-      <div class="slide-outer">
+      <div class="slide-outer" data-desc-idx=${descIdx}>
         <div class="slide" id=${anchor || undefined}
              data-slide-id="${id}"
              style="background-color:${bg};color:${fg}">
@@ -157,7 +157,7 @@ export function TitleSlide({ desc, anchor, onRerender }) {
   }
 
   return html`
-    <div class="slide-outer">
+    <div class="slide-outer" data-desc-idx=${descIdx}>
       <div class="slide title-slide" id=${anchor || undefined}
            data-slide-id="${id}"
            style="background-color:${bg};color:${fg}">

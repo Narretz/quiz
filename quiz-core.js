@@ -178,6 +178,7 @@ export function normalizeSavedQuiz(saved) {
     style,
     jackpotSize: saved.jackpotSize || 0,
     email: saved.email || "",
+    showValidation: !!saved.showValidation,
   };
 }
 

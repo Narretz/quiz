@@ -18,7 +18,7 @@ function focusEnd(el) {
   sel.collapseToEnd();
 }
 
-export function DescriptionSlide({ desc, onRerender }) {
+export function DescriptionSlide({ desc, descIdx, onRerender }) {
   const bg = slideStyle.value.backgroundColor;
   const fg = slideStyle.value.textColor || '#000';
   const { pad } = SLIDE_STYLE;
@@ -103,7 +103,7 @@ export function DescriptionSlide({ desc, onRerender }) {
   }, [imgEntry, imgEntry1, desc.text.de, desc.text.en]);
 
   return html`
-    <div class="slide-outer">
+    <div class="slide-outer" data-desc-idx=${descIdx}>
     <div class="slide" ref=${slideRef} style="background-color:${bg};color:${fg}"
          data-slide-id=${id} data-answers="0">
       ${imgStyle && html`<${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} style=${imgStyle} slideKey=${slideKey} imgIdx=${0}

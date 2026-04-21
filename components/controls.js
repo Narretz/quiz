@@ -1,7 +1,7 @@
 import { h } from "preact";
 import htm from "htm";
 import {
-  currentQuiz, currentQuizId, status, jackpotSize, quizEmail,
+  currentQuiz, currentQuizId, status, jackpotSize, quizEmail, showValidation,
   downloadPptx, deleteSavedQuiz, scheduleSave,
 } from "../lib/state.js";
 
@@ -13,6 +13,8 @@ export function Controls() {
   const statusText = status.value;
 
   async function onDownload() {
+    showValidation.value = true;
+    scheduleSave();
     try {
       await downloadPptx();
     } catch (err) {
