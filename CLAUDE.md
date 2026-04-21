@@ -24,7 +24,7 @@ Dimensions, positions, font sizes, colors, and layout logic must use the same co
 ```
 index.html          -- Mount point, import map, CDN scripts, links style.css
 app.js              -- Root Preact component, mounts to #app
-quiz-core.js        -- Shared logic: SLIDE_STYLE, astToQuiz, buildSlideDescriptors, buildPptx, computeImageLayout, fit
+quiz-core.js        -- Shared logic: SLIDE_STYLE, astToQuiz, buildSlideDescriptors, buildPptx, computeImageLayout, computeTwoImageLayout, extractQuestions, normalizeSavedQuiz, fit
 lib/
   state.js          -- All signals, persistence (IndexedDB), upload/load/save/download
   db.js             -- IndexedDB wrapper (dbPut, dbGet, dbDelete, dbList)
@@ -35,16 +35,28 @@ lib/
   assets/           -- Static images (tipperary-logo.gif, pub-quiz-toucan.jpg)
 components/
   slide-preview.js  -- Section structure, slide dispatch, buildSections()
+  slide-image.js    -- Per-image component with individual remove ×, unlink ✂, remove from linked ✂ buttons
   question-slide.js -- Question/answer slides with text fitting and image layout
   title-slide.js    -- Round titles, answer dividers, break slides (with image linking)
   intro-slide.js    -- 5 intro slide variants (welcome, rules, format, golden-rules, begin)
   description-slide.js -- Round description slides (DE + EN text)
-  image-actions.js  -- Hover overlay: +img, +audio, remove, unlink/relink buttons
+  image-actions.js  -- Hover overlay above slide: +img, +audio, remove, unlink/relink buttons
   controls.js       -- Status display and download button
   style-controls.js -- Debug-only font size / line spacing / background color controls
   saved-quiz-bar.js -- Saved quiz list with load/delete
   toc.js            -- Table of contents with anchor navigation
 style.css           -- All styles
+tests/
+  normalize.test.js -- Unit tests for extractQuestions, normalizeSavedQuiz (backwards compat)
+  build-pptx.test.js-- Unit tests for buildPptx with PptxSpy mock
+  parse-xlsx.test.js-- Unit tests for astToQuiz XLSX parser
+  images/           -- Test images (portrait, landscape, square, ultrawide, ultranarrow)
+  audio/            -- Test audio files
+e2e/
+  seed.js           -- Parses XLSX in Node, seeds IndexedDB via page.evaluate
+  quiz.spec.js      -- E2E: upload, rendering, download, text editing, TOC navigation
+  images.spec.js    -- E2E: image positioning, full-screen, multi-image, linking, action buttons
+  audio.spec.js     -- E2E: audio add/remove, independence, coexistence, persistence
 ```
 
 ## Key Concepts
@@ -71,6 +83,9 @@ Images and audio are stored in `slideImages` and `slideAudio` signals as `Record
 
 - Questions: `"r0q0:0"` (question), `"r0q0:1"` (answer)
 - All other slides: `"title-r0:0"`, `"intro-3:0"`, etc. (always `:0`)
+- Second image on a slide: append `:1` to the slide key, e.g. `"r0q0:0:1"` (second image on question slide)
+
+Audio is stored per-slide only — it does NOT link between question and answer slides like images do.
 
 ### Image Linking
 
@@ -82,12 +97,31 @@ The `isSource` flag in `image-actions.js` controls which side pushes images. Onl
 
 ### Image Layout (Question Slides)
 
-`computeImageLayout(aspectRatio)` returns positioning based on aspect ratio:
+Each slide supports up to **2 images**. `getSlideImages(images, slideKey)` returns `[img0, img1]`.
+
+**Single image** — `computeImageLayout(aspectRatio)` positions based on aspect ratio:
 - **Portrait** (< 1): Image on right 30%, text narrowed
 - **Landscape** (1-2): Image in bottom-right, DE text full width, EN text narrowed
 - **Ultrawide** (> 2): Image at bottom full width, all text full width but height-limited
 
+**Two images** — `computeTwoImageLayout(ar0, ar1)` places them side-by-side at the bottom, each in half the width (minus gap). Text stays full width above. Returns `{ img0, img1, deW, enW, answerW, textBottomLimit }`.
+
+**Full-screen mode**: When a question slide has no text (`hasQuestionText` is false), image(s) fill the entire slide (contain-fit, centered). Two images go side-by-side, each centered in its half.
+
 **Short-text optimization**: When text is short enough (< 40% of slide height) and the image is landscape, `fitSlideText()` in `lib/fitting.js` moves the image below the text instead of bottom-right, giving it more space. The computed position is stored in `override.imgLayout` and read by `buildPptx()`.
+
+### Slide Outer Wrapper
+
+All slide types are wrapped in `<div class="slide-outer">` which contains:
+1. `<div class="slide">` — the actual slide content (has `overflow: hidden`)
+2. `<ImageActions>` — hover action bar positioned above the slide via `bottom: 100%`
+
+This pattern keeps action buttons accessible on hover without being clipped by the slide's overflow. The `SlideImage` component (in `slide-image.js`) renders each image with per-image hover buttons (`remove ×`, `unlink ✂`, `remove from linked ✂`) inside `.slide-img-btns`.
+
+### Per-Image vs Slide-Level Buttons
+
+- **Per-image buttons** (in `.slide-img-btns` overlay on each image): `remove ×` removes that single image (promotes image 1→0 if image 0 is removed), `unlink ✂` / `remove from linked ✂` act on that image only.
+- **Slide-level buttons** (in `.img-actions` bar above slide): `remove all img` removes both images + linked, `unlink all img` / `relink` act on all images. Button text changes from "img" to "all img" when two images are present.
 
 ### Text Fitting (Question Slides)
 
@@ -123,6 +157,25 @@ Single source of truth for all slide styles and dimensions is in `quiz-core.js`.
 Should be applied as defaults and persisted into storage per quiz.
 
 Preview scaling: `PT_SCALE = 576 / (10 * 72)` for pt->px, `PX = 576 / 10` for inches->px.
+
+### Backwards Compatibility
+
+`normalizeSavedQuiz(saved)` in `quiz-core.js` handles old saves missing fields:
+- Missing `descriptors` → regenerated via `buildSlideDescriptors(saved.quiz)`
+- Missing `questions` → extracted via `extractQuestions(saved.quiz)`
+- Missing `style.backgroundColor` / `style.textColor` → defaults to `"#FFFFFF"` / `"#000000"`
+- Missing `images`, `audio`, `manualOverrides` → empty `{}`
+
+`extractQuestions(quiz)` builds the `questions` lookup from quiz round data. Both functions are pure and tested in `tests/normalize.test.js`.
+
+## Testing
+
+- **Unit tests**: `npm test` — runs `node --test tests/*.test.js` (Node built-in test runner)
+- **E2E tests**: `npm run test:e2e` — runs `npx playwright test` (Chromium, port 3004)
+
+E2E tests use `seedQuiz(page)` (in `e2e/seed.js`) to parse the XLSX in Node and seed IndexedDB directly, avoiding slow file uploads for every test. Only the "upload" describe block in `quiz.spec.js` tests actual XLSX upload.
+
+The Playwright config starts the web server on port 3004 (`node cli.js web --port 3004`) with `reuseExistingServer: false` to avoid conflicts with the dev server.
 
 ## Conventions
 
