@@ -166,7 +166,7 @@ test.describe("validation bar", () => {
     await expect(page.locator(".validation-bar")).toBeVisible();
 
     // Allow the async db write to land, then reload.
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
     await page.reload();
     await page.locator(".slide").first().waitFor({ timeout: 10_000 });
 
@@ -175,7 +175,7 @@ test.describe("validation bar", () => {
 
     // Toggle off and verify the off state persists too.
     await checkbox.uncheck();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1000);
     await page.reload();
     await page.locator(".slide").first().waitFor({ timeout: 10_000 });
     await expect(page.locator(".validation-bar")).toHaveCount(0);
