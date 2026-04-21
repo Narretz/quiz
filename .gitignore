@@ -2,3 +2,4 @@ node_modules/
 extracted-old/
 quizzes/
 test-results/
+.claude/worktrees
