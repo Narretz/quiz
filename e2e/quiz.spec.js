@@ -106,6 +106,68 @@ test.describe("quiz loaded", () => {
     await expect(deField).toHaveText("Edited question text");
   });
 
+  test("can edit round title DE text", async ({ page }) => {
+    const titleSlide = page.locator('.slide[data-slide-id="title-r0"]');
+    await titleSlide.scrollIntoViewIfNeeded();
+
+    const deField = titleSlide.locator(".title-bar__field").first();
+    await deField.click();
+    await page.keyboard.press("Control+a");
+    await page.keyboard.type("Edited Round");
+    await deField.press("Enter");
+
+    await expect(deField).toHaveText("Edited Round");
+  });
+
+  test("can add EN translation to round title", async ({ page }) => {
+    const titleSlide = page.locator('.slide[data-slide-id="title-r0"]');
+    await titleSlide.scrollIntoViewIfNeeded();
+    await titleSlide.hover();
+
+    const enTag = titleSlide.locator(".title-bar__tag--en");
+    await enTag.click();
+
+    const enField = titleSlide.locator(".title-bar__field").nth(1);
+    await page.keyboard.type("English Title");
+    await enField.press("Enter");
+
+    await expect(enField).toHaveText("English Title");
+  });
+
+  test("round title edits persist after reload", async ({ page }) => {
+    const titleSlide = page.locator('.slide[data-slide-id="title-r0"]');
+    await titleSlide.scrollIntoViewIfNeeded();
+
+    // Edit DE
+    const deField = titleSlide.locator(".title-bar__field").first();
+    await deField.click();
+    await page.keyboard.press("Control+a");
+    await page.keyboard.type("Persisted DE");
+    await deField.press("Tab");
+
+    // Edit EN
+    const enField = titleSlide.locator(".title-bar__field").nth(1);
+    await page.keyboard.type("Persisted EN");
+    await enField.press("Enter");
+
+    await page.waitForTimeout(500);
+    await page.reload();
+    await page.locator(".slide").first().waitFor({ timeout: 10_000 });
+
+    const reloadedTitle = page.locator('.slide[data-slide-id="title-r0"]');
+    await reloadedTitle.scrollIntoViewIfNeeded();
+    await expect(reloadedTitle.locator(".title-bar__field").first()).toHaveText("Persisted DE");
+    await expect(reloadedTitle.locator(".title-bar__field").nth(1)).toHaveText("Persisted EN");
+  });
+
+  test("Antworten slide is not editable", async ({ page }) => {
+    const antSlide = page.locator('.slide[data-slide-id="antworten-s0"]');
+    await antSlide.scrollIntoViewIfNeeded();
+
+    const editableFields = antSlide.locator(".title-bar__field");
+    await expect(editableFields).toHaveCount(0);
+  });
+
   test("goodbye slide is rendered after jackpot answers", async ({ page }) => {
     const lastSlide = page.locator(".slide").last();
     await lastSlide.scrollIntoViewIfNeeded();
@@ -118,7 +180,7 @@ test.describe("quiz loaded", () => {
     const targetText = await secondLink.textContent();
     await secondLink.click();
 
-    const titleSlide = page.locator(".slide .title-text", { hasText: targetText });
+    const titleSlide = page.locator(".slide .title-bar__field, .slide .q-text__field", { hasText: targetText });
     await expect(titleSlide.first()).toBeInViewport({ timeout: 3_000 });
   });
 

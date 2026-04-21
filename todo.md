@@ -1,7 +1,7 @@
 # Validation
 
 - check if answer(s) are in either text block
-- check if all question slides have at least some content: questions have either text or media, answers have either extra image or answer text
+- check if all question slides have at least some content: questions have either text or media, answers have either different media or answer in one language
 - check if jackpot and email are set
 - check if title slides and extra slides have images
 
@@ -20,17 +20,19 @@
 - Bold formatting
 - Feld für Jackpot-Summe ✅
 - Feld für Email-Adresse ✅
+- format multiple choice questions
 
 # Bilingual round titles (de/en)
 
 Currently `desc.text` for title slides is a plain string. To support separate DE/EN:
 
-- [ ] Change descriptor format: `text: { de, en }` instead of `text: "string"`
-- [ ] Migration for old saved quizzes: normalize plain string to `{ de: str, en: "" }` on load
-- [ ] Update `buildSlideDescriptors()` / `addTitle()` to emit `{ de, en }`
-- [ ] Update `title-slide.js` preview to render both languages
-- [ ] Update `buildPptx()` title slide rendering to handle `{ de, en }`
-- [ ] Parsing: either split `round.name` by `⬧` separator or let EN be added manually via editing
+- [x] Change descriptor format: `text: { de, en }` instead of `text: "string"`
+- [x] Migration for old saved quizzes: normalize plain string to `{ de: str, en: "" }` on load
+- [x] Update `buildSlideDescriptors()` / `addTitle()` to emit `{ de, en }`
+- [x] Update `title-slide.js` preview to render both languages
+- [x] Update `buildPptx()` title slide rendering to handle `{ de, en }`
+- [x] same support for subtitles in round titles as well
+- [x] Parsing: don't parse EN from xlsx
 
 
 # Video: ✅

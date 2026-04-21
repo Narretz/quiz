@@ -226,6 +226,38 @@ describe("normalizeSavedQuiz", () => {
       assert.strictEqual(result.email, "quiz@test.de");
     });
 
+    it("migrates old title descriptors with plain string text to { de, en }", () => {
+      const quiz = makeQuiz();
+      const saved = {
+        quiz,
+        descriptors: [
+          { type: "title", text: "Round 1", subtitle: null, id: "title-r0" },
+          { type: "title", text: "Antworten ⬧ Answers", subtitle: "Swap papers", id: "antworten-s0" },
+          { type: "intro", id: "intro-0" },
+        ],
+      };
+      const result = normalizeSavedQuiz(saved);
+
+      assert.deepStrictEqual(result.descriptors[0].text, { de: "Round 1", en: "" });
+      assert.strictEqual(result.descriptors[0].subtitle, null);
+      assert.deepStrictEqual(result.descriptors[1].text, { de: "Antworten ⬧ Answers", en: "" });
+      assert.deepStrictEqual(result.descriptors[1].subtitle, { de: "Swap papers", en: "" });
+      assert.strictEqual(result.descriptors[2].type, "intro");
+    });
+
+    it("preserves already-migrated bilingual title descriptors", () => {
+      const quiz = makeQuiz();
+      const saved = {
+        quiz,
+        descriptors: [
+          { type: "title", text: { de: "Runde 1", en: "Round 1" }, subtitle: { de: "Untertitel", en: "Subtitle" }, id: "title-r0" },
+        ],
+      };
+      const result = normalizeSavedQuiz(saved);
+      assert.deepStrictEqual(result.descriptors[0].text, { de: "Runde 1", en: "Round 1" });
+      assert.deepStrictEqual(result.descriptors[0].subtitle, { de: "Untertitel", en: "Subtitle" });
+    });
+
     it("treats image entries without type field as images", () => {
       const quiz = makeQuiz();
       const saved = {

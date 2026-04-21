@@ -149,11 +149,17 @@ export function mergeAudioIntoImages(images, audio) {
 export function normalizeSavedQuiz(saved) {
   const questions = saved.questions || extractQuestions(saved.quiz);
   const descriptors = saved.descriptors
-    ? saved.descriptors.map((d) =>
-        d.type === "question" && d.id?.startsWith("r5q") && !("jackpot" in d)
-          ? { ...d, jackpot: true }
-          : d,
-      )
+    ? saved.descriptors.map((d) => {
+        if (d.type === "question" && d.id?.startsWith("r5q") && !("jackpot" in d))
+          return { ...d, jackpot: true };
+        if (d.type === "title" && typeof d.text === "string")
+          return {
+            ...d,
+            text: { de: d.text, en: "" },
+            subtitle: typeof d.subtitle === "string" ? { de: d.subtitle, en: "" } : d.subtitle,
+          };
+        return d;
+      })
     : buildSlideDescriptors(saved.quiz);
   const style = saved.style ? {
     fontSize: saved.style.fontSize,
@@ -263,8 +269,8 @@ export function astToQuiz(ast) {
  */
 export function buildSlideDescriptors(quiz) {
   const slides = [];
-  const ANTWORTEN_TEXT = "Antworten ⬧ Answers";
-  const ANTWORTEN_SUB = "Bitte tauscht eure Papiere mit einem anderen Team aus.\nPlease swap your papers with another team.";
+  const ANTWORTEN_TEXT = { de: "Antworten", en: "Answers" };
+  const ANTWORTEN_SUB = { de: "Bitte tauscht eure Papiere mit einem anderen Team aus.", en: "Please swap your papers with another team." };
 
   function addTitle(text, subtitle, id) {
     slides.push({ type: "title", text, subtitle: subtitle || null, id: id || null });
@@ -274,7 +280,7 @@ export function buildSlideDescriptors(quiz) {
     for (let r = 0; r < rounds.length; r++) {
       const ri = roundOffset + r;
       const round = rounds[r];
-      addTitle(round.name, null, withAnswers ? `title-r${ri}-ans` : `title-r${ri}`);
+      addTitle({ de: round.name, en: "" }, null, withAnswers ? `title-r${ri}-ans` : `title-r${ri}`);
       if (!withAnswers && round.description?.de) {
         slides.push({ type: "description", text: round.description, id: `desc-r${ri}` });
       }
@@ -312,14 +318,14 @@ export function buildSlideDescriptors(quiz) {
   const jr = quiz.rounds[5];
   if (jr) {
     const jri = 5;
-    addTitle(jr.name, null, `title-r${jri}`);
+    addTitle({ de: jr.name, en: "" }, null, `title-r${jri}`);
     addExtra("no-phones");
     const count = jr.questions.length || 4;
     for (let i = 0; i < count; i++) {
       slides.push({ type: "question", id: `r${jri}q${i}`, num: i + 1, withAnswers: false, jackpot: true });
     }
     // No Antworten divider for jackpot
-    addTitle(jr.name, null, `title-r${jri}-ans`);
+    addTitle({ de: jr.name, en: "" }, null, `title-r${jri}-ans`);
     for (let i = 0; i < count; i++) {
       slides.push({ type: "question", id: `r${jri}q${i}`, num: i + 1, withAnswers: true, jackpot: true });
     }
@@ -592,24 +598,38 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
     if (desc.type === "title") {
       const slideKey = desc.id ? `${desc.id}:0` : null;
       const [img0, img1] = slideKey ? getSlideImages(images, slideKey) : [null, null];
-      const isJackpotTitle = desc.text === "Jackpot!";
+      const titleDe = desc.text.de || "";
+      const titleEn = desc.text.en || "";
+      const isJackpotTitle = titleDe === "Jackpot!";
       const jackpotSubtitle = isJackpotTitle && `ca. ${money + DEFAULT_MONEY} €`;
-      const hasSubtitle = desc.subtitle || jackpotSubtitle;
+      const subtitleDe = desc.subtitle?.de || "";
+      const subtitleEn = desc.subtitle?.en || "";
+      const hasSubtitle = subtitleDe || subtitleEn || jackpotSubtitle;
+      const hasEn = titleEn || subtitleEn;
       if (img0) {
         // Image mode: text at top, image below
-        const textH = hasSubtitle ? 1.8 : 1.0;
-        slide.addText(desc.text, {
-          x: 0, y: pad, w: "100%", h: textH * 0.6,
+        const textH = hasSubtitle ? 1.8 : hasEn ? 1.4 : 1.0;
+        slide.addText(titleDe, {
+          x: 0, y: pad, w: "100%", h: 0.6,
           fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "top", color: fgColor,
         });
-        if (desc.subtitle) {
-          slide.addText(desc.subtitle, {
-            x: 0.5, y: pad + textH * 0.6, w: W - 1, h: textH * 0.4,
+        let nextY = pad + 0.6;
+        if (titleEn) {
+          slide.addText(titleEn, {
+            x: 0, y: nextY, w: "100%", h: 0.5,
+            fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "top", color: fgColor,
+          });
+          nextY += 0.5;
+        }
+        if (subtitleDe || subtitleEn) {
+          const subText = subtitleEn ? `${subtitleDe}\n${subtitleEn}` : subtitleDe;
+          slide.addText(subText, {
+            x: 0.5, y: nextY, w: W - 1, h: textH - (nextY - pad),
             fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top", color: fgColor,
           });
         } else if (jackpotSubtitle) {
           slide.addText(jackpotSubtitle, {
-            x: 0.5, y: pad + textH * 0.6, w: W - 1, h: textH * 0.4,
+            x: 0.5, y: nextY, w: W - 1, h: textH - (nextY - pad),
             fontSize: 28, bold: true, color: "FFC000", align: "center", valign: "top",
           });
         }
@@ -620,18 +640,30 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
         }
       } else {
         // No image: centered
-        slide.addText(desc.text, {
-          x: 0, y: hasSubtitle ? 0.5 : 0, w: "100%", h: hasSubtitle ? "50%" : "100%",
+        const totalParts = 1 + (titleEn ? 1 : 0) + (hasSubtitle ? 1 : 0);
+        const blockH = totalParts <= 1 ? 1.0 : totalParts * 0.7;
+        const startY = (H - blockH) / 2;
+        slide.addText(titleDe, {
+          x: 0, y: startY, w: "100%", h: 0.7,
           fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "middle", color: fgColor,
         });
-        if (desc.subtitle) {
-          slide.addText(desc.subtitle, {
-            x: 0.5, y: "55%", w: 9, h: "40%",
+        let nextY = startY + 0.7;
+        if (titleEn) {
+          slide.addText(titleEn, {
+            x: 0, y: nextY, w: "100%", h: 0.6,
+            fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "middle", color: fgColor,
+          });
+          nextY += 0.6;
+        }
+        if (subtitleDe || subtitleEn) {
+          const subText = subtitleEn ? `${subtitleDe}\n${subtitleEn}` : subtitleDe;
+          slide.addText(subText, {
+            x: 0.5, y: nextY, w: 9, h: 0.8,
             fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top", color: fgColor,
           });
         } else if (jackpotSubtitle) {
           slide.addText(jackpotSubtitle, {
-            x: 0.5, y: "55%", w: 9, h: "40%",
+            x: 0.5, y: nextY, w: 9, h: 0.8,
             fontSize: 28, bold: true, color: "FFC000", align: "center", valign: "top",
           });
         }

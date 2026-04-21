@@ -92,12 +92,31 @@ describe("buildPptx", () => {
   });
 
   it("renders title slide text", () => {
-    const titleIdx = descriptors.findIndex((d) => d.type === "title" && d.text === "Round 1");
+    const titleIdx = descriptors.findIndex((d) => d.type === "title" && d.text.de === "Round 1");
     const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
     const slide = pptx.slides[titleIdx];
     const titleText = slide.texts.find((t) => t.content === "Round 1");
     assert.ok(titleText, "title text should be present");
     assert.ok(titleText.opts.bold);
+  });
+
+  it("renders bilingual title with EN text when present", () => {
+    const titleIdx = descriptors.findIndex((d) => d.type === "title" && d.text.de === "Round 1");
+    descriptors[titleIdx] = { ...descriptors[titleIdx], text: { de: "Runde 1", en: "Round 1" } };
+    const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+    const slide = pptx.slides[titleIdx];
+    const deText = slide.texts.find((t) => t.content === "Runde 1");
+    const enText = slide.texts.find((t) => t.content === "Round 1");
+    assert.ok(deText, "DE title text should be present");
+    assert.ok(enText, "EN title text should be present");
+  });
+
+  it("renders bilingual subtitle on Antworten slide", () => {
+    const antIdx = descriptors.findIndex((d) => d.type === "title" && d.text.de === "Antworten");
+    const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+    const slide = pptx.slides[antIdx];
+    const subText = slide.texts.find((t) => typeof t.content === "string" && t.content.includes("Bitte tauscht") && t.content.includes("Please swap"));
+    assert.ok(subText, "Antworten subtitle should contain both DE and EN");
   });
 
   it("renders question text with number prefix", () => {
@@ -205,7 +224,7 @@ describe("buildPptx", () => {
     });
 
     it("adds jackpot subtitle to Jackpot! title slides when jackpotSize > 0", () => {
-      const jackpotTitleIdx = descriptors.findIndex((d) => d.type === "title" && d.text === "Jackpot!");
+      const jackpotTitleIdx = descriptors.findIndex((d) => d.type === "title" && d.text.de === "Jackpot!");
       const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions, { jackpotSize: 300 });
       const slide = pptx.slides[jackpotTitleIdx];
 
@@ -217,7 +236,7 @@ describe("buildPptx", () => {
     });
 
     it("does add jackpot subtitle with DEFAULT_MONEY when jackpotSize is 0", () => {
-      const jackpotTitleIdx = descriptors.findIndex((d) => d.type === "title" && d.text === "Jackpot!");
+      const jackpotTitleIdx = descriptors.findIndex((d) => d.type === "title" && d.text.de === "Jackpot!");
       const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
       const slide = pptx.slides[jackpotTitleIdx];
       const hasSubtitle = slide.texts.some((t) =>

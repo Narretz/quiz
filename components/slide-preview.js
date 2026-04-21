@@ -91,13 +91,13 @@ export function SlidePreview() {
       const desc = descriptors[i];
       if (!desc) continue;
 
-      if (desc.type === "title" && roundNames.has(desc.text)) {
+      if (desc.type === "title" && roundNames.has(desc.text.de)) {
         elements.push(html`<div key=${"br-" + i} style="flex-basis:100%;height:0" />`);
       }
 
       if (desc.type === "title") {
         let anchor = null;
-        if (tocIdx < tocEntries.length && !desc.text.startsWith("Antworten")) {
+        if (tocIdx < tocEntries.length && !desc.text.de.startsWith("Antworten")) {
           anchor = tocEntries[tocIdx].anchor;
           tocIdx++;
         }

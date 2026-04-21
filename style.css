@@ -301,6 +301,57 @@
         opacity: 1;
     }
 
+    .title-bar {
+        text-align: center;
+    }
+
+    .title-bar__field {
+        display: inline-block;
+        outline: none;
+        cursor: text;
+        min-width: 1em;
+        min-height: 1.2em;
+        vertical-align: middle;
+    }
+
+    .title-bar__field:focus {
+        outline: 1.5px solid rgba(255, 255, 255, 0.35);
+        outline-offset: 2px;
+    }
+
+    .title-bar__sep {
+        padding: 0 6px;
+        user-select: none;
+    }
+
+    .title-bar__sep--hover {
+        visibility: hidden;
+    }
+
+    .title-bar:hover .title-bar__sep--hover,
+    .title-bar:focus-within .title-bar__sep--hover {
+        visibility: visible;
+    }
+
+    .title-bar__tag {
+        font-size: 11px;
+        text-transform: uppercase;
+        visibility: hidden;
+        user-select: none;
+        padding: 0 3px;
+        opacity: 0.8;
+        cursor: pointer;
+    }
+
+    .title-bar:hover .title-bar__tag,
+    .title-bar:focus-within .title-bar__tag {
+        visibility: visible;
+    }
+
+    .title-bar__tag:hover {
+        opacity: 1;
+    }
+
     .q-text__field {
         outline: none;
         min-width: 1em;
