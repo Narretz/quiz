@@ -301,6 +301,15 @@
         opacity: 1;
     }
 
+    .answer-bar--ghost {
+        background: rgba(0, 0, 0, 0.35) !important;
+    }
+
+    .answer-bar--ghost:hover,
+    .answer-bar--ghost:focus-within {
+        background: rgba(0, 0, 0, 0.55) !important;
+    }
+
     .title-bar {
         text-align: center;
     }

@@ -106,6 +106,28 @@ test.describe("quiz loaded", () => {
     await expect(deField).toHaveText("Edited question text");
   });
 
+
+  test("can edit answer from question slide ghost bar", async ({ page }) => {
+    const questionSlide = page.locator('.slide[data-slide-id="r0q0"][data-answers="0"]');
+    await questionSlide.scrollIntoViewIfNeeded();
+    await questionSlide.hover();
+
+    const ghostBar = questionSlide.locator(".answer-bar--ghost");
+    await expect(ghostBar).toBeVisible();
+
+    const deField = ghostBar.locator(".answer-bar__field--de");
+    await deField.click();
+    await page.keyboard.press("Control+a");
+    await page.keyboard.type("Ghost answer");
+    await deField.press("Enter");
+
+    // Verify it updated the answer slide too
+    const answerSlide = page.locator('.slide[data-slide-id="r0q0"][data-answers="1"]');
+    await answerSlide.scrollIntoViewIfNeeded();
+    const ansBar = answerSlide.locator(".answer-bar .answer-bar__field--de");
+    await expect(ansBar).toHaveText("Ghost answer");
+  });
+
   test("can edit round title DE text", async ({ page }) => {
     const titleSlide = page.locator('.slide[data-slide-id="title-r0"]');
     await titleSlide.scrollIntoViewIfNeeded();

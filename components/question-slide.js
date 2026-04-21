@@ -174,6 +174,65 @@ export function QuestionSlide({ desc, onRerender }) {
     }
   }, [imgEntry, imgEntry1, slideKey, style.fontSize, style.lineSpacing, q?.text?.de, q?.text?.en]);
 
+  function renderAnswerBar(isGhost) {
+    const filled = !isGhost && (ansDe || ansEn);
+    const cls = `answer-bar${filled ? ' answer-bar--filled' : ''}${isGhost ? ' answer-bar--ghost' : ''}`;
+    return html`
+      <div ref=${isGhost ? null : ansBarRef} class=${cls}
+           style="font-size:${ansFs}px;background:${SLIDE_STYLE.answer.backgroundColor};color:${SLIDE_STYLE.answer.color}"
+           onClick=${(e) => {
+             if (e.target === e.currentTarget && ansDeRef.current) ansDeRef.current.focus();
+           }}>
+        <span class="answer-bar__tag answer-bar__tag--de"
+              onClick=${(e) => { e.stopPropagation(); focusEnd(ansDeRef.current); }}>de</span>
+        <span ref=${ansDeRef} contentEditable class="answer-bar__field answer-bar__field--de"
+             onBlur=${(e) => {
+               const text = e.target.textContent.trim();
+               if (text === ansDe) return;
+               const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
+               const en = ansEn ? existing.answers.en : text;
+               quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, answers: { de: text, en } } };
+               scheduleSave();
+               onRerender();
+             }}
+             onKeyDown=${(e) => {
+               if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+               if (e.key === "Tab") {
+                 e.preventDefault();
+                 const text = e.target.textContent.trim();
+                 if (text !== ansDe) {
+                   const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
+                   const en = ansEn ? existing.answers.en : text;
+                   quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, answers: { de: text, en } } };
+                   scheduleSave();
+                   onRerender();
+                 }
+                 requestAnimationFrame(() => { if (ansEnRef.current) ansEnRef.current.focus(); });
+               }
+             }}>
+        </span>
+        <span class=${`answer-bar__sep ${(!ansDe || !ansEn) ? 'answer-bar__sep--hover' : ''}`}>⬧</span>
+        <span ref=${ansEnRef} contentEditable
+             class="answer-bar__field answer-bar__field--en"
+             onBlur=${(e) => {
+               const text = e.target.textContent.trim();
+               if (text === ansEn) return;
+               const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
+               const en = text || existing.answers.de;
+               quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, answers: { ...existing.answers, en } } };
+               scheduleSave();
+               onRerender();
+             }}
+             onKeyDown=${(e) => {
+               if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+             }}>
+        </span>
+        <span class=${`answer-bar__tag answer-bar__tag--en ${!ansEn ? 'answer-bar__tag--edit' : ''}`}
+              onClick=${(e) => { e.stopPropagation(); focusEnd(ansEnRef.current); }}>en</span>
+      </div>
+    `;
+  }
+
   return html`
     <div class="slide-outer">
     <div class="slide" ref=${slideRef} style="background-color:${bg};color:${style.textColor || '#000'}"
@@ -223,62 +282,8 @@ export function QuestionSlide({ desc, onRerender }) {
       ` : html`
         <div style="position:absolute;left:${px(pad)};top:${px(pad)};font-size:${numFs}px;font-weight:bold">${num}</div>
       `}
-      ${withAnswers && html`
-        <div ref=${ansBarRef} class="answer-bar ${(ansDe || ansEn) ? 'answer-bar--filled' : ''}"
-             style="font-size:${ansFs}px;background:${SLIDE_STYLE.answer.backgroundColor};color:${SLIDE_STYLE.answer.color}"
-             onClick=${(e) => {
-               if (e.target === ansBarRef.current && ansDeRef.current) ansDeRef.current.focus();
-             }}>
-          <span class="answer-bar__tag answer-bar__tag--de"
-                onClick=${(e) => { e.stopPropagation(); focusEnd(ansDeRef.current); }}>de</span>
-          <span ref=${ansDeRef} contentEditable class="answer-bar__field answer-bar__field--de"
-               onBlur=${(e) => {
-                 const text = e.target.textContent.trim();
-                 if (text === ansDe) return;
-                 const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
-                 const en = ansEn ? existing.answers.en : text;
-                 quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, answers: { de: text, en } } };
-                 scheduleSave();
-                 onRerender();
-               }}
-               onKeyDown=${(e) => {
-                 if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
-                 if (e.key === "Tab") {
-                   e.preventDefault();
-                   const text = e.target.textContent.trim();
-                   if (text !== ansDe) {
-                     const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
-                     const en = ansEn ? existing.answers.en : text;
-                     quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, answers: { de: text, en } } };
-                     scheduleSave();
-                     onRerender();
-                   }
-                   requestAnimationFrame(() => { if (ansEnRef.current) ansEnRef.current.focus(); });
-                 }
-               }}>
-          </span>
-          <span class=${`answer-bar__sep ${(!ansDe || !ansEn) ? 'answer-bar__sep--hover' : ''}`}>⬧</span>
-          <span ref=${ansEnRef} contentEditable
-               class="answer-bar__field answer-bar__field--en"
-               onBlur=${(e) => {
-                 const text = e.target.textContent.trim();
-                 if (text === ansEn) return;
-                 const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
-                 const en = text || existing.answers.de;
-                 quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, answers: { ...existing.answers, en } } };
-                 scheduleSave();
-                 onRerender();
-               }}
-               onKeyDown=${(e) => {
-                 if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
-               }}>
-          </span>
-          <span class=${`answer-bar__tag answer-bar__tag--en ${!ansEn ? 'answer-bar__tag--edit' : ''}`}
-                onClick=${(e) => { e.stopPropagation(); focusEnd(ansEnRef.current); }}>
-            en
-          </span>
-        </div>
-      `}
+      ${withAnswers && renderAnswerBar(false)}
+      ${!withAnswers && renderAnswerBar(true)}
       ${withAnswers && html`
         <svg style="position:absolute;top:0;left:0;z-index:1" width="30" height="30" viewBox="0 0 30 30">
           <polygon points="0,0 27,0 0,27" fill=${SLIDE_STYLE.answer.backgroundColor} />
