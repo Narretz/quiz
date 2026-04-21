@@ -1,6 +1,6 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { buildPptx, buildSlideDescriptors, SLIDE_STYLE } from "../quiz-core.js";
+import { buildPptx, buildSlideDescriptors, SLIDE_STYLE, DEFAULT_MONEY } from "../quiz-core.js";
 import { INTRO_SLIDES } from "../lib/intro-slides.js";
 
 // --- PptxGenJS spy ---
@@ -151,6 +151,78 @@ describe("buildPptx", () => {
     const slide = pptx.slides[qIdx];
     assert.ok(slide.media[0].data.startsWith("audio/mp3"), "should normalize MIME type");
     assert.ok(!slide.media[0].data.startsWith("data:"), "should strip data: prefix");
+  });
+
+  describe("jackpotSize and email options", () => {
+    it("replaces {money} in rules slide with jackpotSize", () => {
+      const rulesIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "rules");
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions, { jackpotSize: 250 });
+      const slide = pptx.slides[rulesIdx];
+      const has250 = slide.texts.some((t) =>
+        Array.isArray(t.content)
+          ? t.content.some((r) => r.text?.includes("250"))
+          : typeof t.content === "string" && t.content.includes("250")
+      );
+      assert.ok(has250, "rules slide should contain jackpot amount 250");
+    });
+
+    it("uses 0 as default when jackpotSize not provided", () => {
+      const rulesIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "rules");
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[rulesIdx];
+      const has0 = slide.texts.some((t) =>
+        Array.isArray(t.content)
+          ? t.content.some((r) => r.text?.includes("0 €"))
+          : false
+      );
+      assert.ok(has0, "rules slide should show 0 € by default");
+    });
+
+    it("adds email to goodbye slide when provided", () => {
+      const goodbyeIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "goodbye");
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions, { email: "quiz@test.de" });
+      const slide = pptx.slides[goodbyeIdx];
+      const hasEmail = slide.texts.some((t) =>
+        Array.isArray(t.content)
+          ? t.content.some((r) => r.text?.includes("quiz@test.de"))
+          : typeof t.content === "string" && t.content.includes("quiz@test.de")
+      );
+      assert.ok(hasEmail, "goodbye slide should contain email address");
+    });
+
+    it("does not add email section to goodbye slide when email is empty", () => {
+      const goodbyeIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "goodbye");
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[goodbyeIdx];
+      const hasEmailPlaceholder = slide.texts.some((t) =>
+        Array.isArray(t.content)
+          ? t.content.some((r) => r.text?.includes("{email}"))
+          : false
+      );
+      assert.ok(!hasEmailPlaceholder, "goodbye slide should not contain {email} placeholder");
+    });
+
+    it("adds jackpot subtitle to Jackpot! title slides when jackpotSize > 0", () => {
+      const jackpotTitleIdx = descriptors.findIndex((d) => d.type === "title" && d.text === "Jackpot!");
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions, { jackpotSize: 300 });
+      const slide = pptx.slides[jackpotTitleIdx];
+
+      // 300 + ~50 for today
+      const hasSubtitle = slide.texts.some((t) =>
+        typeof t.content === "string" && t.content.includes("ca. 350 €")
+      );
+      assert.ok(hasSubtitle, "Jackpot title should show ca. 350 €");
+    });
+
+    it("does add jackpot subtitle with DEFAULT_MONEY when jackpotSize is 0", () => {
+      const jackpotTitleIdx = descriptors.findIndex((d) => d.type === "title" && d.text === "Jackpot!");
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[jackpotTitleIdx];
+      const hasSubtitle = slide.texts.some((t) =>
+        typeof t.content === "string" && t.content.includes(`ca. ${DEFAULT_MONEY} €`)
+      );
+      assert.ok(hasSubtitle, "Jackpot title should have subtitle when jackpotSize is 0");
+    });
   });
 
   describe("backwards compatibility", () => {

@@ -1,8 +1,8 @@
 import { h } from "preact";
 import htm from "htm";
 import {
-  currentQuiz, currentQuizId, status,
-  downloadPptx, deleteSavedQuiz,
+  currentQuiz, currentQuizId, status, jackpotSize, quizEmail,
+  downloadPptx, deleteSavedQuiz, scheduleSave,
 } from "../lib/state.js";
 
 const html = htm.bind(h);
@@ -25,12 +25,28 @@ export function Controls() {
     if (quizId) deleteSavedQuiz(quizId);
   }
 
+  function onJackpotChange(e) {
+    jackpotSize.value = Number(e.target.value) || 0;
+    scheduleSave();
+  }
+
+  function onEmailChange(e) {
+    quizEmail.value = e.target.value;
+    scheduleSave();
+  }
+
   return html`
     <div class="controls">
       ${quizId && html`
-        <button disabled=${!quiz} onClick=${onDownload}>Download .pptx</button>
+        <button disabled=${!quiz || status.value === 'Generating PPTX...'} onClick=${onDownload}>Download .pptx</button>
       `}
       <span class="status">${statusText}</span>
+      ${quizId && html`
+        <div class="quiz-settings">
+          <label>Jackpot €<input type="number" class="setting-input" min="0" value=${jackpotSize.value} onChange=${onJackpotChange} /></label>
+          <label>Email<input type="email" class="setting-input setting-input--email" value=${quizEmail.value} onChange=${onEmailChange} /></label>
+        </div>
+      `}
       ${quizId && html`
         <button style="margin-left:auto;background:#dc2626" onClick=${onDelete}>Delete quiz</button>
       `}

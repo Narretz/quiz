@@ -3,7 +3,7 @@ import { effect } from "@preact/signals";
 import htm from "htm";
 import {
   currentQuiz, currentQuizId, slideDescriptors, slideImages, quizQuestions, manualOverrides,
-  slideStyle, savedList, status, debug, refreshSavedList, uploadQuiz, loadSavedQuiz,
+  slideStyle, savedList, status, debug, jackpotSize, quizEmail, refreshSavedList, uploadQuiz, loadSavedQuiz,
 } from "./lib/state.js";
 import { SavedQuizBar } from "./components/saved-quiz-bar.js";
 import { Controls } from "./components/controls.js";
@@ -17,6 +17,7 @@ function App() {
   // Touch all signals so App re-renders when any change
   currentQuiz.value; currentQuizId.value; slideDescriptors.value; slideImages.value;
   quizQuestions.value; manualOverrides.value; slideStyle.value; savedList.value; status.value;
+  jackpotSize.value; quizEmail.value;
 
   async function onUpload(e) {
     const file = e.target.files[0];
@@ -71,5 +72,6 @@ render(html`<${App} />`, document.getElementById("app"));
 effect(() => {
   currentQuiz.value; currentQuizId.value; slideDescriptors.value; slideImages.value;
   quizQuestions.value; manualOverrides.value; slideStyle.value; savedList.value; status.value;
+  jackpotSize.value; quizEmail.value;
   render(html`<${App} />`, document.getElementById("app"));
 });

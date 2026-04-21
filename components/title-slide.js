@@ -1,9 +1,9 @@
 import { h } from "preact";
 import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
-import { SLIDE_STYLE, getSlideImages } from "../quiz-core.js";
+import { SLIDE_STYLE, getSlideImages, DEFAULT_MONEY } from "../quiz-core.js";
 import { PT_SCALE, PX, px, layoutImageBelowText, layoutTwoImagesBelowText } from "../lib/utils.js";
-import { slideStyle, slideImages } from "../lib/state.js";
+import { slideStyle, slideImages, jackpotSize } from "../lib/state.js";
 import { ImageActions } from "./image-actions.js";
 import { SlideImage } from "./slide-image.js";
 
@@ -15,6 +15,10 @@ export function TitleSlide({ desc, anchor, onRerender }) {
   const titleFs = SLIDE_STYLE.title.fontSize * PT_SCALE;
   const subtitleFs = SLIDE_STYLE.question.fontSize * PT_SCALE;
   const id = desc.id;
+  const money = jackpotSize.value;
+  const isJackpotTitle = desc.text === "Jackpot!";
+  // jackpot amount + 50€ (10 teams with 5€ entry fee)
+  const jackpotSubtitle = isJackpotTitle && `ca. ${money + DEFAULT_MONEY} €`;
 
   const titleForQuestions = id?.startsWith("title-r") && !id.endsWith("-ans");
 
@@ -51,7 +55,10 @@ export function TitleSlide({ desc, anchor, onRerender }) {
           <div ref=${textRef} style="position:absolute;left:0;top:${px(pad)};width:100%;text-align:center">
             <span class="title-text" style="font-size:${titleFs}px">${desc.text}</span>
             ${desc.subtitle && html`
-              <div style="margin-top:8px;font-size:${subtitleFs}px;white-space:pre-line">${desc.subtitle}</div>
+              <div style="margin-top:6px;font-size:${subtitleFs}px;white-space:pre-line">${desc.subtitle}</div>
+            `}
+            ${jackpotSubtitle && html`
+              <div style="margin-top:6px;font-size:${28 * PT_SCALE}px;font-weight:bold;color:#FFC000">${jackpotSubtitle}</div>
             `}
           </div>
           <${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} imgRef=${imgRef} slideKey=${slideKey} imgIdx=${0}
@@ -73,7 +80,10 @@ export function TitleSlide({ desc, anchor, onRerender }) {
            style="background-color:${bg};color:${fg}">
         <span class="title-text" style="font-size:${titleFs}px">${desc.text}</span>
         ${desc.subtitle && html`
-          <div style="margin-top:12px;font-size:${subtitleFs}px;white-space:pre-line">${desc.subtitle}</div>
+          <div style="margin-top:6px;font-size:${subtitleFs}px;white-space:pre-line">${desc.subtitle}</div>
+        `}
+        ${jackpotSubtitle && html`
+          <div style="margin-top:6px;font-size:${28 * PT_SCALE}px;font-weight:bold;color:#FFC000">${jackpotSubtitle}</div>
         `}
       </div>
       ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} linkedSlideKey=${linkedSlideKey}

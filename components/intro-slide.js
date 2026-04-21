@@ -1,17 +1,17 @@
 import { h } from "preact";
 import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
-import { INTRO_SLIDES, DEFAULT_MONEY } from "../lib/intro-slides.js";
+import { INTRO_SLIDES } from "../lib/intro-slides.js";
 import { SLIDE_STYLE, getSlideImages } from "../quiz-core.js";
 import { PT_SCALE, px, PX, layoutImageBelowText, layoutTwoImagesBelowText } from "../lib/utils.js";
-import { slideStyle, slideImages } from "../lib/state.js";
+import { slideStyle, slideImages, jackpotSize, quizEmail } from "../lib/state.js";
 import { ImageActions } from "./image-actions.js";
 import { SlideImage } from "./slide-image.js";
 
 const html = htm.bind(h);
 
-function replaceMoney(text) {
-  return text.replace("{money}", String(DEFAULT_MONEY));
+function replaceVars(text, vars) {
+  return text.replace(/\{(\w+)\}/g, (m, key) => key in vars ? String(vars[key]) : m);
 }
 
 function c(color) {
@@ -24,6 +24,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
   const style = data.style || data.id; // migration fallback for old saves
   const bg = slideStyle.value.backgroundColor;
   const fg = slideStyle.value.textColor || '#000';
+  const vars = { money: jackpotSize.value, email: quizEmail.value || "" };
   const slideKey = id ? `${id}:0` : null;
   const [imgEntry, imgEntry1] = slideKey ? getSlideImages(slideImages.value, slideKey) : [null, null];
   const hasTwoImages = imgEntry && imgEntry1;
@@ -49,6 +50,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
   }
 
   if (style === "rules") {
+    const sections = data.sections.filter((sec) => !sec.showIf || vars[sec.showIf]);
     if (imgEntry) {
       const textRef = useRef(null);
       const imgElRef = useRef(null);
@@ -67,10 +69,10 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
               <div style="font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
                 ${data.title.text}
               </div>
-              ${data.sections.map((sec) => html`
+              ${sections.map((sec) => html`
                 <div style="font-size:${data.defaultFontSize * PT_SCALE}px;margin-top:8px">
-                  ${sec.lines.map((line) => html`
-                    <div>${line.runs.map((r) => html`<span style="color:${c(r.color)};${r.bold ? 'font-weight:bold;' : ''}${r.underline ? 'text-decoration:underline;' : ''}${r.fontSize ? `font-size:${r.fontSize * PT_SCALE}px;` : ''}">${replaceMoney(r.text)}</span>`)}</div>
+                  ${sec.lines.filter((line) => !line.showIf || vars[line.showIf]).map((line) => html`
+                    <div>${line.runs.map((r) => html`<span style="color:${c(r.color)};${r.bold ? 'font-weight:bold;' : ''}${r.underline ? 'text-decoration:underline;' : ''}${r.fontSize ? `font-size:${r.fontSize * PT_SCALE}px;` : ''}">${replaceVars(r.text, vars)}</span>`)}</div>
                   `)}
                 </div>
               `)}
@@ -92,10 +94,10 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc }) {
           <div style="position:absolute;left:0;top:${px(data.titleY)};width:100%;text-align:center;font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
             ${data.title.text}
           </div>
-          ${data.sections.map((sec, si) => html`
+          ${sections.map((sec, si) => html`
             <div style="position:absolute;left:${px(SLIDE_STYLE.pad)};top:${px(data.sectionStartY + si * data.sectionGap)};width:${px(SLIDE_STYLE.width - 2 * SLIDE_STYLE.pad)};font-size:${data.defaultFontSize * PT_SCALE}px;text-align:center">
-              ${sec.lines.map((line) => html`
-                <div>${line.runs.map((r) => html`<span style="color:${c(r.color)};${r.bold ? 'font-weight:bold;' : ''}${r.underline ? 'text-decoration:underline;' : ''}${r.fontSize ? `font-size:${r.fontSize * PT_SCALE}px;` : ''}">${replaceMoney(r.text)}</span>`)}</div>
+              ${sec.lines.filter((line) => !line.showIf || vars[line.showIf]).map((line) => html`
+                <div>${line.runs.map((r) => html`<span style="color:${c(r.color)};${r.bold ? 'font-weight:bold;' : ''}${r.underline ? 'text-decoration:underline;' : ''}${r.fontSize ? `font-size:${r.fontSize * PT_SCALE}px;` : ''}">${replaceVars(r.text, vars)}</span>`)}</div>
               `)}
             </div>
           `)}

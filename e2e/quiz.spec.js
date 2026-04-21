@@ -121,4 +121,66 @@ test.describe("quiz loaded", () => {
     const titleSlide = page.locator(".slide .title-text", { hasText: targetText });
     await expect(titleSlide.first()).toBeInViewport({ timeout: 3_000 });
   });
+
+  test("jackpot input updates rules slide", async ({ page }) => {
+    const jackpotInput = page.locator('.setting-input[type="number"]');
+    await jackpotInput.fill("250");
+    await jackpotInput.press("Enter");
+
+    // Second slide is the rules slide (index 1)
+    const rulesSlide = page.locator(".slide").nth(1);
+    await rulesSlide.scrollIntoViewIfNeeded();
+    await expect(rulesSlide).toContainText("250 €");
+  });
+
+  test("jackpot input shows 0 by default", async ({ page }) => {
+    const rulesSlide = page.locator(".slide").nth(1);
+    await rulesSlide.scrollIntoViewIfNeeded();
+    await expect(rulesSlide).toContainText("0 €");
+  });
+
+  test("jackpot input adds subtitle to Jackpot title slide", async ({ page }) => {
+    const jackpotInput = page.locator('.setting-input[type="number"]');
+    await jackpotInput.fill("300");
+    await jackpotInput.press("Enter");
+
+    const jackpotTitle = page.locator('.slide[data-slide-id="title-r5"]');
+    await jackpotTitle.scrollIntoViewIfNeeded();
+    // 50 extra for today
+    await expect(jackpotTitle).toContainText("ca. 350 €");
+
+    const jackpotAnsTitle = page.locator('.slide[data-slide-id="title-r5-ans"]');
+    await jackpotAnsTitle.scrollIntoViewIfNeeded();
+    // 50 extra for today
+    await expect(jackpotTitle).toContainText("ca. 350 €");
+
+  });
+
+  test("email input updates goodbye slide", async ({ page }) => {
+    const emailInput = page.locator('.setting-input--email');
+    await emailInput.fill("quiz@test.de");
+    await emailInput.dispatchEvent("change");
+
+    const lastSlide = page.locator(".slide").last();
+    await lastSlide.scrollIntoViewIfNeeded();
+    await expect(lastSlide).toContainText("quiz@test.de");
+  });
+
+  test("jackpot and email persist after reload", async ({ page }) => {
+    const jackpotInput = page.locator('.setting-input[type="number"]');
+    await jackpotInput.fill("180");
+    await jackpotInput.press("Enter");
+
+    const emailInput = page.locator('.setting-input--email');
+    await emailInput.fill("persist@test.de");
+    await emailInput.dispatchEvent("change");
+
+    // Wait for save
+    await page.waitForTimeout(500);
+    await page.reload();
+    await page.locator(".slide").first().waitFor({ timeout: 10_000 });
+
+    await expect(page.locator('.setting-input[type="number"]')).toHaveValue("180");
+    await expect(page.locator('.setting-input--email')).toHaveValue("persist@test.de");
+  });
 });

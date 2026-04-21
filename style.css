@@ -32,6 +32,30 @@
         min-height: 40px;
     }
 
+    .quiz-settings {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        font-size: 0.85rem;
+    }
+
+    .quiz-settings label {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+    }
+
+    .setting-input {
+        width: 70px;
+        padding: 2px 4px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+    }
+
+    .setting-input--email {
+        width: 180px;
+    }
+
     .saved-quizzes {
         font-size: 0.85rem;
     }

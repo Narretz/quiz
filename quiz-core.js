@@ -3,7 +3,13 @@
  * Used by both CLI (parse-quiz.js, generate-pptx.js) and browser (index.html).
  */
 
-import { INTRO_SLIDES, EXTRA_SLIDES, DEFAULT_MONEY } from "./lib/intro-slides.js";
+import { INTRO_SLIDES, EXTRA_SLIDES } from "./lib/intro-slides.js";
+
+/**
+ * jackpot size when it was just cracked: 10 teams, each 5€ entry fee
+ * @type {Number}
+ */
+export const DEFAULT_MONEY = 50;
 
 /** Slide dimensions and font sizes — single source of truth for PPTX and preview. */
 export const SLIDE_STYLE = {
@@ -147,6 +153,8 @@ export function normalizeSavedQuiz(saved) {
     manualOverrides: saved.manualOverrides || {},
     descriptors,
     style,
+    jackpotSize: saved.jackpotSize || 0,
+    email: saved.email || "",
   };
 }
 
@@ -304,8 +312,8 @@ export function buildSlideDescriptors(quiz) {
   return slides;
 }
 
-function replaceMoney(text, money) {
-  return text.replace("{money}", String(money));
+function replaceVars(text, vars) {
+  return text.replace(/\{(\w+)\}/g, (m, key) => key in vars ? String(vars[key]) : m);
 }
 
 function resolveColor(c) {
@@ -348,9 +356,8 @@ function addTwoImagesBelowText(slide, entry0, entry1, textBottom) {
   }
 }
 
-function renderIntroSlide(slide, data, assets, desc, images) {
+function renderIntroSlide(slide, data, assets, desc, images, money, email) {
   if (!data) return;
-  const money = DEFAULT_MONEY;
   const { width: W, height: H, pad } = SLIDE_STYLE;
   const style = data.style || data.id; // migration fallback for old saves
   const slideKey = desc?.id ? `${desc.id}:0` : null;
@@ -386,6 +393,8 @@ function renderIntroSlide(slide, data, assets, desc, images) {
   }
 
   if (style === "rules") {
+    const vars = { money, email };
+    const sections = data.sections.filter((sec) => !sec.showIf || vars[sec.showIf]);
     const titleY = imgEntry ? pad : data.titleY;
     let sectionStartY = imgEntry ? pad + 0.6 : data.sectionStartY;
     slide.addText(data.title.text, {
@@ -393,11 +402,12 @@ function renderIntroSlide(slide, data, assets, desc, images) {
       fontSize: data.title.fontSize, bold: true, underline: true, color: resolveColor(data.title.color), align: "center",
     });
     let textBottom = sectionStartY;
-    data.sections.forEach((sec, si) => {
+    sections.forEach((sec, si) => {
       let y = sectionStartY + si * data.sectionGap;
       for (const line of sec.lines) {
+        if (line.showIf && !vars[line.showIf]) continue;
         const runs = line.runs.map((r) => ({
-          text: replaceMoney(r.text, money),
+          text: replaceVars(r.text, vars),
           options: {
             fontSize: r.fontSize || data.defaultFontSize,
             bold: r.bold || false,
@@ -517,8 +527,10 @@ function renderIntroSlide(slide, data, assets, desc, images) {
  * @param {object} [introAssets] - { logo: base64, toucan: base64 }
  * @param {Record<string, {text:{de:string,en:string}, answers:{de:string,en:string}}>} [questions]
  */
-export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, audio = {}, introAssets = {}, questions = {}) {
+export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, audio = {}, introAssets = {}, questions = {}, options = {}) {
   images = mergeAudioIntoImages(images, audio);
+  const money = options.jackpotSize ?? 0;
+  const email = options.email || "";
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
   pptx.theme = { headFontFace: "Arial", bodyFontFace: "Arial" };
@@ -561,9 +573,12 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
     if (desc.type === "title") {
       const slideKey = desc.id ? `${desc.id}:0` : null;
       const [img0, img1] = slideKey ? getSlideImages(images, slideKey) : [null, null];
+      const isJackpotTitle = desc.text === "Jackpot!";
+      const jackpotSubtitle = isJackpotTitle && `ca. ${money + DEFAULT_MONEY} €`;
+      const hasSubtitle = desc.subtitle || jackpotSubtitle;
       if (img0) {
         // Image mode: text at top, image below
-        const textH = desc.subtitle ? 1.8 : 1.0;
+        const textH = hasSubtitle ? 1.8 : 1.0;
         slide.addText(desc.text, {
           x: 0, y: pad, w: "100%", h: textH * 0.6,
           fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "top", color: fgColor,
@@ -572,6 +587,11 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
           slide.addText(desc.subtitle, {
             x: 0.5, y: pad + textH * 0.6, w: W - 1, h: textH * 0.4,
             fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top", color: fgColor,
+          });
+        } else if (jackpotSubtitle) {
+          slide.addText(jackpotSubtitle, {
+            x: 0.5, y: pad + textH * 0.6, w: W - 1, h: textH * 0.4,
+            fontSize: 28, bold: true, color: "FFC000", align: "center", valign: "top",
           });
         }
         if (img1) {
@@ -582,13 +602,18 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
       } else {
         // No image: centered
         slide.addText(desc.text, {
-          x: 0, y: desc.subtitle ? 0.5 : 0, w: "100%", h: desc.subtitle ? "50%" : "100%",
+          x: 0, y: hasSubtitle ? 0.5 : 0, w: "100%", h: hasSubtitle ? "50%" : "100%",
           fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "middle", color: fgColor,
         });
         if (desc.subtitle) {
           slide.addText(desc.subtitle, {
             x: 0.5, y: "55%", w: 9, h: "40%",
             fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top", color: fgColor,
+          });
+        } else if (jackpotSubtitle) {
+          slide.addText(jackpotSubtitle, {
+            x: 0.5, y: "55%", w: 9, h: "40%",
+            fontSize: 28, bold: true, color: "FFC000", align: "center", valign: "top",
           });
         }
       }
@@ -597,7 +622,7 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
     }
 
     if (desc.type === "intro") {
-      renderIntroSlide(slide, desc.data || INTRO_SLIDES[desc.introIndex], introAssets, desc, images);
+      renderIntroSlide(slide, desc.data || INTRO_SLIDES[desc.introIndex], introAssets, desc, images, money, email);
       addSlideMedia(slide, desc, { skipImage: true });
       continue;
     }

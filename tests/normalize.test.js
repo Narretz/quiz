@@ -184,6 +184,28 @@ describe("normalizeSavedQuiz", () => {
       assert.strictEqual(result.images["r0q0:0:1"].data, "aud");
     });
 
+    it("defaults jackpotSize to 0 when missing", () => {
+      const quiz = makeQuiz();
+      const saved = { quiz, descriptors: [] };
+      const result = normalizeSavedQuiz(saved);
+      assert.strictEqual(result.jackpotSize, 0);
+    });
+
+    it("defaults email to empty string when missing", () => {
+      const quiz = makeQuiz();
+      const saved = { quiz, descriptors: [] };
+      const result = normalizeSavedQuiz(saved);
+      assert.strictEqual(result.email, "");
+    });
+
+    it("preserves jackpotSize and email when present", () => {
+      const quiz = makeQuiz();
+      const saved = { quiz, descriptors: [], jackpotSize: 200, email: "quiz@test.de" };
+      const result = normalizeSavedQuiz(saved);
+      assert.strictEqual(result.jackpotSize, 200);
+      assert.strictEqual(result.email, "quiz@test.de");
+    });
+
     it("treats image entries without type field as images", () => {
       const quiz = makeQuiz();
       const saved = {
