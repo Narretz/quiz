@@ -20,7 +20,8 @@
       "Bash(sed 's/<a:t>//g')",
       "Bash(node --test tests/*)",
       "Bash(npm test *)",
-      "Bash(npx playwright *)"
+      "Bash(npx playwright *)",
+      "Bash(npm run *)"
     ]
   },
   "enabledMcpjsonServers": [
