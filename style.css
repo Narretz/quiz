@@ -369,6 +369,15 @@
         cursor: pointer;
     }
 
+    .title-bar__tag--shift {
+        margin-left: 30px;
+    }
+
+
+    .title-bar__tag--edit {
+        margin-left: 8px;
+    }
+
     .title-bar:hover .title-bar__tag,
     .title-bar:focus-within .title-bar__tag {
         visibility: visible;

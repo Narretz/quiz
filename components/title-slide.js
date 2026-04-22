@@ -83,7 +83,7 @@ export function TitleSlide({ desc, descIdx, anchor, onRerender }) {
     if (isRoundTitle) {
       return html`
         <div class="title-bar" style="font-size:${titleFs}px;font-weight:bold">
-          <span class="title-bar__tag title-bar__tag--de"
+          <span class="title-bar__tag title-bar__tag--de ${!titleEn ? 'title-bar__tag--shift' : ''}"
                 onClick=${(e) => { e.stopPropagation(); focusEnd(deTextRef.current); }}>de</span>
           <span ref=${deTextRef} contentEditable class="title-bar__field"
                onBlur=${(e) => {
@@ -98,8 +98,9 @@ export function TitleSlide({ desc, descIdx, anchor, onRerender }) {
                    e.target.blur();
                    requestAnimationFrame(() => focusEnd(enTextRef.current));
                  }
-               }}></span>
-          <span class=${`title-bar__sep ${(!titleDe || !titleEn) ? 'title-bar__sep--hover' : ''}`}>⬧</span>
+               }}></span>${titleEn ? html`<br/>` : ''}
+          <span class=${`title-bar__tag title-bar__tag--en ${!titleEn ? 'title-bar__tag--edit' : ''}`}
+                onClick=${(e) => { e.stopPropagation(); focusEnd(enTextRef.current); }}>en</span>
           <span ref=${enTextRef} contentEditable class="title-bar__field"
                onBlur=${(e) => {
                  const text = e.target.textContent.trim();
@@ -109,8 +110,6 @@ export function TitleSlide({ desc, descIdx, anchor, onRerender }) {
                onKeyDown=${(e) => {
                  if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
                }}></span>
-          <span class=${`title-bar__tag title-bar__tag--en ${!titleEn ? 'title-bar__tag--edit' : ''}`}
-                onClick=${(e) => { e.stopPropagation(); focusEnd(enTextRef.current); }}>en</span>
         </div>
       `;
     }
