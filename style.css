@@ -379,8 +379,11 @@
     }
 
     .q-text__field {
-        display: inline-block;
         outline: none;
+    }
+
+    .q-text__field:empty {
+        display: inline-block;
         min-width: 1em;
         min-height: 1.2em;
         vertical-align: middle;

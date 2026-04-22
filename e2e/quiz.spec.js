@@ -110,6 +110,27 @@ test.describe("quiz loaded", () => {
     await expect(deField).toHaveText("Edited question text");
   });
 
+  test("question text field is inline when filled, inline-block when empty", async ({ page }) => {
+    // Regression: filled fields must be `display: inline` so long text wraps
+    // word-by-word next to the question number instead of the whole block
+    // jumping to the next line. Empty fields need inline-block for a clickable
+    // min-width/height target.
+    const filledField = page.locator('.slide[data-slide-id="r0q0"][data-answers="0"] [lang="de"] .q-text__field');
+    await filledField.scrollIntoViewIfNeeded();
+    await expect(filledField).not.toHaveCSS("display", "inline-block");
+
+    const emptySlide = page.locator('.slide[data-slide-id="r1q0"][data-answers="0"]');
+    await emptySlide.scrollIntoViewIfNeeded();
+    await emptySlide.hover();
+    const emptyField = emptySlide.locator('[lang="de"] .q-text__field');
+    await expect(emptyField).toHaveCSS("display", "inline-block");
+
+    // After typing, it should switch to inline so text can wrap naturally
+    await emptyField.click();
+    await page.keyboard.type("Now filled");
+    await expect(emptyField).not.toHaveCSS("display", "inline-block");
+  });
+
   test("empty question slots are editable", async ({ page }) => {
     // r1 (Weihnachtslieder) has 0 questions in XLSX → 10 empty descriptor slots
     const slide = page.locator('.slide[data-slide-id="r1q0"][data-answers="0"]');
