@@ -203,7 +203,7 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
         ${isRoundTitle && html`<button onClick=${nav}>${!isSource ? "\u2191 questions" : "\u2193 answers"}</button>`}
       </div>
       <div class="img-actions__right">
-        ${debug && imgEntry && html`
+        ${debug && html`
           <label class="override-label">
             <input type="number" class="slide-fs-input" step="0.5" value=${displayFs}
                    onChange=${onOverrideChange} title="Font size (pt)" />pt
