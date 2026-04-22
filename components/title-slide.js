@@ -134,35 +134,23 @@ export function TitleSlide({ desc, descIdx, anchor, onRerender }) {
     return null;
   }
 
-  if (imgEntry) {
-    const { pad } = SLIDE_STYLE;
-    return html`
-      <div class="slide-outer" data-desc-idx=${descIdx}>
-        <div class="slide" id=${anchor || undefined}
-             data-slide-id="${id}"
-             style="background-color:${bg};color:${fg}">
-          <div ref=${textRef} style="position:absolute;left:0;top:${px(pad)};width:100%;text-align:center">
-            ${renderTitle()}
-            ${renderSubtitle()}
-          </div>
-          <${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} imgRef=${imgRef} slideKey=${slideKey} imgIdx=${0}
-               isSource=${titleForQuestions} linkKey=${linkedSlideKey} onRerender=${onRerender} />
-          ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} type=${imgEntry1.type} name=${imgEntry1.name} imgRef=${img1Ref} slideKey=${slideKey} imgIdx=${1}
-               isSource=${titleForQuestions} linkKey=${linkedSlideKey} onRerender=${onRerender} />`}
-        </div>
-        ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} linkedSlideKey=${linkedSlideKey}
-                       imgEntry=${imgEntry} slideKey=${slideKey} onRerender=${onRerender} />`}
-      </div>
-    `;
-  }
-
+  const { pad } = SLIDE_STYLE;
+  const textStyle = imgEntry
+    ? `position:absolute;left:0;top:${px(pad)};width:100%;text-align:center`
+    : "";
   return html`
     <div class="slide-outer" data-desc-idx=${descIdx}>
-      <div class="slide title-slide" id=${anchor || undefined}
+      <div class=${imgEntry ? "slide" : "slide title-slide"} id=${anchor || undefined}
            data-slide-id="${id}"
            style="background-color:${bg};color:${fg}">
-        ${renderTitle()}
-        ${renderSubtitle()}
+        <div ref=${textRef} style=${textStyle}>
+          ${renderTitle()}
+          ${renderSubtitle()}
+        </div>
+        ${imgEntry && html`<${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} imgRef=${imgRef} slideKey=${slideKey} imgIdx=${0}
+             isSource=${titleForQuestions} linkKey=${linkedSlideKey} onRerender=${onRerender} />`}
+        ${imgEntry && hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} type=${imgEntry1.type} name=${imgEntry1.name} imgRef=${img1Ref} slideKey=${slideKey} imgIdx=${1}
+             isSource=${titleForQuestions} linkKey=${linkedSlideKey} onRerender=${onRerender} />`}
       </div>
       ${id && html`<${ImageActions} id=${id} withAnswers=${false} isQuestion=${false} linkedSlideKey=${linkedSlideKey}
                      imgEntry=${imgEntry} slideKey=${slideKey} onRerender=${onRerender} />`}

@@ -365,6 +365,32 @@ test.describe("image linking", () => {
   });
 });
 
+test.describe("title slide images", () => {
+  test.beforeEach(async ({ page }) => {
+    await seedQuiz(page);
+  });
+
+  test("title text remains visible after adding and removing an image", async ({ page }) => {
+    // Regression: adding/removing an image on a title slide swapped the slide
+    // between two JSX subtrees, unmounting the contentEditable title spans.
+    // The `useLayoutEffect([titleDe])` that seeds their textContent didn't
+    // re-run, so the title went blank until reload.
+    const outer = page.locator('.slide-outer:has(.slide[data-slide-id="title-r0"])').first();
+    await outer.scrollIntoViewIfNeeded();
+
+    const deField = outer.locator('[lang="de"] .title-bar__field, .title-bar__field').first();
+    const originalTitle = (await deField.textContent())?.trim();
+    expect(originalTitle).toBeTruthy();
+
+    await addImage(outer, IMG.landscape);
+    await expect(deField).toHaveText(originalTitle);
+
+    await hoverAndClickButton(outer, "remove media");
+    await expect(slideImg(outer)).toHaveCount(0);
+    await expect(deField).toHaveText(originalTitle);
+  });
+});
+
 test.describe("image action buttons", () => {
   test.beforeEach(async ({ page }) => {
     await seedQuiz(page);
