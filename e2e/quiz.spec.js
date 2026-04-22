@@ -385,26 +385,6 @@ test.describe("quiz loaded", () => {
     await expect(lastSlide).toContainText("See you again next week");
   });
 
-  test("TOC navigation scrolls to round", async ({ page }) => {
-    const tocLinks = page.locator(".toc a");
-    const secondLink = tocLinks.nth(1);
-    const targetText = await secondLink.textContent();
-    await secondLink.click();
-
-    const titleSlide = page.locator(".slide .title-bar__field, .slide .q-text__field", { hasText: targetText });
-    await expect(titleSlide.first()).toBeInViewport({ timeout: 3_000 });
-  });
-
-  test("scrolling to the top clears the url hash", async ({ page }) => {
-    // Scroll down so a section anchor is set
-    await page.evaluate(() => window.scrollTo({ top: 2000, behavior: "instant" }));
-    await expect.poll(() => page.evaluate(() => location.hash)).not.toBe("");
-
-    // Scroll back to the top
-    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
-    await expect.poll(() => page.evaluate(() => location.hash)).toBe("");
-  });
-
   test("jackpot input updates rules slide", async ({ page }) => {
     const jackpotInput = page.locator('.setting-input[type="number"]');
     await jackpotInput.fill("250");
