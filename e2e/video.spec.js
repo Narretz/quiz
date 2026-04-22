@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 import path from "path";
+import fs from "fs/promises";
+import JSZip from "jszip";
 import { seedQuiz } from "./seed.js";
 
 const VIDEO = path.resolve("tests/video/portrait.mp4");
@@ -196,6 +198,40 @@ test.describe("video", () => {
     // Video gone, image stays
     await expect(slideVideo(outer)).not.toBeVisible();
     await expect(outer.locator(".slide .slide-img-wrap img")).toBeVisible();
+  });
+
+  test("downloaded PPTX has click-to-play timing and cover frame for video", async ({ page }) => {
+    const outer = questionOuter(page, "r0q0");
+    await addAV(outer, VIDEO);
+    // wait for cover extraction to finish (mirrored on answer slide as an <img>)
+    await expect(questionOuter(page, "r0q0", true).locator(".slide .slide-img-wrap img")).toBeVisible({ timeout: 5_000 });
+
+    await page.locator("button", { hasText: "Validate" }).click();
+    const downloadPromise = page.waitForEvent("download", { timeout: 60_000 });
+    await page.locator("button", { hasText: "Download .pptx" }).click();
+    const download = await downloadPromise;
+    const pptxPath = await download.path();
+    const zip = await JSZip.loadAsync(await fs.readFile(pptxPath));
+
+    // Find the slide that embeds the video (r0q0 question slide)
+    const slidePaths = Object.keys(zip.files).filter((p) => /^ppt\/slides\/slide\d+\.xml$/.test(p));
+    let videoSlideXml = null;
+    for (const p of slidePaths) {
+      const xml = await zip.files[p].async("string");
+      if (xml.includes("a:videoFile") && xml.includes("ppaction://media")) {
+        videoSlideXml = xml;
+        break;
+      }
+    }
+    expect(videoSlideXml, "a slide should embed the video").not.toBeNull();
+
+    // Click-to-play timing: mediacall / playFrom(0.0) targeting the Media shape.
+    // Without this, PowerPoint treats click/spacebar as "advance slide" instead of "play video".
+    expect(videoSlideXml).toMatch(/<p:timing>/);
+    expect(videoSlideXml).toMatch(/presetClass="mediacall"/);
+    expect(videoSlideXml).toMatch(/cmd="playFrom\(0\.0\)"/);
+    // The video file reference must remain a videoFile (not renamed to audioFile like audio slides)
+    expect(videoSlideXml).not.toMatch(/<a:audioFile/);
   });
 
   test("video persists after page reload", async ({ page }) => {
