@@ -327,6 +327,10 @@
         display: none;
     }
 
+    .slide:has(video:hover) .answer-bar {
+        display: none !important;
+    }
+
     .title-bar {
         text-align: center;
     }

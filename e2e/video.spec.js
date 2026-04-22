@@ -234,6 +234,26 @@ test.describe("video", () => {
     expect(videoSlideXml).not.toMatch(/<a:audioFile/);
   });
 
+  test("ghost answer bar hides while pointer is over the video", async ({ page }) => {
+    // The ghost bar sits at the bottom of the slide and overlaps the video's
+    // controls. Hide it whenever the pointer is inside the video element so
+    // it never blocks play/pause/seek interactions.
+    const outer = questionOuter(page, "r0q0", false);
+    await addAV(outer, VIDEO);
+    await outer.scrollIntoViewIfNeeded();
+    await outer.hover();
+
+    const ghostBar = outer.locator(".answer-bar--ghost");
+    await expect(ghostBar).toBeVisible();
+
+    await outer.locator("video").hover();
+    await expect(ghostBar).not.toBeVisible();
+
+    // Move off the video (but still over the slide) — bar should reappear
+    await outer.hover({ position: { x: 10, y: 10 } });
+    await expect(ghostBar).toBeVisible();
+  });
+
   test("video persists after page reload", async ({ page }) => {
     const outer = questionOuter(page, "r0q0");
     await addAV(outer, VIDEO);
