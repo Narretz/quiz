@@ -7,8 +7,8 @@ const XLSX_PATH = path.resolve("tests/files/basic.xlsx");
 test.describe("upload", () => {
   test("loads the page with upload button", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("h1")).toHaveText("Quiz XLSX to PPTX");
-    await expect(page.locator("label.upload-btn")).toBeVisible();
+    await expect(page.locator("h1")).toHaveText("Quiz Creator");
+    await expect(page.locator("label .upload-btn")).toBeVisible();
   });
 
   test("uploads XLSX and renders slides", async ({ page }) => {
@@ -31,8 +31,11 @@ test.describe("upload", () => {
     await fileInput.setInputFiles(XLSX_PATH);
     await expect(page.locator(".slide").first()).toBeVisible({ timeout: 10_000 });
 
-    const savedItem = page.locator(".saved-quizzes .sq-item");
-    await expect(savedItem.first()).toBeVisible({ timeout: 5_000 });
+    // Return to the main menu to see the saved-quizzes list.
+    await page.locator(".home-btn").click();
+
+    const options = page.locator(".saved-quizzes-select option[value]:not([value=''])");
+    await expect(options).not.toHaveCount(0, { timeout: 5_000 });
   });
 });
 
@@ -316,6 +319,23 @@ test.describe("quiz loaded", () => {
     await enField.press("Enter");
 
     await expect(enField).toHaveText("English Title");
+  });
+
+  test("round title edit (DE) updates the TOC entry", async ({ page }) => {
+    const titleSlide = page.locator('.slide[data-slide-id="title-r0"]');
+    await titleSlide.scrollIntoViewIfNeeded();
+
+    const originalLabel = await page.locator(".toc a").nth(1).textContent();
+
+    const deField = titleSlide.locator(".title-bar__field").first();
+    await deField.click();
+    await page.keyboard.press("Control+a");
+    await page.keyboard.type("Music Round");
+    await deField.press("Enter");
+
+    // The TOC label for round 0 (2nd entry after Intro) should update to match.
+    await expect(page.locator(".toc a").nth(1)).toHaveText("Music Round");
+    expect(originalLabel).not.toBe("Music Round");
   });
 
   test("round title edits sync between question and answer title slides", async ({ page }) => {

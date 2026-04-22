@@ -12,9 +12,17 @@ export function SavedQuizBar({ onLoad }) {
 
   const sorted = [...list].sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0));
 
-  return html`<div class="saved-quizzes">${sorted.map((entry) => html`
-    <span class="sq-item ${entry.id === activeId ? "active" : ""}" key=${entry.id}>
-      <span class="sq-label" onClick=${() => onLoad(entry.id)}>${entry.id}</span>
-    </span>
-  `)}</div>`;
+  function onChange(e) {
+    const id = e.target.value;
+    if (id) onLoad(id);
+  }
+
+  return html`
+    <select class="saved-quizzes-select" value=${activeId || ""} onChange=${onChange}>
+      <option value="" disabled>Select a stored quiz…</option>
+      ${sorted.map((entry) => html`
+        <option key=${entry.id} value=${entry.id}>${entry.quiz?.name || entry.id}</option>
+      `)}
+    </select>
+  `;
 }

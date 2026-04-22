@@ -13,13 +13,35 @@
 
     h1 {
         margin-bottom: 1rem;
+        font-size: 1.8rem;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+    }
+
+    .home-btn {
+        padding: 0.1rem 0.55rem;
+        font-size: 1.2rem;
+        line-height: 1;
+        background: #fff;
+        color: #2563eb;
+        border: 1px solid #ccc;
+    }
+
+    .home-btn:hover {
+        background: #eff4ff;
+        color: #1d4ed8;
+    }
+
+    h2 {
+        font-size: 1.6rem;
     }
 
     .howto {
       margin: 10px 10px 10px 0;
     }
 
-    details ul {
+    .howto ul {
         margin-left: 20px;
     }
 
@@ -52,7 +74,7 @@
         font-size: 0.85rem;
     }
 
-    .quiz-settings label {
+    .controls label {
         display: flex;
         align-items: center;
         gap: 0.3rem;
@@ -69,55 +91,42 @@
         width: 180px;
     }
 
-    .saved-quizzes {
-        font-size: 0.85rem;
+    .setting-input--name {
+        width: 220px;
     }
 
-    .saved-quizzes:empty {
-        display: none;
+    .setting-input--date {
+        width: 140px;
     }
 
-    .saved-quizzes .sq-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.4rem;
-        padding: 0.3rem 0.6rem;
-        margin: 0.2rem;
-        border-radius: 4px;
-        background: #fff;
-        border: 1px solid #ddd;
+    .h1-quiz-name {
+        font-weight: normal;
+        color: #666;
+        font-size: 1.2rem;
     }
 
-    .saved-quizzes .sq-item.active {
-        border-color: #2563eb;
-        border-width: 3px;
-        background: #eff4ff;
-    }
-
-    .saved-quizzes .sq-label {
-        cursor: pointer;
-    }
-
-    .saved-quizzes .sq-label:hover {
-        text-decoration: underline;
-    }
-
-    .saved-quizzes .sq-delete {
-        background: none;
+    .saved-quizzes-select {
+        font-size: 0.9rem;
+        padding: 0.4rem 0.6rem;
         border: none;
-        color: #999;
+        border-radius: 4px;
+        background: #2563eb;
+        color: #fff;
         cursor: pointer;
-        font-size: 0.85rem;
-        padding: 0 0.2rem;
-        line-height: 1;
+        min-width: 220px;
     }
 
-    .saved-quizzes .sq-delete:hover {
-        color: #e00;
+    .saved-quizzes-select:hover {
+        background: #1d4ed8;
+    }
+
+    .saved-quizzes-select option {
+        background: #fff;
+        color: #333;
     }
 
     button,
-    label.upload-btn {
+    span.upload-btn {
         padding: 0.5rem 1.2rem;
         border: none;
         border-radius: 4px;
@@ -133,15 +142,15 @@
     }
 
     button:hover:not(:disabled),
-    label.upload-btn:hover {
+    span.upload-btn:hover {
         background: #1d4ed8;
     }
 
-    label.upload-btn {
+    span.upload-btn {
         display: inline-block;
     }
 
-    label.upload-btn input {
+    span.upload-btn input {
         display: none;
     }
 
