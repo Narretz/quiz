@@ -22,7 +22,8 @@
       "Bash(npm test *)",
       "Bash(npx playwright *)",
       "Bash(npm run *)",
-      "Bash(git diff *)"
+      "Bash(git diff *)",
+      "Bash(git stash *)"
     ]
   },
   "enabledMcpjsonServers": [
