@@ -50,8 +50,7 @@ tests/
   normalize.test.js -- Unit tests for extractQuestions, normalizeSavedQuiz (backwards compat)
   build-pptx.test.js-- Unit tests for buildPptx with PptxSpy mock
   parse-xlsx.test.js-- Unit tests for astToQuiz XLSX parser
-  images/           -- Test images (portrait, landscape, square, ultrawide, ultranarrow)
-  audio/            -- Test audio files
+  files/            -- Test images (portrait, landscape, square, ultrawide, ultranarrow), videos, audios, xlsx
 e2e/
   seed.js           -- Parses XLSX in Node, seeds IndexedDB via page.evaluate
   quiz.spec.js      -- E2E: upload, rendering, download, text editing, TOC navigation

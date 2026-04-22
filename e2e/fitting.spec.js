@@ -2,8 +2,8 @@ import { test, expect } from "@playwright/test";
 import path from "path";
 import { seedQuiz } from "./seed.js";
 
-const IMG_PORTRAIT = path.resolve("tests/images/image-portrait.jpg");
-const IMG_LANDSCAPE = path.resolve("tests/images/image-landscape.webp");
+const IMG_PORTRAIT = path.resolve("tests/files/image-portrait.jpg");
+const IMG_LANDSCAPE = path.resolve("tests/files/image-landscape.webp");
 
 const LONG_DE = "Im vergangenen Monat wurde bekannt, dass die Lieblingsburgerkette von Barack Obama vor der Insolvenz steht. Am Freitag schloss dann die erste Filiale von Five Guys. Besser läuft es für eine Berliner Kultmarke, die vom Szene-Imbiss zum ernstzunehmenden Player wurde. Mit einem durchschnittlichen Umsatz von 3,25 Millionen Euro pro Standort setzt sich die Marke damit hinter McDonald's auf Platz 2. Welche Kette suche ich?";
 const LONG_EN = "Last month, it was announced that Barack Obama's favorite burger chain was facing bankruptcy. On Friday, the first Five Guys branch closed. Things are going better for a cult Berlin brand that has gone from being a trendy snack bar to a serious player. With average sales of €3.25 million per location, the brand ranks second behind McDonald's. Which chain am I looking for?";

@@ -3,10 +3,10 @@ import path from "path";
 import { seedQuiz } from "./seed.js";
 
 const IMG = {
-  portrait: path.resolve("tests/images/image-portrait.jpg"),
-  landscape: path.resolve("tests/images/image-landscape.webp"),
-  square: path.resolve("tests/images/image-square.webp"),
-  ultrawide: path.resolve("tests/images/image-ultrawide.png"),
+  portrait: path.resolve("tests/files/image-portrait.jpg"),
+  landscape: path.resolve("tests/files/image-landscape.webp"),
+  square: path.resolve("tests/files/image-square.webp"),
+  ultrawide: path.resolve("tests/files/image-ultrawide.png"),
 };
 
 function questionOuter(page, id, answers = false) {

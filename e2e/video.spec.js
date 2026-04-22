@@ -4,7 +4,7 @@ import fs from "fs/promises";
 import JSZip from "jszip";
 import { seedQuiz } from "./seed.js";
 
-const VIDEO = path.resolve("tests/video/portrait.mp4");
+const VIDEO = path.resolve("tests/files/portrait.mp4");
 
 function questionOuter(page, id, answers = false) {
   return page.locator(`.slide-outer:has(.slide[data-slide-id="${id}"][data-answers="${answers ? 1 : 0}"])`);
@@ -126,7 +126,7 @@ test.describe("video", () => {
     // Add a separate image to answer slot 1
     await answer.hover();
     const imgInput = answer.locator('.img-actions input[type="file"][accept="image/*"]');
-    await imgInput.setInputFiles(path.resolve("tests/images/image-landscape.webp"));
+    await imgInput.setInputFiles(path.resolve("tests/files/image-landscape.webp"));
     await expect(answer.locator(".slide .slide-img-wrap")).toHaveCount(2, { timeout: 5_000 });
 
     // Remove video from question
@@ -146,7 +146,7 @@ test.describe("video", () => {
     await answer.scrollIntoViewIfNeeded();
     await answer.hover();
     const imgInput = answer.locator('.img-actions input[type="file"][accept="image/*"]');
-    await imgInput.setInputFiles(path.resolve("tests/images/image-landscape.webp"));
+    await imgInput.setInputFiles(path.resolve("tests/files/image-landscape.webp"));
     await expect(answer.locator(".slide .slide-img-wrap img")).toBeVisible({ timeout: 5_000 });
 
     // Now add video to question
@@ -164,7 +164,7 @@ test.describe("video", () => {
     await outer.scrollIntoViewIfNeeded();
     await outer.hover();
     const imgInput = outer.locator('.img-actions input[type="file"][accept="image/*"]');
-    await imgInput.setInputFiles(path.resolve("tests/images/image-landscape.webp"));
+    await imgInput.setInputFiles(path.resolve("tests/files/image-landscape.webp"));
     await expect(outer.locator(".slide .slide-img-wrap").first()).toBeVisible({ timeout: 5_000 });
 
     // Add video
@@ -183,7 +183,7 @@ test.describe("video", () => {
     await outer.scrollIntoViewIfNeeded();
     await outer.hover();
     const imgInput = outer.locator('.img-actions input[type="file"][accept="image/*"]');
-    await imgInput.setInputFiles(path.resolve("tests/images/image-landscape.webp"));
+    await imgInput.setInputFiles(path.resolve("tests/files/image-landscape.webp"));
     await expect(outer.locator(".slide .slide-img-wrap").first()).toBeVisible({ timeout: 5_000 });
 
     // Add video

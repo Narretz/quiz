@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import path from "path";
 import { seedQuiz } from "./seed.js";
 
-const AUDIO = path.resolve("tests/audio/band-aid.mp3");
+const AUDIO = path.resolve("tests/files/band-aid.mp3");
 
 function questionOuter(page, id, answers = false) {
   return page.locator(`.slide-outer:has(.slide[data-slide-id="${id}"][data-answers="${answers ? 1 : 0}"])`);
@@ -92,7 +92,7 @@ test.describe("audio", () => {
     await outer.scrollIntoViewIfNeeded();
     await outer.hover();
     const imgInput = outer.locator('.img-actions input[type="file"][accept="image/*"]');
-    await imgInput.setInputFiles(path.resolve("tests/images/image-landscape.webp"));
+    await imgInput.setInputFiles(path.resolve("tests/files/image-landscape.webp"));
     await expect(outer.locator(".slide .slide-img-wrap").first()).toBeVisible({ timeout: 5_000 });
 
     // Add audio
