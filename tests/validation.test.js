@@ -86,6 +86,71 @@ describe("validateQuiz", () => {
       assert.ok(findIssue(issues, messages.ANSWER_IN_QUESTION));
     });
 
+    it("does not flag multiple-choice answers whose options are listed in the question", () => {
+      const quiz = fullQuiz();
+      quiz.rounds[0].questions[0] = {
+        text: {
+          de: "Welche Stadt ist die Hauptstadt? A) Paris B) Chicago C) Miami",
+          en: "Which is the capital? A) Paris B) Chicago C) Miami",
+        },
+        answers: { de: "B) Chicago", en: "B) Chicago" },
+      };
+      const issues = validateQuiz(inputs(quiz));
+      assert.equal(findIssue(issues, messages.ANSWER_IN_QUESTION), undefined);
+    });
+
+    it("handles lowercase and '.'/':' MC markers", () => {
+      const quiz = fullQuiz();
+      quiz.rounds[0].questions[0] = {
+        text: {
+          de: "Welche? a. Paris b. Chicago c. Miami",
+          en: "Which? a. Paris b. Chicago c. Miami",
+        },
+        answers: { de: "b. Chicago", en: "b. Chicago" },
+      };
+      const issues = validateQuiz(inputs(quiz));
+      assert.equal(findIssue(issues, messages.ANSWER_IN_QUESTION), undefined);
+
+      quiz.rounds[0].questions[0] = {
+        text: {
+          de: "Welche? A: Paris B: Chicago",
+          en: "Which? A: Paris B: Chicago",
+        },
+        answers: { de: "B: Chicago", en: "B: Chicago" },
+      };
+      const issues2 = validateQuiz(inputs(quiz));
+      assert.equal(findIssue(issues2, messages.ANSWER_IN_QUESTION), undefined);
+    });
+
+    it("still flags an MC-style answer when the question only has an unrelated letter marker", () => {
+      // Answer "B) Chicago" but question only has "Z) ..." — the answer's own letter
+      // is not listed in the question, so this isn't a real MC question.
+      const quiz = fullQuiz();
+      quiz.rounds[0].questions[0] = {
+        text: {
+          de: "Die Antwort ist B) Chicago. Z) siehe Fußnote.",
+          en: "The answer is B) Chicago. Z) see footnote.",
+        },
+        answers: { de: "B) Chicago", en: "B) Chicago" },
+      };
+      const issues = validateQuiz(inputs(quiz));
+      assert.ok(findIssue(issues, messages.ANSWER_IN_QUESTION));
+    });
+
+    it("still flags an MC-style answer when the question has no other options", () => {
+      // Answer looks like MC but question doesn't list alternatives → genuine leak.
+      const quiz = fullQuiz();
+      quiz.rounds[0].questions[0] = {
+        text: {
+          de: "Die Antwort auf diese Frage ist B) Chicago, oder?",
+          en: "The answer is B) Chicago, right?",
+        },
+        answers: { de: "B) Chicago", en: "B) Chicago" },
+      };
+      const issues = validateQuiz(inputs(quiz));
+      assert.ok(findIssue(issues, messages.ANSWER_IN_QUESTION));
+    });
+
     it("does not flag substring matches inside other words", () => {
       const quiz = fullQuiz();
       quiz.rounds[0].questions[0] = {
