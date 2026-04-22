@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { extractQuestions, normalizeSavedQuiz, mergeAudioIntoImages, buildSlideDescriptors, AUDIO_DIMENSIONS } from "../quiz-core.js";
+import { extractQuestions, normalizeSavedQuiz, mergeAudioIntoImages, buildSlideDescriptors, getQuizStats, AUDIO_DIMENSIONS } from "../quiz-core.js";
 
 function makeQuiz(overrides) {
   return {
@@ -52,6 +52,89 @@ describe("extractQuestions", () => {
     const q = extractQuestions(quiz);
     q["r0q0"].text.de = "CHANGED";
     assert.strictEqual(quiz.rounds[0].questions[0].text.de, "Frage 1");
+  });
+});
+
+// --- getQuizStats ---
+
+describe("getQuizStats", () => {
+  it("counts total questions (one per question id, not per phase)", () => {
+    const quiz = makeQuiz();
+    const descriptors = buildSlideDescriptors(quiz);
+    const stats = getQuizStats(descriptors, extractQuestions(quiz), {});
+    // 2 + 1 + 1 + 1 + 1 + 4 = 10
+    assert.strictEqual(stats.total, 10);
+  });
+
+  it("counts filled questions by text", () => {
+    const quiz = makeQuiz();
+    const descriptors = buildSlideDescriptors(quiz);
+    const questions = extractQuestions(quiz);
+    questions["r0q0"].text = { de: "", en: "" };
+    questions["r0q1"].text = { de: "", en: "" };
+    const stats = getQuizStats(descriptors, questions, {});
+    assert.strictEqual(stats.questionsFilled, 8);
+    assert.strictEqual(stats.answersFilled, 10);
+  });
+
+  it("counts a question as filled if it has media even without text", () => {
+    const quiz = makeQuiz();
+    const descriptors = buildSlideDescriptors(quiz);
+    const questions = extractQuestions(quiz);
+    questions["r0q0"].text = { de: "", en: "" };
+    const stats = getQuizStats(descriptors, questions, { "r0q0:0": { data: "img" } });
+    assert.strictEqual(stats.questionsFilled, 10);
+  });
+
+  it("counts a second-slot media as content", () => {
+    const quiz = makeQuiz();
+    const descriptors = buildSlideDescriptors(quiz);
+    const questions = extractQuestions(quiz);
+    questions["r0q0"].text = { de: "", en: "" };
+    const stats = getQuizStats(descriptors, questions, { "r0q0:0:1": { data: "img" } });
+    assert.strictEqual(stats.questionsFilled, 10);
+  });
+
+  it("counts answer as filled only when answer media is distinct from question media", () => {
+    const quiz = makeQuiz();
+    const descriptors = buildSlideDescriptors(quiz);
+    const questions = extractQuestions(quiz);
+    questions["r0q0"].answers = { de: "", en: "" };
+
+    // Same image on question and answer (auto-linked copy) — does NOT count the answer as filled
+    const sameOnBoth = {
+      "r0q0:0": { data: "img-a" },
+      "r0q0:1": { data: "img-a" },
+    };
+    const statsSame = getQuizStats(descriptors, questions, sameOnBoth);
+    assert.strictEqual(statsSame.answersFilled, 9);
+
+    // Different image on answer — counts
+    const distinct = {
+      "r0q0:0": { data: "img-a" },
+      "r0q0:1": { data: "img-b" },
+    };
+    const statsDistinct = getQuizStats(descriptors, questions, distinct);
+    assert.strictEqual(statsDistinct.answersFilled, 10);
+
+    // Media only on answer (no question media) — counts
+    const answerOnly = { "r0q0:1": { data: "img-a" } };
+    const statsAnswerOnly = getQuizStats(descriptors, questions, answerOnly);
+    assert.strictEqual(statsAnswerOnly.answersFilled, 10);
+  });
+
+  it("counts blank quiz as 0/total for both", () => {
+    const quiz = {
+      date: "2026-01-01",
+      rounds: [
+        { name: "Round 1", description: { de: "", en: "" }, questions: Array.from({ length: 10 }, () => ({ text: { de: "", en: "" }, answers: { de: "", en: "" } })) },
+      ],
+    };
+    const descriptors = buildSlideDescriptors(quiz);
+    const stats = getQuizStats(descriptors, extractQuestions(quiz), {});
+    assert.strictEqual(stats.total, 10);
+    assert.strictEqual(stats.questionsFilled, 0);
+    assert.strictEqual(stats.answersFilled, 0);
   });
 });
 

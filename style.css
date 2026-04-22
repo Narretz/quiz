@@ -171,6 +171,18 @@
         color: #666;
     }
 
+    .quiz-stats {
+        font-size: 0.85rem;
+        color: #666;
+        display: inline-flex;
+        gap: 0.35rem;
+        align-items: center;
+    }
+
+    .quiz-stats__sep {
+        opacity: 0.4;
+    }
+
     .toc {
         display: flex;
         gap: 0.3rem;

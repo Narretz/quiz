@@ -137,6 +137,38 @@ export function getRoundName(descriptors, quiz, ri) {
   return `Round ${ri + 1}`;
 }
 
+/**
+ * Count question slides and how many have content on the question / answer side.
+ * Question side: text OR media on the question slide.
+ * Answer side: text OR media distinct from the question side (mere auto-linked
+ * copies don't count, matching the validator's ANSWER_NO_TEXT_NO_DISTINCT_MEDIA
+ * logic).
+ * Each question has two descriptors (question-phase + answer-phase), counted once.
+ */
+export function getQuizStats(descriptors, questions, images) {
+  let total = 0;
+  let questionsFilled = 0;
+  let answersFilled = 0;
+  for (const d of descriptors) {
+    if (d.type !== "question" || d.withAnswers) continue;
+    total++;
+    const q = questions?.[d.id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
+    const qKey = `${d.id}:0`;
+    const aKey = `${d.id}:1`;
+    const qHasText = !!(q.text?.de?.trim() || q.text?.en?.trim());
+    const qHasMedia = !!(images?.[qKey] || images?.[`${qKey}:1`]);
+    if (qHasText || qHasMedia) questionsFilled++;
+    const aHasText = !!(q.answers?.de?.trim() || q.answers?.en?.trim());
+    const a0 = images?.[aKey]?.data;
+    const a1 = images?.[`${aKey}:1`]?.data;
+    const q0 = images?.[qKey]?.data;
+    const q1 = images?.[`${qKey}:1`]?.data;
+    const aHasDistinctMedia = (a0 && a0 !== q0) || (a1 && a1 !== q1);
+    if (aHasText || aHasDistinctMedia) answersFilled++;
+  }
+  return { total, questionsFilled, answersFilled };
+}
+
 export function extractQuestions(quiz) {
   const questions = {};
   quiz.rounds.forEach((round, ri) => {

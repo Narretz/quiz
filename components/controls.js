@@ -1,7 +1,9 @@
 import { h } from "preact";
 import htm from "htm";
+import { getQuizStats } from "../quiz-core.js";
 import {
   currentQuiz, currentQuizId, status, jackpotSize, quizEmail, showValidation,
+  slideDescriptors, quizQuestions, slideImages,
   downloadPptx, deleteSavedQuiz, scheduleSave, debug
 } from "../lib/state.js";
 
@@ -11,6 +13,9 @@ export function Controls() {
   const quiz = currentQuiz.value;
   const quizId = currentQuizId.value;
   const statusText = status.value;
+  const stats = quiz
+    ? getQuizStats(slideDescriptors.value, quizQuestions.value, slideImages.value)
+    : null;
 
   function onValidateToggle() {
     showValidation.value = !showValidation.value;
@@ -66,6 +71,13 @@ export function Controls() {
         <button disabled=${!quiz || (!showValidation.value && !debug) || status.value === 'Generating PPTX...'} onClick=${onDownload}>Download .pptx</button>
       `}
       <span class="status">${statusText}</span>
+      ${stats && html`
+        <span class="quiz-stats">
+          <span title="Questions with text or media">${stats.questionsFilled}/${stats.total} questions</span>
+          <span class="quiz-stats__sep">·</span>
+          <span title="Answer slides with text or media">${stats.answersFilled}/${stats.total} answers</span>
+        </span>
+      `}
       ${quizId && html`
         <button style="margin-left:auto;background:#dc2626" onClick=${onDelete}>Delete quiz</button>
       `}
