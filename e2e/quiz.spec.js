@@ -172,6 +172,40 @@ test.describe("quiz loaded", () => {
     expect(isFocused).toBe(false);
   });
 
+  test("Tab cycles through DE question → EN question → DE answer → EN answer → next slide", async ({ page }) => {
+    const slide = page.locator('.slide[data-slide-id="r0q0"][data-answers="0"]');
+    await slide.scrollIntoViewIfNeeded();
+
+    // Start at DE question
+    const deField = slide.locator('[lang="de"] .q-text__field');
+    await deField.click();
+
+    // Tab → EN question
+    await page.keyboard.press("Tab");
+    const enField = slide.locator('[lang="en"] .q-text__field');
+    await expect.poll(() => enField.evaluate((el) => el === document.activeElement)).toBe(true);
+
+    // Tab → DE answer (ghost bar)
+    await page.keyboard.press("Tab");
+    const ansDeField = slide.locator(".answer-bar__field--de");
+    await expect.poll(() => ansDeField.evaluate((el) => el === document.activeElement)).toBe(true);
+
+    // Tab → EN answer (ghost bar)
+    await page.keyboard.press("Tab");
+    const ansEnField = slide.locator(".answer-bar__field--en");
+    await expect.poll(() => ansEnField.evaluate((el) => el === document.activeElement)).toBe(true);
+
+    // Tab → next slide (r0q1 question slide — questions are grouped before answers)
+    await page.keyboard.press("Tab");
+    const nextSlide = page.locator('.slide[data-slide-id="r0q1"][data-answers="0"]');
+    const nextDe = nextSlide.locator('[lang="de"] .q-text__field');
+    await expect.poll(() => nextDe.evaluate((el) => el === document.activeElement)).toBe(true);
+
+    // Ghost answer bar on the next slide should be visible (focus-within triggers display)
+    const nextGhostBar = nextSlide.locator(".answer-bar--ghost");
+    await expect(nextGhostBar).toBeVisible();
+  });
+
   test("question text field is inline when filled, inline-block when empty", async ({ page }) => {
     // Regression: filled fields must be `display: inline` so long text wraps
     // word-by-word next to the question number instead of the whole block
@@ -216,7 +250,7 @@ test.describe("quiz loaded", () => {
     await expect(enField).toHaveText("English question");
   });
 
-  test("ghost answer bar hides when question text is focused", async ({ page }) => {
+  test("ghost answer bar fades when question text is focused", async ({ page }) => {
     const slide = page.locator('.slide[data-slide-id="r0q0"][data-answers="0"]');
     await slide.scrollIntoViewIfNeeded();
     await slide.hover();
@@ -224,12 +258,12 @@ test.describe("quiz loaded", () => {
     const ghostBar = slide.locator(".answer-bar--ghost");
     await expect(ghostBar).toBeVisible();
 
-    // Focus DE question text — ghost bar should hide
+    // Focus DE question text — ghost bar should fade but remain reachable via Tab
     const deField = slide.locator('[lang="de"] .q-text__field');
     await deField.click();
-    await expect(ghostBar).not.toBeVisible();
+    await expect(ghostBar).toHaveCSS("opacity", "0.3");
 
-    // Click outside to blur, then hover slide — ghost bar should reappear
+    // Click outside to blur, then hover slide — ghost bar should return to full opacity
     await page.mouse.click(0, 0);
     await slide.hover();
     await expect(ghostBar).toBeVisible();

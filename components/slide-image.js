@@ -71,9 +71,9 @@ export function SlideImage({ src, type, name, style, imgRef, slideKey, imgIdx, i
 
   const actionBtns = html`
     <div class="slide-img-btns">
-      <button onClick=${remove}>remove ×</button>
-      ${!isSource && isLinked && html`<button onClick=${unlinkImg}>unlink ✂</button>`}
-      ${isSource && isLinked && html`<button onClick=${(e) => {
+      <button tabindex="-1" onClick=${remove}>remove ×</button>
+      ${!isSource && isLinked && html`<button tabindex="-1" onClick=${unlinkImg}>unlink ✂</button>`}
+      ${isSource && isLinked && html`<button tabindex="-1" onClick=${(e) => {
         e.stopPropagation();
         removeImage(linkedKey);
         scheduleSave();

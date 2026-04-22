@@ -199,40 +199,40 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
   return html`
     <div class="img-actions">
       <div class="img-actions__left">
-        ${isQuestion && html`<button onClick=${nav}>${withAnswers ? "\u2191 question" : "\u2193 answer"}</button>`}
-        ${isRoundTitle && html`<button onClick=${nav}>${!isSource ? "\u2191 questions" : "\u2193 answers"}</button>`}
+        ${isQuestion && html`<button tabindex="-1" onClick=${nav}>${withAnswers ? "\u2191 question" : "\u2193 answer"}</button>`}
+        ${isRoundTitle && html`<button tabindex="-1" onClick=${nav}>${!isSource ? "\u2191 questions" : "\u2193 answers"}</button>`}
       </div>
       <div class="img-actions__right">
         ${debug && html`
           <label class="override-label">
-            <input type="number" class="slide-fs-input" step="0.5" value=${displayFs}
+            <input tabindex="-1" type="number" class="slide-fs-input" step="0.5" value=${displayFs}
                    onChange=${onOverrideChange} title="Font size (pt)" />pt
           </label>
           <label class="override-label">
-            <input type="number" class="slide-ls-input" step="1" value=${displayLs}
+            <input tabindex="-1" type="number" class="slide-ls-input" step="1" value=${displayLs}
                    onChange=${onOverrideChange} title="Line spacing %" />%
           </label>
-          ${hasManualOverride && html`<button onClick=${resetOverride} title="Clear manual override, return to auto-fitting">\u21BA auto</button>`}
+          ${hasManualOverride && html`<button tabindex="-1" onClick=${resetOverride} title="Clear manual override, return to auto-fitting">\u21BA auto</button>`}
         `}
-        ${hasAnyMedia && html`<button onClick=${removeAllImages}>remove ${hasMaxSlots ? "all" : "media"}</button>`}
+        ${hasAnyMedia && html`<button tabindex="-1" onClick=${removeAllImages}>remove ${hasMaxSlots ? "all" : "media"}</button>`}
         ${!isSource && isLinked && html`
-          <button onClick=${unlink}>unlink ${hasMaxSlots ? "all" : "media"}</button>
+          <button tabindex="-1" onClick=${unlink}>unlink ${hasMaxSlots ? "all" : "media"}</button>
         `}
         ${!isSource && linkKey && !hasAnyMedia && images[linkKey] && html`
-          <button onClick=${relink}>relink</button>
+          <button tabindex="-1" onClick=${relink}>relink</button>
         `}
         ${isSource && linkKey && imgEntry && images[linkKey]?.data === imgEntry.data && html`
-          <button onClick=${() => { removeImage(linkKey); removeImage(linkKey + ":1"); scheduleSave(); onRerender(); }}>remove ${hasMaxSlots ? "all" : "media"} from linked</button>
+          <button tabindex="-1" onClick=${() => { removeImage(linkKey); removeImage(linkKey + ":1"); scheduleSave(); onRerender(); }}>remove ${hasMaxSlots ? "all" : "media"} from linked</button>
         `}
         ${!hasMaxSlots && html`
           <label>
-            <button type="button" onClick=${(e) => { e.preventDefault(); e.target.parentElement.querySelector("input").click(); }}>+img</button>
+            <button tabindex="-1" type="button" onClick=${(e) => { e.preventDefault(); e.target.parentElement.querySelector("input").click(); }}>+img</button>
             <input type="file" accept="image/*" multiple onChange=${addImg} style="display:none" />
           </label>
         `}
         ${!hasAV && !hasMaxSlots && html`
           <label>
-            <button type="button" onClick=${(e) => { e.preventDefault(); e.target.parentElement.querySelector("input").click(); }}>+av</button>
+            <button tabindex="-1" type="button" onClick=${(e) => { e.preventDefault(); e.target.parentElement.querySelector("input").click(); }}>+av</button>
             <input type="file" accept="audio/*,video/*" onChange=${addAV} style="display:none" />
           </label>
         `}

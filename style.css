@@ -263,6 +263,7 @@
     }
 
     .slide:hover .answer-bar,
+    .slide:focus-within .answer-bar,
     .answer-bar:focus-within {
         display: block;
     }
@@ -334,8 +335,8 @@
         background: rgba(0, 0, 0, 0.55) !important;
     }
 
-    .slide:has([data-role]:focus-within) .answer-bar--ghost {
-        display: none;
+    .slide:has([data-role]:focus-within) .answer-bar--ghost:not(:focus-within) {
+        opacity: 0.3;
     }
 
     .slide:has(video:hover) .answer-bar {

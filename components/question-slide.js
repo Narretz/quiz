@@ -260,7 +260,8 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
                  quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, text: { ...existing.text, en: text } } };
                  scheduleSave();
                  onRerender();
-               }}></span>
+               }}
+></span>
           <span class="q-text__tag q-text__tag--en" onClick=${(e) => { e.stopPropagation(); focusEnd(enTextRef.current); }}>en</span>
         </div>
       ` : html`
