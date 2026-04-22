@@ -12,8 +12,8 @@ export function Controls() {
   const quizId = currentQuizId.value;
   const statusText = status.value;
 
-  function onValidate() {
-    showValidation.value = true;
+  function onValidateToggle() {
+    showValidation.value = !showValidation.value;
     scheduleSave();
   }
 
@@ -61,7 +61,7 @@ export function Controls() {
     `}
     <div class="controls ${debug ? 'controls--sticky' : ''}">
       ${quizId && html`
-        <button disabled=${!quiz || showValidation.value} onClick=${onValidate}>Validate</button>
+        <button disabled=${!quiz} onClick=${onValidateToggle}>${showValidation.value ? 'Hide' : 'Show'} Validation</button>
         <span class="controls__arrow">→</span>
         <button disabled=${!quiz || (!showValidation.value && !debug) || status.value === 'Generating PPTX...'} onClick=${onDownload}>Download .pptx</button>
       `}

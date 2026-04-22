@@ -55,12 +55,12 @@ test.describe("quiz loaded", () => {
     await expect(downloadBtn).toBeVisible();
     await expect(downloadBtn).toBeDisabled();
 
-    await page.locator("button", { hasText: "Validate" }).click();
+    await page.locator("button", { hasText: "Show Validation" }).click();
     await expect(downloadBtn).toBeEnabled();
   });
 
   test("downloads PPTX file", async ({ page }) => {
-    await page.locator("button", { hasText: "Validate" }).click();
+    await page.locator("button", { hasText: "Show Validation" }).click();
     const downloadPromise = page.waitForEvent("download", {timeout: 45000});
     await page.locator("button", { hasText: "Download .pptx" }).click();
     const download = await downloadPromise;

@@ -6,33 +6,35 @@ test.describe("validation bar", () => {
     await seedQuiz(page);
   });
 
-  test("is hidden by default, Validate button visible, Download disabled", async ({ page }) => {
+  test("is hidden by default, appears after clicking Validate, enables Download", async ({ page }) => {
     await expect(page.locator(".validation-bar")).toHaveCount(0);
-    await expect(page.locator("button", { hasText: "Validate" })).toBeVisible();
+    await expect(page.locator("button", { hasText: "Show Validation" })).toBeVisible();
     await expect(page.locator("button", { hasText: "Download .pptx" })).toBeDisabled();
-  });
 
-  test("appears after clicking Validate, enables Download", async ({ page }) => {
-    await page.locator("button", { hasText: "Validate" }).click();
+    await page.locator("button", { hasText: "Show Validation" }).click();
     await expect(page.locator(".validation-bar")).toBeVisible();
     await expect(page.locator("button", { hasText: "Download .pptx" })).toBeEnabled();
   });
 
-  test("Validate button disabled while validation is shown", async ({ page }) => {
-    await page.locator("button", { hasText: "Validate" }).click();
+  test("Validate button toggles validation", async ({ page }) => {
+    await page.locator("button", { hasText: "Show Validation" }).click();
+    await expect(page.locator("button", { hasText: "Show Validation" })).toHaveCount(0);
+    await expect(page.locator("button", { hasText: "Hide Validation" })).toBeEnabled();
     await expect(page.locator(".validation-bar")).toBeVisible();
-    await expect(page.locator("button", { hasText: "Validate" })).toBeDisabled();
+    await expect(page.locator("button", { hasText: "Hide Validation" })).toBeEnabled();
+    await page.locator("button", { hasText: "Hide Validation" }).click();
+    await expect(page.locator(".validation-bar")).toHaveCount(0);
   });
 
   test("dismisses when the × button is clicked", async ({ page }) => {
-    await page.locator("button", { hasText: "Validate" }).click();
+    await page.locator("button", { hasText: "Show Validation" }).click();
     await expect(page.locator(".validation-bar")).toBeVisible();
     await page.locator(".validation-bar__dismiss").click();
     await expect(page.locator(".validation-bar")).toHaveCount(0);
   });
 
   test("shows severity counts and issue list", async ({ page }) => {
-    await page.locator("button", { hasText: "Validate" }).click();
+    await page.locator("button", { hasText: "Show Validation" }).click();
     const bar = page.locator(".validation-bar");
     await expect(bar).toBeVisible();
     // Seeded quiz has unset jackpot + email + no images on titles -> at least info pills
@@ -53,7 +55,7 @@ test.describe("validation bar", () => {
         },
       },
     });
-    await page.locator("button", { hasText: "Validate" }).click();
+    await page.locator("button", { hasText: "Show Validation" }).click();
     const bar = page.locator(".validation-bar");
     await expect(bar).toBeVisible();
 
@@ -66,7 +68,7 @@ test.describe("validation bar", () => {
   });
 
   test("clicking an issue scrolls its slide into view", async ({ page }) => {
-    await page.locator("button", { hasText: "Validate" }).click();
+    await page.locator("button", { hasText: "Show Validation" }).click();
     const bar = page.locator(".validation-bar");
     await expect(bar).toBeVisible();
 
@@ -79,7 +81,7 @@ test.describe("validation bar", () => {
   });
 
   test("prev/next buttons navigate through issues", async ({ page }) => {
-    await page.locator("button", { hasText: "Validate" }).click();
+    await page.locator("button", { hasText: "Show Validation" }).click();
     const bar = page.locator(".validation-bar");
     const cursor = bar.locator(".validation-bar__cursor");
     const total = await bar.locator(".vb-issue").count();
@@ -105,7 +107,7 @@ test.describe("validation bar", () => {
         },
       },
     });
-    await page.locator("button", { hasText: "Validate" }).click();
+    await page.locator("button", { hasText: "Show Validation" }).click();
     const bar = page.locator(".validation-bar");
     const leakIssue = bar.locator(".vb-issue--danger", { hasText: "Burgermeister" });
     await expect(leakIssue).toBeVisible();
@@ -122,7 +124,7 @@ test.describe("validation bar", () => {
   });
 
   test("setting jackpot removes the jackpot-not-set info", async ({ page }) => {
-    await page.locator("button", { hasText: "Validate" }).click();
+    await page.locator("button", { hasText: "Show Validation" }).click();
     const bar = page.locator(".validation-bar");
     await expect(bar).toBeVisible();
     await expect(bar.locator(".vb-issue", { hasText: "Jackpot size is not set" })).toBeVisible();
@@ -135,7 +137,7 @@ test.describe("validation bar", () => {
   });
 
   test("email format validation fires when invalid, clears when valid", async ({ page }) => {
-    await page.locator("button", { hasText: "Validate" }).click();
+    await page.locator("button", { hasText: "Show Validation" }).click();
     const bar = page.locator(".validation-bar");
 
     const emailInput = page.locator(".setting-input--email");

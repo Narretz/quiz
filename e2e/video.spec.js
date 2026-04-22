@@ -206,7 +206,7 @@ test.describe("video", () => {
     // wait for cover extraction to finish (mirrored on answer slide as an <img>)
     await expect(questionOuter(page, "r0q0", true).locator(".slide .slide-img-wrap img")).toBeVisible({ timeout: 5_000 });
 
-    await page.locator("button", { hasText: "Validate" }).click();
+    await page.locator("button", { hasText: "Show Validation" }).click();
     const downloadPromise = page.waitForEvent("download", { timeout: 60_000 });
     await page.locator("button", { hasText: "Download .pptx" }).click();
     const download = await downloadPromise;
