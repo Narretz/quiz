@@ -124,24 +124,24 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
   // Sync answer field contents imperatively — avoid Preact overwriting user edits
   useLayoutEffect(() => {
     if (ansDeRef.current && ansDeRef.current !== document.activeElement) {
-      ansDeRef.current.textContent = ansDe;
+      ansDeRef.current.innerText = ansDe;
     }
   }, [ansDe]);
   useLayoutEffect(() => {
     if (ansEnRef.current && ansEnRef.current !== document.activeElement) {
-      ansEnRef.current.textContent = ansEn;
+      ansEnRef.current.innerText = ansEn;
     }
   }, [ansEn]);
 
   // Sync question text fields imperatively — avoid Preact overwriting user edits
   useLayoutEffect(() => {
     if (deTextRef.current && deTextRef.current !== document.activeElement) {
-      deTextRef.current.textContent = q?.text?.de || "";
+      deTextRef.current.innerText = q?.text?.de || "";
     }
   }, [q?.text?.de]);
   useLayoutEffect(() => {
     if (enTextRef.current && enTextRef.current !== document.activeElement) {
-      enTextRef.current.textContent = q?.text?.en || "";
+      enTextRef.current.innerText = q?.text?.en || "";
     }
   }, [q?.text?.en]);
 
@@ -174,7 +174,7 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
               onClick=${(e) => { e.stopPropagation(); focusEnd(ansDeRef.current); }}>de</span>
         <span ref=${ansDeRef} contentEditable class="answer-bar__field answer-bar__field--de"
              onBlur=${(e) => {
-               const text = e.target.textContent.trim();
+               const text = e.target.innerText.trim();
                if (text === ansDe) return;
                const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
                const en = ansEn ? existing.answers.en : text;
@@ -186,7 +186,7 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
                if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
                if (e.key === "Tab") {
                  e.preventDefault();
-                 const text = e.target.textContent.trim();
+                 const text = e.target.innerText.trim();
                  if (text !== ansDe) {
                    const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
                    const en = ansEn ? existing.answers.en : text;
@@ -202,7 +202,7 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
         <span ref=${ansEnRef} contentEditable
              class="answer-bar__field answer-bar__field--en"
              onBlur=${(e) => {
-               const text = e.target.textContent.trim();
+               const text = e.target.innerText.trim();
                if (text === ansEn) return;
                const existing = q || quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
                const en = text || existing.answers.de;
@@ -228,7 +228,7 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
         <div lang="de" data-role="de" style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${qFs}px;line-height:${qLh}">
           <span style="font-size:${numFs}px;font-weight:bold">${num}</span>${" "}<span ref=${deTextRef} contentEditable class="q-text__field"
                onBlur=${(e) => {
-                 const text = e.target.textContent.trim();
+                 const text = e.target.innerText.trim();
                  if (text === (q.text.de || "")) return;
                  const existing = quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
                  quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, text: { ...existing.text, de: text } } };
@@ -236,10 +236,9 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
                  onRerender();
                }}
                onKeyDown=${(e) => {
-                 if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
                  if (e.key === "Tab") {
                    e.preventDefault();
-                   const text = e.target.textContent.trim();
+                   const text = e.target.innerText.trim();
                    if (text !== (q.text.de || "")) {
                      const existing = quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
                      quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, text: { ...existing.text, de: text } } };
@@ -254,15 +253,12 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
         <div lang="en" data-role="en" class=${q.text.en ? '' : 'q-block--empty'} style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${qFs}px;line-height:${qLh}">
           <span style="font-size:${numFs}px;font-weight:bold">${num}</span>${" "}<span ref=${enTextRef} contentEditable class="q-text__field"
                onBlur=${(e) => {
-                 const text = e.target.textContent.trim();
+                 const text = e.target.innerText.trim();
                  if (text === (q.text.en || "")) return;
                  const existing = quizQuestions.value[id] || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
                  quizQuestions.value = { ...quizQuestions.value, [id]: { ...existing, text: { ...existing.text, en: text } } };
                  scheduleSave();
                  onRerender();
-               }}
-               onKeyDown=${(e) => {
-                 if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
                }}></span>
           <span class="q-text__tag q-text__tag--en" onClick=${(e) => { e.stopPropagation(); focusEnd(enTextRef.current); }}>en</span>
         </div>

@@ -105,9 +105,71 @@ test.describe("quiz loaded", () => {
     await deField.click();
     await page.keyboard.press("Control+a");
     await page.keyboard.type("Edited question text");
-    await deField.press("Enter");
+    await deField.evaluate((el) => el.blur());
 
     await expect(deField).toHaveText("Edited question text");
+  });
+
+  test("Enter inserts a newline in question text instead of blurring", async ({ page }) => {
+    const questionSlide = page.locator('.slide[data-slide-id="r0q0"][data-answers="0"]');
+    await questionSlide.scrollIntoViewIfNeeded();
+
+    const deField = questionSlide.locator('[lang="de"] .q-text__field');
+    await deField.click();
+    await page.keyboard.press("Control+a");
+    await page.keyboard.type("Line one");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("Line two");
+
+    // Field should still be focused (Enter did not blur)
+    const isFocused = await deField.evaluate((el) => document.activeElement === el);
+    expect(isFocused).toBe(true);
+
+    // Blur and verify the newline was preserved
+    await deField.evaluate((el) => el.blur());
+    const text = await deField.evaluate((el) => el.innerText);
+    expect(text).toContain("Line one");
+    expect(text).toContain("Line two");
+    expect(text.trim().split("\n").length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("newlines in question text persist after reload", async ({ page }) => {
+    const questionSlide = page.locator('.slide[data-slide-id="r0q0"][data-answers="0"]');
+    await questionSlide.scrollIntoViewIfNeeded();
+
+    const deField = questionSlide.locator('[lang="de"] .q-text__field');
+    await deField.click();
+    await page.keyboard.press("Control+a");
+    await page.keyboard.type("First line");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type("Second line");
+    await deField.evaluate((el) => el.blur());
+    await page.waitForTimeout(500);
+
+    await page.reload();
+    await page.locator(".slide").first().waitFor({ timeout: 10_000 });
+
+    const reloaded = page.locator('.slide[data-slide-id="r0q0"][data-answers="0"] [lang="de"] .q-text__field');
+    await reloaded.scrollIntoViewIfNeeded();
+    const text = await reloaded.evaluate((el) => el.innerText);
+    expect(text).toContain("First line");
+    expect(text).toContain("Second line");
+    expect(text.trim().split("\n").length).toBeGreaterThanOrEqual(2);
+  });
+
+  test("Enter still blurs answer fields", async ({ page }) => {
+    const answerSlide = page.locator('.slide[data-slide-id="r0q0"][data-answers="1"]');
+    await answerSlide.scrollIntoViewIfNeeded();
+
+    const deField = answerSlide.locator(".answer-bar__field--de");
+    await deField.click();
+    await page.keyboard.press("Control+a");
+    await page.keyboard.type("Test answer");
+    await deField.press("Enter");
+
+    // Field should have blurred (Enter blurs answer fields)
+    const isFocused = await deField.evaluate((el) => document.activeElement === el);
+    expect(isFocused).toBe(false);
   });
 
   test("question text field is inline when filled, inline-block when empty", async ({ page }) => {
@@ -141,7 +203,7 @@ test.describe("quiz loaded", () => {
     const deField = slide.locator('[lang="de"] .q-text__field');
     await deField.click();
     await page.keyboard.type("New question");
-    await deField.press("Enter");
+    await deField.evaluate((el) => el.blur());
     await expect(deField).toHaveText("New question");
 
     // EN field should appear on hover and be editable
@@ -150,7 +212,7 @@ test.describe("quiz loaded", () => {
     const enField = slide.locator('[lang="en"] .q-text__field');
     await enField.click();
     await page.keyboard.type("English question");
-    await enField.press("Enter");
+    await enField.evaluate((el) => el.blur());
     await expect(enField).toHaveText("English question");
   });
 

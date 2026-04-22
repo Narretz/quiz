@@ -32,7 +32,7 @@ async function clearQuestionText(page, outer) {
     await field.click();
     await page.keyboard.press("Control+a");
     await page.keyboard.press("Backspace");
-    await page.keyboard.press("Enter");
+    await field.evaluate((el) => el.blur());
   }
 }
 

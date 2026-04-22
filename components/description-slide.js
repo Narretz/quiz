@@ -64,12 +64,12 @@ export function DescriptionSlide({ desc, descIdx, onRerender }) {
   // Sync text fields imperatively — avoid Preact overwriting user edits
   useLayoutEffect(() => {
     if (deTextRef.current && deTextRef.current !== document.activeElement) {
-      deTextRef.current.textContent = desc.text.de || "";
+      deTextRef.current.innerText = desc.text.de || "";
     }
   }, [desc.text.de]);
   useLayoutEffect(() => {
     if (enTextRef.current && enTextRef.current !== document.activeElement) {
-      enTextRef.current.textContent = desc.text.en || "";
+      enTextRef.current.innerText = desc.text.en || "";
     }
   }, [desc.text.en]);
 
@@ -119,15 +119,14 @@ export function DescriptionSlide({ desc, descIdx, onRerender }) {
       <div ref=${deRef} lang="de" data-role="de" style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${fs}px;line-height:${lh};white-space:pre-line">
         <span ref=${deTextRef} contentEditable class="q-text__field"
              onBlur=${(e) => {
-               const text = e.target.textContent.trim();
+               const text = e.target.innerText.trim();
                if (text === (desc.text.de || "")) return;
                updateText("de", text);
              }}
              onKeyDown=${(e) => {
-               if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
                if (e.key === "Tab") {
                  e.preventDefault();
-                 const text = e.target.textContent.trim();
+                 const text = e.target.innerText.trim();
                  if (text !== (desc.text.de || "")) updateText("de", text);
                  requestAnimationFrame(() => { if (enTextRef.current) focusEnd(enTextRef.current); });
                }
@@ -137,13 +136,11 @@ export function DescriptionSlide({ desc, descIdx, onRerender }) {
       <div ref=${enRef} lang="en" data-role="en" style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${fs}px;line-height:${lh};white-space:pre-line">
         <span ref=${enTextRef} contentEditable class="q-text__field"
              onBlur=${(e) => {
-               const text = e.target.textContent.trim();
+               const text = e.target.innerText.trim();
                if (text === (desc.text.en || "")) return;
                updateText("en", text);
              }}
-             onKeyDown=${(e) => {
-               if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
-             }}></span>
+></span>
         <span class="q-text__tag q-text__tag--en" onClick=${(e) => { e.stopPropagation(); focusEnd(enTextRef.current); }}>en</span>
       </div>
     </div>

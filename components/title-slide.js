@@ -67,11 +67,11 @@ export function TitleSlide({ desc, descIdx, anchor, onRerender }) {
 
   useLayoutEffect(() => {
     if (deTextRef.current && deTextRef.current !== document.activeElement)
-      deTextRef.current.textContent = titleDe;
+      deTextRef.current.innerText = titleDe;
   }, [titleDe]);
   useLayoutEffect(() => {
     if (enTextRef.current && enTextRef.current !== document.activeElement)
-      enTextRef.current.textContent = titleEn;
+      enTextRef.current.innerText = titleEn;
   }, [titleEn]);
 
   useLayoutEffect(() => {
@@ -90,7 +90,7 @@ export function TitleSlide({ desc, descIdx, anchor, onRerender }) {
                 onClick=${(e) => { e.stopPropagation(); focusEnd(deTextRef.current); }}>de</span>
           <span ref=${deTextRef} contentEditable class="title-bar__field"
                onBlur=${(e) => {
-                 const text = e.target.textContent.trim();
+                 const text = e.target.innerText.trim();
                  if (text === titleDe) return;
                  updateField("de", text);
                }}
@@ -106,7 +106,7 @@ export function TitleSlide({ desc, descIdx, anchor, onRerender }) {
                 onClick=${(e) => { e.stopPropagation(); focusEnd(enTextRef.current); }}>en</span>
           <span ref=${enTextRef} contentEditable class="title-bar__field"
                onBlur=${(e) => {
-                 const text = e.target.textContent.trim();
+                 const text = e.target.innerText.trim();
                  if (text === titleEn) return;
                  updateField("en", text);
                }}

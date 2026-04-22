@@ -116,7 +116,7 @@ test.describe("validation bar", () => {
     await deField.click();
     await page.keyboard.press("Control+a");
     await page.keyboard.type("Wo isst man heute?");
-    await deField.press("Enter");
+    await deField.evaluate((el) => el.blur());
 
     await expect(leakIssue).toHaveCount(0);
   });
