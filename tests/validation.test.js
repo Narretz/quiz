@@ -7,13 +7,13 @@ function fullQuiz(overrides = {}) {
   const base = {
     date: "2026-01-01",
     rounds: [
-      { name: "Round 1", description: { de: "", en: "" }, questions: Array.from({ length: 10 }, (_, i) =>
+      { name: "Music", description: { de: "", en: "" }, questions: Array.from({ length: 10 }, (_, i) =>
         ({ text: { de: `Frage ${i + 1} hier ist ein langer Text`, en: `Question ${i + 1} here is long text` }, answers: { de: `Antwort${i + 1}`, en: `Answer${i + 1}` } })) },
-      { name: "Round 2", description: { de: "", en: "" }, questions: Array.from({ length: 10 }, (_, i) =>
+      { name: "Movies", description: { de: "", en: "" }, questions: Array.from({ length: 10 }, (_, i) =>
         ({ text: { de: `Frage2 ${i} hier ist ein Text`, en: `Question2 ${i} here is a text` }, answers: { de: `Zwei${i}`, en: `Two${i}` } })) },
-      { name: "Round 3", description: { de: "", en: "" }, questions: Array.from({ length: 10 }, (_, i) =>
+      { name: "Sports", description: { de: "", en: "" }, questions: Array.from({ length: 10 }, (_, i) =>
         ({ text: { de: `Frage3 ${i} lange Text`, en: `Question3 ${i} longer text` }, answers: { de: `Drei${i}`, en: `Three${i}` } })) },
-      { name: "Round 4", description: { de: "", en: "" }, questions: Array.from({ length: 10 }, (_, i) =>
+      { name: "Trivia", description: { de: "", en: "" }, questions: Array.from({ length: 10 }, (_, i) =>
         ({ text: { de: `Frage4 ${i} viel Text`, en: `Question4 ${i} more text` }, answers: { de: `Vier${i}`, en: `Four${i}` } })) },
       { name: "Name 10", description: { de: "", en: "" }, questions: Array.from({ length: 10 }, (_, i) =>
         ({ text: { de: `Nenne 10 Dinge ${i}`, en: `Name 10 things ${i}` }, answers: { de: "", en: "" } })) },
@@ -290,7 +290,7 @@ describe("validateQuiz", () => {
         "title-r0-ans:0": { data: "x", width: 10, height: 10 },
       };
       const issues = validateQuiz(inputs(quiz, { images }));
-      const forR0 = issues.filter((i) => i.message === messages.TITLE_NO_IMAGE && /Round 1/.test(i.label));
+      const forR0 = issues.filter((i) => i.message === messages.TITLE_NO_IMAGE && /Music/.test(i.label));
       assert.equal(forR0.length, 0);
     });
 
@@ -310,8 +310,49 @@ describe("validateQuiz", () => {
         assert.ok(!issue.label.includes("[object"), `label should not contain [object: got "${issue.label}"`);
         assert.ok(issue.label.length > 0, "label should not be empty");
       }
-      const r1 = titleIssues.find((i) => i.label === "Round 1");
+      const r1 = titleIssues.find((i) => i.label === "Music");
       assert.ok(r1, "should use DE text from bilingual title as label");
+    });
+
+    it("flags default round names (Round 1..4) from a blank quiz", () => {
+      const quiz = fullQuiz({
+        rounds: [
+          { name: "Round 1", description: { de: "", en: "" }, questions: [] },
+          { name: "Round 2", description: { de: "", en: "" }, questions: [] },
+          { name: "Round 3", description: { de: "", en: "" }, questions: [] },
+          { name: "Round 4", description: { de: "", en: "" }, questions: [] },
+          { name: "Name 10", description: { de: "", en: "" }, questions: [] },
+          { name: "Jackpot!", description: { de: "", en: "" }, questions: [] },
+        ],
+      });
+      const issues = validateQuiz(inputs(quiz));
+      const defaults = issues.filter((i) => i.message === messages.TITLE_DEFAULT_NAME);
+      assert.equal(defaults.length, 4);
+      assert.deepEqual(defaults.map((i) => i.label).sort(), ["Round 1", "Round 2", "Round 3", "Round 4"]);
+    });
+
+    it("does not flag Name 10 or Jackpot! titles as default names", () => {
+      const quiz = fullQuiz();
+      const issues = validateQuiz(inputs(quiz));
+      const defaults = issues.filter((i) => i.message === messages.TITLE_DEFAULT_NAME);
+      assert.equal(defaults.length, 0);
+    });
+
+    it("clears the default-name flag once user renames the round", () => {
+      const quiz = fullQuiz({
+        rounds: [
+          { name: "Music", description: { de: "", en: "" }, questions: [] },
+          { name: "Round 2", description: { de: "", en: "" }, questions: [] },
+          { name: "Round 3", description: { de: "", en: "" }, questions: [] },
+          { name: "Round 4", description: { de: "", en: "" }, questions: [] },
+          { name: "Name 10", description: { de: "", en: "" }, questions: [] },
+          { name: "Jackpot!", description: { de: "", en: "" }, questions: [] },
+        ],
+      });
+      const issues = validateQuiz(inputs(quiz));
+      const defaults = issues.filter((i) => i.message === messages.TITLE_DEFAULT_NAME);
+      assert.equal(defaults.length, 3);
+      assert.ok(!defaults.some((i) => i.label === "Music"));
     });
 
     it("never flags round title answer slides (mirror the question-phase title)", () => {

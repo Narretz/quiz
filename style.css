@@ -45,6 +45,18 @@
         margin-left: 20px;
     }
 
+    .main-controls.controls {
+        gap: 3rem;
+    }
+
+    .main-controls.controls label {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        text-transform: uppercase;
+        font-size: 0.9rem;
+    }
+
     .controls {
         display: flex;
         gap: 1rem;

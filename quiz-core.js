@@ -123,6 +123,20 @@ export function computeTwoImageLayout(ar0, ar1, heightFrac = 0.45) {
   };
 }
 
+/**
+ * Returns the live round name: descriptor-edited title if present, else the
+ * upload-time name from quiz.rounds, else a generic fallback.
+ * `quiz` is the snapshot; edits live in `descriptors`.
+ */
+export function getRoundName(descriptors, quiz, ri) {
+  const desc = descriptors?.find((d) => d.id === `title-r${ri}`);
+  const edited = desc?.text?.de?.trim();
+  if (edited) return edited;
+  const original = quiz?.rounds?.[ri]?.name?.trim();
+  if (original) return original;
+  return `Round ${ri + 1}`;
+}
+
 export function extractQuestions(quiz) {
   const questions = {};
   quiz.rounds.forEach((round, ri) => {

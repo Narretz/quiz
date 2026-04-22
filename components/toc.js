@@ -1,36 +1,37 @@
 import { h } from "preact";
 import { useEffect } from "preact/hooks";
 import htm from "htm";
-import { currentQuiz } from "../lib/state.js";
+import { currentQuiz, slideDescriptors } from "../lib/state.js";
+import { getRoundName } from "../quiz-core.js";
 import { slugify, scrollToElement } from "../lib/utils.js";
 
 const html = htm.bind(h);
 
-function buildTocEntries(quiz) {
+function buildTocEntries(quiz, descriptors) {
   if (!quiz) return [];
   const entries = [{ label: "Intro", anchor: "intro" }];
 
+  function pushRound(ri) {
+    const name = getRoundName(descriptors, quiz, ri);
+    entries.push({ label: name, anchor: slugify(name) });
+  }
+  function pushRoundAnswers(ri) {
+    const name = getRoundName(descriptors, quiz, ri);
+    entries.push({ label: `${name} Answers`, anchor: slugify(name) + "-answers" });
+  }
+
   // Section 1: rounds 0-1
-  for (const r of quiz.rounds.slice(0, 2)) {
-    entries.push({ label: r.name, anchor: slugify(r.name) });
-  }
-  for (const r of quiz.rounds.slice(0, 2)) {
-    entries.push({ label: `${r.name} Answers`, anchor: slugify(r.name) + "-answers" });
-  }
+  for (let ri = 0; ri < Math.min(2, quiz.rounds.length); ri++) pushRound(ri);
+  for (let ri = 0; ri < Math.min(2, quiz.rounds.length); ri++) pushRoundAnswers(ri);
 
   // Section 2: rounds 2-4
-  for (const r of quiz.rounds.slice(2, 5)) {
-    entries.push({ label: r.name, anchor: slugify(r.name) });
-  }
-  for (const r of quiz.rounds.slice(2, 5)) {
-    entries.push({ label: `${r.name} Answers`, anchor: slugify(r.name) + "-answers" });
-  }
+  for (let ri = 2; ri < Math.min(5, quiz.rounds.length); ri++) pushRound(ri);
+  for (let ri = 2; ri < Math.min(5, quiz.rounds.length); ri++) pushRoundAnswers(ri);
 
   // Jackpot section: round 5
-  const jr = quiz.rounds[5];
-  if (jr) {
-    entries.push({ label: jr.name, anchor: slugify(jr.name) });
-    entries.push({ label: `${jr.name} Answers`, anchor: slugify(jr.name) + "-answers" });
+  if (quiz.rounds[5]) {
+    pushRound(5);
+    pushRoundAnswers(5);
   }
 
   return entries;
@@ -38,7 +39,8 @@ function buildTocEntries(quiz) {
 
 export function TOC() {
   const quiz = currentQuiz.value;
-  const entries = buildTocEntries(quiz);
+  const descriptors = slideDescriptors.value;
+  const entries = buildTocEntries(quiz, descriptors);
 
   useEffect(() => {
     if (!entries.length) return;

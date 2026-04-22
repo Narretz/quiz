@@ -4,7 +4,7 @@ import htm from "htm";
 import {
   currentQuiz, currentQuizId, slideDescriptors, slideImages, quizQuestions, manualOverrides,
   slideStyle, savedList, status, debug, jackpotSize, quizEmail, showValidation,
-  refreshSavedList, uploadQuiz, loadSavedQuiz, unloadQuiz,
+  refreshSavedList, uploadQuiz, loadSavedQuiz, unloadQuiz, createBlankQuiz,
 } from "./lib/state.js";
 import { SavedQuizBar } from "./components/saved-quiz-bar.js";
 import { Controls } from "./components/controls.js";
@@ -43,15 +43,21 @@ function App() {
       ${quizLoaded && quizLabel && html`<span class="h1-quiz-name">— ${quizLabel}</span>`}
     </h1>
     ${!quizLoaded && html`
-      <div class="controls">
+      <div class="controls main-controls">
         <label>
-          Start with an xlsx file
+        <span>Start with an xlsx file</span>
           <span class="upload-btn">
             Upload .xlsx
             <input type="file" accept=".xlsx" onChange=${onUpload} />
           </span>
         </label>
-        Load a saved quiz:<${SavedQuizBar} onLoad=${loadSavedQuiz} />
+        <label>
+          <span>Create a blank quiz with Tipperary structure</span>
+          <button class="new-quiz-btn" onClick=${createBlankQuiz}>Create quiz</button>
+        </label>
+        <label>
+          <span>Load a saved quiz</span><${SavedQuizBar} onLoad=${loadSavedQuiz} />
+        </label>
       </div>
       <div class="howto">
         <h2>How does it work?</h2>
