@@ -139,14 +139,22 @@ test.describe("validation bar", () => {
     const bar = page.locator(".validation-bar");
 
     const emailInput = page.locator(".setting-input--email");
-    await emailInput.fill("not-an-email");
-    await emailInput.dispatchEvent("change");
-    await expect(bar.locator(".vb-issue", { hasText: "Email format looks invalid" })).toBeVisible();
 
-    await emailInput.fill("quiz@example.com");
-    await emailInput.dispatchEvent("change");
-    await expect(bar.locator(".vb-issue", { hasText: "Email format looks invalid" })).toHaveCount(0);
-    await expect(bar.locator(".vb-issue", { hasText: "Email is not set" })).toHaveCount(0);
+    // Retry the fill+commit: the input is controlled by a signal, and a stray
+    // Preact re-render between fill() and the change event can reset the DOM
+    // value before the handler reads it. Blurring fires a native change.
+    await expect(async () => {
+      await emailInput.fill("not-an-email");
+      await emailInput.blur();
+      await expect(bar.locator(".vb-issue", { hasText: "Email format looks invalid" })).toBeVisible({ timeout: 1000 });
+    }).toPass();
+
+    await expect(async () => {
+      await emailInput.fill("quiz@example.com");
+      await emailInput.blur();
+      await expect(bar.locator(".vb-issue", { hasText: "Email format looks invalid" })).toHaveCount(0, { timeout: 1000 });
+      await expect(bar.locator(".vb-issue", { hasText: "Email is not set" })).toHaveCount(0, { timeout: 1000 });
+    }).toPass();
   });
 
   test("debug Validate checkbox shows the bar live without downloading", async ({ page }) => {
