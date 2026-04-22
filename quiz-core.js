@@ -502,19 +502,21 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
 
   if (style === "begin") {
     // Split lines into groups separated by marginTop gaps
+    const lineH = (pts) => (pts / 72) * 1.2;
     const groups = []; // [{ y, runs, h }]
     let y = imgEntry ? pad : null; // absolute positioning for image layout, null for centered
     for (const l of data.lines) {
       if (l.marginTop && y != null) y += l.marginTop;
+      const lh = lineH(l.fontSize || 20);
       const run = { text: l.text + "\n", options: { fontSize: l.fontSize, bold: !!l.bold, color: resolveColor(l.color) } };
       const lastGroup = groups[groups.length - 1];
       if (lastGroup && !l.marginTop) {
         lastGroup.runs.push(run);
-        lastGroup.h += 0.5;
+        lastGroup.h += lh;
       } else {
-        groups.push({ y, runs: [run], h: 0.5 });
+        groups.push({ y, runs: [run], h: lh });
       }
-      if (y != null) y += 0.5;
+      if (y != null) y += lh;
     }
     if (imgEntry) {
       for (const g of groups) {
@@ -608,36 +610,43 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
       const hasSubtitle = subtitleDe || subtitleEn || jackpotSubtitle;
       const hasEn = titleEn || subtitleEn;
       if (img0) {
-        // Image mode: text at top, image below
-        const textH = hasSubtitle ? 1.8 : hasEn ? 1.4 : 1.0;
+        // Image mode: text at top, image below — stack elements and derive textBottom
+        const lineH = (pts) => (pts / 72) * 1.2;
+        const titleLineH = lineH(SLIDE_STYLE.title.fontSize);
+        let nextY = pad;
         slide.addText(titleDe, {
-          x: 0, y: pad, w: "100%", h: 0.6,
+          x: 0, y: nextY, w: "100%", h: titleLineH,
           fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "top", color: fgColor,
         });
-        let nextY = pad + 0.6;
+        nextY += titleLineH;
         if (titleEn) {
           slide.addText(titleEn, {
-            x: 0, y: nextY, w: "100%", h: 0.5,
+            x: 0, y: nextY, w: "100%", h: titleLineH,
             fontSize: SLIDE_STYLE.title.fontSize, bold: true, align: "center", valign: "top", color: fgColor,
           });
-          nextY += 0.5;
+          nextY += titleLineH;
         }
         if (subtitleDe || subtitleEn) {
           const subText = subtitleEn ? `${subtitleDe}\n${subtitleEn}` : subtitleDe;
+          const subLines = subtitleEn ? 2 : 1;
+          const subH = lineH(SLIDE_STYLE.question.fontSize) * subLines;
           slide.addText(subText, {
-            x: 0.5, y: nextY, w: W - 1, h: textH - (nextY - pad),
+            x: 0.5, y: nextY, w: W - 1, h: subH,
             fontSize: SLIDE_STYLE.question.fontSize, align: "center", valign: "top", color: fgColor,
           });
+          nextY += subH;
         } else if (jackpotSubtitle) {
+          const jpH = lineH(28);
           slide.addText(jackpotSubtitle, {
-            x: 0.5, y: nextY, w: W - 1, h: textH - (nextY - pad),
+            x: 0.5, y: nextY, w: W - 1, h: jpH,
             fontSize: 28, bold: true, color: "FFC000", align: "center", valign: "top",
           });
+          nextY += jpH;
         }
         if (img1) {
-          addTwoImagesBelowText(slide, img0, img1, pad + textH);
+          addTwoImagesBelowText(slide, img0, img1, nextY);
         } else {
-          addImageBelowText(slide, img0, pad + textH);
+          addImageBelowText(slide, img0, nextY);
         }
       } else {
         // No image: centered

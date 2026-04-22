@@ -280,6 +280,61 @@ describe("buildPptx", () => {
     });
   });
 
+  describe("image-below-text positioning", () => {
+    const fakeImg = { data: "data:image/png;base64,abc", width: 800, height: 600 };
+    const lineH = (pts) => (pts / 72) * 1.2;
+
+    it("no-phones intro: text box height derives from font size, image below", () => {
+      const noPhonesIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "no-phones");
+      assert.ok(noPhonesIdx !== -1, "no-phones descriptor should exist");
+      const images = { [`no-phones:0`]: fakeImg };
+      const pptx = buildPptx(descriptors, PptxSpy, images, {}, {}, {}, questions);
+      const slide = pptx.slides[noPhonesIdx];
+
+      const textEl = slide.texts.find((t) => Array.isArray(t.content) && t.content.some((r) => r.text?.includes("NO PHONES!")));
+      assert.ok(textEl, "NO PHONES! text should be present");
+      const expectedH = lineH(50);
+      assert.ok(Math.abs(textEl.opts.h - expectedH) < 0.01,
+        `text box height ${textEl.opts.h} should be ~${expectedH.toFixed(3)} (derived from 50pt)`);
+      assert.strictEqual(textEl.opts.y, SLIDE_STYLE.pad, "text should start at pad");
+
+      assert.ok(slide.images.length > 0, "should have an image");
+      const img = slide.images[0];
+      const expectedImgTop = SLIDE_STYLE.pad + expectedH + SLIDE_STYLE.pad;
+      assert.ok(Math.abs(img.y - expectedImgTop) < 0.01,
+        `image y=${img.y.toFixed(3)} should be ~${expectedImgTop.toFixed(3)} (textBottom + pad)`);
+    });
+
+    it("title slide with image: text box height derives from font size", () => {
+      const titleIdx = descriptors.findIndex((d) => d.type === "title" && d.text.de === "Round 1");
+      const images = { [`${descriptors[titleIdx].id}:0`]: fakeImg };
+      const pptx = buildPptx(descriptors, PptxSpy, images, {}, {}, {}, questions);
+      const slide = pptx.slides[titleIdx];
+
+      const deText = slide.texts.find((t) => t.content === "Round 1");
+      assert.ok(deText, "DE title should exist");
+      const expectedTitleH = lineH(SLIDE_STYLE.title.fontSize);
+      assert.ok(Math.abs(deText.opts.h - expectedTitleH) < 0.01,
+        `title box height ${deText.opts.h} should be ~${expectedTitleH.toFixed(3)} (derived from ${SLIDE_STYLE.title.fontSize}pt)`);
+
+      assert.ok(slide.images.length > 0, "should have an image");
+      const img = slide.images[0];
+      assert.ok(img.y > deText.opts.y + deText.opts.h,
+        `image y=${img.y.toFixed(3)} should be below text bottom ${(deText.opts.y + deText.opts.h).toFixed(3)}`);
+    });
+
+    it("begin-style intro without image: centered layout unaffected", () => {
+      const noPhonesIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "no-phones");
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[noPhonesIdx];
+
+      const textEl = slide.texts.find((t) => Array.isArray(t.content) && t.content.some((r) => r.text?.includes("NO PHONES!")));
+      assert.ok(textEl, "NO PHONES! text should be present");
+      // Single group, no image → full-slide centered layout
+      assert.strictEqual(textEl.opts.h, "100%", "without image, text box should be 100% height (centered)");
+    });
+  });
+
   describe("backwards compatibility", () => {
     it("reads question from desc.q when questions map has no entry", () => {
       const descs = descriptors.map((d) => {
