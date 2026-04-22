@@ -431,6 +431,11 @@
 
     [data-role] {
         z-index: 1;
+        pointer-events: none;
+    }
+
+    [data-role] > * {
+        pointer-events: auto;
     }
 
     [data-role]:focus-within {
