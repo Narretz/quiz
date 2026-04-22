@@ -2,7 +2,7 @@ import { h } from "preact";
 import htm from "htm";
 import {
   currentQuiz, currentQuizId, status, jackpotSize, quizEmail, showValidation,
-  downloadPptx, deleteSavedQuiz, scheduleSave,
+  downloadPptx, deleteSavedQuiz, scheduleSave, debug
 } from "../lib/state.js";
 
 const html = htm.bind(h);
@@ -41,11 +41,11 @@ export function Controls() {
   }
 
   return html`
-    <div class="controls">
+    <div class="controls ${debug ? 'controls--sticky' : ''}">
       ${quizId && html`
         <button disabled=${!quiz || showValidation.value} onClick=${onValidate}>Validate</button>
         <span class="controls__arrow">→</span>
-        <button disabled=${!quiz || !showValidation.value || status.value === 'Generating PPTX...'} onClick=${onDownload}>Download .pptx</button>
+        <button disabled=${!quiz || (!showValidation.value && !debug) || status.value === 'Generating PPTX...'} onClick=${onDownload}>Download .pptx</button>
       `}
       <span class="status">${statusText}</span>
       ${quizId && html`
