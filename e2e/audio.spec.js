@@ -133,4 +133,22 @@ test.describe("audio", () => {
     await expect(slideAudioSlot(outerAfter)).toBeVisible();
     await expect(slideAudioSlot(outerAfter).locator(".slide-audio__name")).toHaveText("band-aid.mp3");
   });
+
+  test("empty EN text field is clickable when audio is present", async ({ page }) => {
+    // r1q0 has empty question slots — EN field starts empty
+    const outer = questionOuter(page, "r1q0");
+    await addAV(outer, AUDIO);
+
+    const slide = outer.locator(".slide");
+    await slide.hover();
+    const enField = slide.locator('[lang="en"] .q-text__field');
+    await enField.click();
+
+    const isFocused = await enField.evaluate((el) => document.activeElement === el);
+    expect(isFocused).toBe(true);
+
+    await page.keyboard.type("Typed over audio");
+    await enField.evaluate((el) => el.blur());
+    await expect(enField).toHaveText("Typed over audio");
+  });
 });
