@@ -394,6 +394,33 @@ describe("validateQuiz", () => {
     });
   });
 
+  describe("warning: text overflow", () => {
+    it("flags questions whose fit result marks overflow=true", () => {
+      const quiz = fullQuiz();
+      const slideOverrides = { "r0q0:0": { overflow: true } };
+      const issues = validateQuiz(inputs(quiz, { slideOverrides }));
+      const issue = findIssue(issues, messages.TEXT_OVERFLOW);
+      assert.ok(issue, "should flag overflow");
+      assert.equal(issue.severity, "warning");
+    });
+
+    it("does not flag when fit result has overflow=false or missing", () => {
+      const quiz = fullQuiz();
+      const slideOverrides = { "r0q0:0": { fontSize: 18, overflow: false } };
+      const issues = validateQuiz(inputs(quiz, { slideOverrides }));
+      assert.equal(findIssue(issues, messages.TEXT_OVERFLOW), undefined);
+    });
+
+    it("does not flag empty-question slides even if overflow marked", () => {
+      const quiz = fullQuiz();
+      quiz.rounds[0].questions[0] = { text: { de: "", en: "" }, answers: { de: "A", en: "A" } };
+      const images = { "r0q0:0": { data: "x", width: 10, height: 10 } };
+      const slideOverrides = { "r0q0:0": { overflow: true } };
+      const issues = validateQuiz(inputs(quiz, { images, slideOverrides }));
+      assert.equal(findIssue(issues, messages.TEXT_OVERFLOW), undefined);
+    });
+  });
+
   describe("info: very short question text", () => {
     it("flags short DE text", () => {
       const quiz = fullQuiz();

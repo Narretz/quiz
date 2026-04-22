@@ -5,7 +5,7 @@ import { validateQuiz } from "../lib/validation.js";
 import { scrollToElement } from "../lib/utils.js";
 import {
   currentQuiz, slideDescriptors, quizQuestions, slideImages,
-  jackpotSize, quizEmail, showValidation, scheduleSave,
+  jackpotSize, quizEmail, showValidation, scheduleSave, slideOverrides,
 } from "../lib/state.js";
 
 const html = htm.bind(h);
@@ -59,6 +59,7 @@ export function ValidationBar() {
   const issues = validateQuiz({
     descriptors, questions, images, quiz,
     jackpotSize: money, email,
+    slideOverrides: slideOverrides.value,
   });
 
   useEffect(() => {

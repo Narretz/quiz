@@ -155,7 +155,7 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
       : fitSlideText(slideRef.current, images);
     if (result) {
       const prev = slideOverrides.value[slideKey];
-      if (!prev || prev.fontSize !== result.fontSize || prev.lineSpacing !== result.lineSpacing || prev.enY !== result.enY || prev.twoImageFrac !== result.twoImageFrac || prev.answerH !== result.answerH) {
+      if (!prev || prev.fontSize !== result.fontSize || prev.lineSpacing !== result.lineSpacing || prev.enY !== result.enY || prev.twoImageFrac !== result.twoImageFrac || prev.answerH !== result.answerH || !!prev.overflow !== !!result.overflow) {
         slideOverrides.value = { ...slideOverrides.value, [slideKey]: result };
       }
     }
