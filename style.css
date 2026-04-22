@@ -493,6 +493,28 @@
         opacity: 1;
     }
 
+    .q-text__translate {
+        position: absolute;
+        left: 24px;
+        bottom: -14px;
+        font-size: 11px;
+        text-transform: uppercase;
+        padding: 0 3px;
+        opacity: 0.8;
+        color: inherit;
+        text-decoration: underline;
+        display: none;
+    }
+
+    .slide:hover .q-text__translate,
+    [data-role]:focus-within > .q-text__translate {
+        display: block;
+    }
+
+    .q-text__translate:hover {
+        opacity: 1;
+    }
+
     .slide-img-wrap {
         overflow: visible;
     }

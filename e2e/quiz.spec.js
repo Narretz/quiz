@@ -253,6 +253,52 @@ test.describe("quiz loaded", () => {
     await expect(enField).toHaveText("English question");
   });
 
+  test("translate link appears on empty side with Google Translate URL for source text", async ({ page }) => {
+    // Seed a DE-only and an EN-only question, then check the translate link direction/url on each.
+    await seedQuiz(page, {
+      questions: {
+        r1q0: { text: { de: "Hallo Welt", en: "" } },
+        r1q1: { text: { de: "", en: "Hello world" } },
+      },
+    });
+
+    // DE-only: EN side should show translate (de → en)
+    const deOnly = page.locator('.slide[data-slide-id="r1q0"][data-answers="0"]');
+    await deOnly.scrollIntoViewIfNeeded();
+    await deOnly.hover();
+    const enLink = deOnly.locator('[lang="en"] .q-text__translate');
+    await expect(enLink).toBeVisible();
+    const enHref = await enLink.getAttribute("href");
+    expect(enHref).toBe(`https://translate.google.com/?sl=de&tl=en&text=${encodeURIComponent("Hallo Welt")}&op=translate`);
+    await expect(deOnly.locator('[lang="de"] .q-text__translate')).toHaveCount(0);
+
+    // EN-only: DE side should show translate (en → de)
+    const enOnly = page.locator('.slide[data-slide-id="r1q1"][data-answers="0"]');
+    await enOnly.scrollIntoViewIfNeeded();
+    await enOnly.hover();
+    const deLink = enOnly.locator('[lang="de"] .q-text__translate');
+    await expect(deLink).toBeVisible();
+    const deHref = await deLink.getAttribute("href");
+    expect(deHref).toBe(`https://translate.google.com/?sl=en&tl=de&text=${encodeURIComponent("Hello world")}&op=translate`);
+    await expect(enOnly.locator('[lang="en"] .q-text__translate')).toHaveCount(0);
+  });
+
+  test("translate link disappears once the target side is filled", async ({ page }) => {
+    await seedQuiz(page, { questions: { r1q0: { text: { de: "Hallo Welt", en: "" } } } });
+    const slide = page.locator('.slide[data-slide-id="r1q0"][data-answers="0"]');
+    await slide.scrollIntoViewIfNeeded();
+    await slide.hover();
+
+    await expect(slide.locator('[lang="en"] .q-text__translate')).toBeVisible();
+
+    const enField = slide.locator('[lang="en"] .q-text__field');
+    await enField.click();
+    await page.keyboard.type("Filled");
+    await enField.evaluate((el) => el.blur());
+
+    await expect(slide.locator('[lang="en"] .q-text__translate')).toHaveCount(0);
+  });
+
   test("ghost answer bar fades when question text is focused", async ({ page }) => {
     const slide = page.locator('.slide[data-slide-id="r0q0"][data-answers="0"]');
     await slide.scrollIntoViewIfNeeded();

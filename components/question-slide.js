@@ -18,6 +18,10 @@ function focusEnd(el) {
   sel.collapseToEnd();
 }
 
+function translateUrl(source, target, text) {
+  return `https://translate.google.com/?sl=${source}&tl=${target}&text=${encodeURIComponent(text)}&op=translate`;
+}
+
 export function QuestionSlide({ desc, descIdx, onRerender }) {
   const { num, withAnswers, id } = desc;
   const q = quizQuestions.value[id] || desc.q || { text: { de: "", en: "" }, answers: { de: "", en: "" } };
@@ -251,6 +255,9 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
                  }
                }}></span>
           <span class="q-text__tag q-text__tag--de" onClick=${(e) => { e.stopPropagation(); focusEnd(deTextRef.current); }}>de</span>
+          ${!q.text.de && q.text.en && html`<a class="q-text__translate" title="Translate from English with Google Translate"
+              href=${translateUrl("en", "de", q.text.en)} target="_blank" rel="noopener"
+              onClick=${(e) => { e.stopPropagation(); requestAnimationFrame(() => focusEnd(deTextRef.current)); }}>translate</a>`}
         </div>
         <div lang="en" title="English question" data-role="en" class=${q.text.en ? '' : 'q-block--empty'} style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${qFs}px;line-height:${qLh}">
           <span class="q-num" style="font-size:${numFs}px;font-weight:bold"
@@ -265,6 +272,9 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
                }}
 ></span>
           <span class="q-text__tag q-text__tag--en" onClick=${(e) => { e.stopPropagation(); focusEnd(enTextRef.current); }}>en</span>
+          ${!q.text.en && q.text.de && html`<a class="q-text__translate" title="Translate from German with Google Translate"
+              href=${translateUrl("de", "en", q.text.de)} target="_blank" rel="noopener"
+              onClick=${(e) => { e.stopPropagation(); requestAnimationFrame(() => focusEnd(enTextRef.current)); }}>translate</a>`}
         </div>
       ` : html`
         <div style="position:absolute;left:${px(pad)};top:${px(pad)};font-size:${numFs}px;font-weight:bold">${num}</div>
