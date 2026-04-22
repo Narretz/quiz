@@ -486,14 +486,15 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
       x: 0, y: titleY, w: "100%", h: 0.6,
       fontSize: data.title.fontSize, bold: true, underline: true, color: resolveColor(data.title.color), align: "center",
     });
+    const rH = data.ruleHeight || 1.0;
     data.rules.forEach((rule, ri) => {
       slide.addText(rule, {
-        x: 0, y: rulesY + ri * 0.5, w: "100%", h: 0.5,
+        x: 0, y: rulesY + ri * rH, w: "100%", h: rH,
         fontSize: data.ruleFontSize, color: resolveColor(data.ruleColor), align: "center", valign: "middle",
       });
     });
     if (imgEntry) {
-      const textBottom = rulesY + data.rules.length * 0.5;
+      const textBottom = rulesY + data.rules.length * rH;
       if (hasTwoImages) addTwoImagesBelowText(slide, imgEntry, imgEntry1, textBottom);
       else addImageBelowText(slide, imgEntry, textBottom);
     }
@@ -711,14 +712,18 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
           sizing: { type: "contain", w: layout.img.w, h: layout.img.h },
         });
       }
+      const descOverride = descSlideKey ? overrides[descSlideKey] : null;
+      const descEnY = descOverride?.enY ?? 2.5;
+      const descDeH = descEnY - pad;
+      const descEnH = H - pad - descEnY;
       slide.addText(desc.text.de, {
-        x: pad, y: pad, w: deW, h: 2.2,
+        x: pad, y: pad, w: deW, h: descDeH,
         fontSize: SLIDE_STYLE.question.fontSize, valign: "top", color: fgColor,
         lineSpacing: SLIDE_STYLE.question.fontSize * SLIDE_STYLE.question.lineSpacing / 100,
       });
       if (desc.text.en) {
         slide.addText(desc.text.en, {
-          x: pad, y: 2.5, w: enW, h: 2,
+          x: pad, y: descEnY, w: enW, h: descEnH,
           fontSize: SLIDE_STYLE.question.fontSize, valign: "top", color: fgColor,
           lineSpacing: SLIDE_STYLE.question.fontSize * SLIDE_STYLE.question.lineSpacing / 100,
         });

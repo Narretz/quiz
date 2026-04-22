@@ -98,6 +98,12 @@ export function DescriptionSlide({ desc, descIdx, onRerender }) {
         const deBottom = pad + deRef.current.scrollHeight / PX;
         const enY = Math.max(2.5, deBottom + pad);
         enRef.current.style.top = Math.round(enY * PX) + "px";
+        if (slideKey) {
+          const prev = slideOverrides.value[slideKey];
+          if (!prev || prev.enY !== enY) {
+            slideOverrides.value = { ...slideOverrides.value, [slideKey]: { ...prev, enY } };
+          }
+        }
       }
     }
   }, [imgEntry, imgEntry1, desc.text.de, desc.text.en]);

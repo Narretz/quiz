@@ -355,6 +355,67 @@ describe("buildPptx", () => {
     });
   });
 
+  describe("description slide positioning", () => {
+    it("uses overrides enY for DE/EN text box heights", () => {
+      const descDescs = [
+        ...descriptors.slice(0, 5),
+        { type: "description", text: { de: "Lange Beschreibung", en: "Long description" }, id: "desc-r0" },
+        ...descriptors.slice(5),
+      ];
+      const customEnY = 3.2;
+      const overrides = { "desc-r0:0": { enY: customEnY } };
+      const pptx = buildPptx(descDescs, PptxSpy, {}, overrides, {}, {}, questions);
+      const descIdx = descDescs.findIndex((d) => d.type === "description");
+      const slide = pptx.slides[descIdx];
+
+      const deText = slide.texts.find((t) => t.content === "Lange Beschreibung");
+      assert.ok(deText, "DE description text should exist");
+      assert.strictEqual(deText.opts.y, SLIDE_STYLE.pad);
+      assert.ok(Math.abs(deText.opts.h - (customEnY - SLIDE_STYLE.pad)) < 0.001,
+        `DE height ${deText.opts.h} should equal enY - pad = ${customEnY - SLIDE_STYLE.pad}`);
+
+      const enText = slide.texts.find((t) => t.content === "Long description");
+      assert.ok(enText, "EN description text should exist");
+      assert.strictEqual(enText.opts.y, customEnY);
+      const expectedEnH = SLIDE_STYLE.height - SLIDE_STYLE.pad - customEnY;
+      assert.ok(Math.abs(enText.opts.h - expectedEnH) < 0.001,
+        `EN height ${enText.opts.h} should equal H - pad - enY = ${expectedEnH}`);
+    });
+
+    it("falls back to default enY=2.5 without overrides", () => {
+      const descDescs = [
+        ...descriptors.slice(0, 5),
+        { type: "description", text: { de: "Kurz", en: "Short" }, id: "desc-r0" },
+        ...descriptors.slice(5),
+      ];
+      const pptx = buildPptx(descDescs, PptxSpy, {}, {}, {}, {}, questions);
+      const descIdx = descDescs.findIndex((d) => d.type === "description");
+      const slide = pptx.slides[descIdx];
+
+      const enText = slide.texts.find((t) => t.content === "Short");
+      assert.ok(enText);
+      assert.strictEqual(enText.opts.y, 2.5);
+      assert.ok(Math.abs(enText.opts.h - (SLIDE_STYLE.height - SLIDE_STYLE.pad - 2.5)) < 0.001);
+    });
+  });
+
+  describe("golden-rules rule height", () => {
+    it("uses ruleHeight from template data for rule spacing", () => {
+      const grIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "golden-rules");
+      assert.ok(grIdx !== -1, "golden-rules descriptor should exist");
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[grIdx];
+
+      const ruleTexts = slide.texts.filter((t) => typeof t.content === "string" && t.content.startsWith("1.") || typeof t.content === "string" && t.content.startsWith("2."));
+      assert.strictEqual(ruleTexts.length, 2, "should have 2 rule text boxes");
+      const rH = ruleTexts[1].opts.y - ruleTexts[0].opts.y;
+      assert.ok(Math.abs(rH - 1.2) < 0.01,
+        `rule spacing ${rH} should be ~1.2 (ruleHeight from template)`);
+      assert.ok(Math.abs(ruleTexts[0].opts.h - 1.2) < 0.01,
+        `rule box height ${ruleTexts[0].opts.h} should be ~1.2`);
+    });
+  });
+
   describe("backwards compatibility", () => {
     it("reads question from desc.q when questions map has no entry", () => {
       const descs = descriptors.map((d) => {
