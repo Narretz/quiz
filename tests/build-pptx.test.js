@@ -165,6 +165,26 @@ describe("buildPptx", () => {
     assert.strictEqual(slide.media[0].type, "audio");
   });
 
+  it("passes video cover frame to addMedia when provided", () => {
+    const images = { "r0q0:0": { data: "data:video/mp4;base64,vid", type: "video", width: 1280, height: 720, cover: "data:image/png;base64,frame" } };
+    const pptx = buildPptx(descriptors, PptxSpy, images, {}, {}, {}, questions);
+    const qIdx = descriptors.findIndex((d) => d.type === "question" && d.id === "r0q0" && !d.withAnswers);
+    const slide = pptx.slides[qIdx];
+    const videoMedia = slide.media.find((m) => m.type === "video");
+    assert.ok(videoMedia, "video should be added as media");
+    assert.strictEqual(videoMedia.cover, "data:image/png;base64,frame");
+  });
+
+  it("omits video cover when entry has none", () => {
+    const images = { "r0q0:0": { data: "data:video/mp4;base64,vid", type: "video", width: 1280, height: 720 } };
+    const pptx = buildPptx(descriptors, PptxSpy, images, {}, {}, {}, questions);
+    const qIdx = descriptors.findIndex((d) => d.type === "question" && d.id === "r0q0" && !d.withAnswers);
+    const slide = pptx.slides[qIdx];
+    const videoMedia = slide.media.find((m) => m.type === "video");
+    assert.ok(videoMedia);
+    assert.strictEqual(videoMedia.cover, undefined);
+  });
+
   it("normalizes audio/mpeg to audio/mp3 for pptxgenjs", () => {
     const audio = { "r0q0:0": { data: "data:audio/mpeg;base64,abc", name: "clip.mp3", durationMs: 5000 } };
     const pptx = buildPptx(descriptors, PptxSpy, {}, {}, audio, {}, questions);

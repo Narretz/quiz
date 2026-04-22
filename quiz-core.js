@@ -578,7 +578,9 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
       });
     } else if (type === "video") {
       const videoData = entry.data.replace(/^data:/, "");
-      slide.addMedia({ type: "video", data: videoData, x, y, w, h });
+      const opts = { type: "video", data: videoData, x, y, w, h };
+      if (entry.cover) opts.cover = entry.cover;
+      slide.addMedia(opts);
     } else {
       slide.addImage({ data: entry.data, x, y, w, h, sizing: { type: "contain", w, h } });
     }
