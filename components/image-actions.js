@@ -2,7 +2,7 @@ import { h } from "preact";
 import htm from "htm";
 import { SLIDE_STYLE } from "../quiz-core.js";
 import { loadMediaFile, extractVideoFrame } from "../lib/utils.js";
-import { slideImages, setImage, removeImage, setManualOverride, slideOverrides, slideReveals, setSlideReveal, scheduleSave, debug } from "../lib/state.js";
+import { slideImages, setImage, removeImage, manualOverrides, setManualOverride, slideOverrides, slideReveals, setSlideReveal, scheduleSave, debug } from "../lib/state.js";
 
 const html = htm.bind(h);
 
@@ -171,6 +171,15 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
     onRerender();
   }
 
+  function resetOverride() {
+    const next = { ...manualOverrides.value };
+    delete next[slideKey];
+    manualOverrides.value = next;
+    scheduleSave();
+    onRerender();
+  }
+
+  const hasManualOverride = !!manualOverrides.value[slideKey];
   const effective = slideOverrides.value[slideKey];
   const displayFs = effective?.fontSize ?? SLIDE_STYLE.question.fontSize;
   const displayLs = effective?.lineSpacing ?? SLIDE_STYLE.question.lineSpacing;
@@ -203,6 +212,7 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
             <input type="number" class="slide-ls-input" step="1" value=${displayLs}
                    onChange=${onOverrideChange} title="Line spacing %" />%
           </label>
+          ${hasManualOverride && html`<button onClick=${resetOverride} title="Clear manual override, return to auto-fitting">\u21BA auto</button>`}
         `}
         ${hasAnyMedia && html`<button onClick=${removeAllImages}>remove ${hasMaxSlots ? "all" : "media"}</button>`}
         ${!isSource && isLinked && html`

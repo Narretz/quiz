@@ -121,18 +121,6 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
     }
   });
 
-  // Measure answer bar height and store for PPTX export
-  useLayoutEffect(() => {
-    if (!ansBarRef.current || !withAnswers || !slideKey) return;
-    const answerH = ansBarRef.current.offsetHeight / PX;
-    if (answerH > 0) {
-      const prev = slideOverrides.value[slideKey];
-      if (!prev || prev.answerH !== answerH) {
-        slideOverrides.value = { ...slideOverrides.value, [slideKey]: { ...prev, answerH } };
-      }
-    }
-  }, [ansDe, ansEn]);
-
   // Sync answer field contents imperatively — avoid Preact overwriting user edits
   useLayoutEffect(() => {
     if (ansDeRef.current && ansDeRef.current !== document.activeElement) {
@@ -157,22 +145,21 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
     }
   }, [q?.text?.en]);
 
-  // Text fitting pass — runs after DOM is laid out
+  // Text fitting pass — runs after text sync effects so DOM content is up to date
+  const manual = manualOverrides.value[slideKey];
   useLayoutEffect(() => {
     if (!slideRef.current || !hasQuestionText) return;
     const images = slideImages.value;
-    const manual = manualOverrides.value[slideKey];
     const result = manual
       ? fitSlideText(slideRef.current, images, manual.fontSize, manual.lineSpacing)
       : fitSlideText(slideRef.current, images);
-    // Write to slideOverrides signal — used by debug inputs (ImageActions) and PPTX export
     if (result) {
       const prev = slideOverrides.value[slideKey];
-      if (!prev || prev.fontSize !== result.fontSize || prev.lineSpacing !== result.lineSpacing || prev.enY !== result.enY || prev.twoImageFrac !== result.twoImageFrac) {
+      if (!prev || prev.fontSize !== result.fontSize || prev.lineSpacing !== result.lineSpacing || prev.enY !== result.enY || prev.twoImageFrac !== result.twoImageFrac || prev.answerH !== result.answerH) {
         slideOverrides.value = { ...slideOverrides.value, [slideKey]: result };
       }
     }
-  }, [imgEntry, imgEntry1, slideKey, style.fontSize, style.lineSpacing, q?.text?.de, q?.text?.en]);
+  }, [imgEntry, imgEntry1, slideKey, style.fontSize, style.lineSpacing, q?.text?.de, q?.text?.en, ansDe, ansEn, manual]);
 
   function renderAnswerBar(isGhost) {
     const filled = !isGhost && (ansDe || ansEn);

@@ -296,6 +296,9 @@
     }
 
     .answer-bar__tag {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
         font-size: 11px;
         text-transform: uppercase;
         visibility: hidden;
@@ -303,6 +306,14 @@
         padding: 0 3px;
         opacity: 0.8;
         cursor: pointer;
+    }
+
+    .answer-bar__tag--de {
+        left: 4px;
+    }
+
+    .answer-bar__tag--en {
+        right: 4px;
     }
 
     .answer-bar:hover .answer-bar__tag,
