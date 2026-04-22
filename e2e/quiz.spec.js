@@ -222,6 +222,33 @@ test.describe("quiz loaded", () => {
     await expect(enField).toHaveText("English Title");
   });
 
+  test("round title edits sync between question and answer title slides", async ({ page }) => {
+    const questionTitle = page.locator('.slide[data-slide-id="title-r0"]');
+    const answerTitle = page.locator('.slide[data-slide-id="title-r0-ans"]');
+
+    // Edit DE on the question-phase title
+    await questionTitle.scrollIntoViewIfNeeded();
+    const qDe = questionTitle.locator(".title-bar__field").first();
+    await qDe.click();
+    await page.keyboard.press("Control+a");
+    await page.keyboard.type("Synced DE");
+    await qDe.press("Enter");
+
+    // Answer-phase title should reflect the same DE text
+    await answerTitle.scrollIntoViewIfNeeded();
+    await expect(answerTitle.locator(".title-bar__field").first()).toHaveText("Synced DE");
+
+    // Now edit EN on the answer-phase title — should propagate back to the question-phase title
+    await answerTitle.hover();
+    await answerTitle.locator(".title-bar__tag--en").click();
+    const aEn = answerTitle.locator(".title-bar__field").nth(1);
+    await page.keyboard.type("Synced EN");
+    await aEn.press("Enter");
+
+    await questionTitle.scrollIntoViewIfNeeded();
+    await expect(questionTitle.locator(".title-bar__field").nth(1)).toHaveText("Synced EN");
+  });
+
   test("round title edits persist after reload", async ({ page }) => {
     const titleSlide = page.locator('.slide[data-slide-id="title-r0"]');
     await titleSlide.scrollIntoViewIfNeeded();

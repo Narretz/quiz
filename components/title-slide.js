@@ -52,11 +52,14 @@ export function TitleSlide({ desc, descIdx, anchor, onRerender }) {
 
   function updateField(lang, text) {
     const descs = slideDescriptors.value;
-    const idx = descs.findIndex(d => d.id === id);
-    if (idx === -1) return;
-    const updated = [...descs];
-    const old = updated[idx].text || { de: "", en: "" };
-    updated[idx] = { ...updated[idx], text: { ...old, [lang]: text } };
+    const pairedId = isRoundTitle
+      ? (titleForQuestions ? `${id}-ans` : id.replace(/-ans$/, ""))
+      : null;
+    const updated = descs.map((d) => {
+      if (d.id !== id && d.id !== pairedId) return d;
+      const old = d.text || { de: "", en: "" };
+      return { ...d, text: { ...old, [lang]: text } };
+    });
     slideDescriptors.value = updated;
     scheduleSave();
     onRerender();
