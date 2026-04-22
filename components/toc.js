@@ -66,7 +66,9 @@ export function TOC() {
       for (const [id, v] of visible) {
         if (v > max) { max = v; current = id; }
       }
-      if (`#${current}` !== location.hash) {
+      if (window.scrollY === 0) {
+        if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+      } else if (`#${current}` !== location.hash) {
         history.replaceState(null, "", `#${current}`);
       }
     }
