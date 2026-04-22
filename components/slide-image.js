@@ -28,10 +28,9 @@ export function SlideImage({ src, type, name, style, imgRef, slideKey, imgIdx, i
     e.stopPropagation();
     const myData = images[myKey];
     const wasVideo = myData?.type === "video";
+    const linkedRemoved = linkedKey && images[linkedKey]?.data === myData?.data;
     removeImage(myKey);
-    if (isSource && linkedKey && images[linkedKey]?.data === myData?.data) {
-      removeImage(linkedKey);
-    }
+    if (linkedRemoved) removeImage(linkedKey);
     if (wasVideo && isSource && linkKey) {
       const r0 = slideImages.value[linkKey]?.videoFrame;
       const r1 = slideImages.value[linkKey + ":1"]?.videoFrame;
@@ -42,11 +41,11 @@ export function SlideImage({ src, type, name, style, imgRef, slideKey, imgIdx, i
         removeImage(linkKey + ":1");
       }
     }
-    // Promote image 1 to slot 0 if removing image 0
+    // Promote image 1 to slot 0 if removing image 0 (on both sides if linked removal)
     if (imgIdx === 0 && images[slideKey + ":1"]) {
       setImage(slideKey, images[slideKey + ":1"]);
       removeImage(slideKey + ":1");
-      if (isSource && linkKey && images[linkKey + ":1"]) {
+      if (linkedRemoved && images[linkKey + ":1"]) {
         setImage(linkKey, images[linkKey + ":1"]);
         removeImage(linkKey + ":1");
       }

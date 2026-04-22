@@ -343,6 +343,45 @@ test.describe("image linking", () => {
     await expect(slideImg(answer).first()).toBeVisible({ timeout: 5_000 });
   });
 
+  test("per-image remove × on answer slide removes from both question and answer", async ({ page }) => {
+    // The image on the answer slide is a copy linked to the question slide.
+    // Clicking "remove ×" should remove the whole linked pair, not just the answer copy
+    // (that's what "unlink ✂" is for).
+    const question = questionOuter(page, "r0q0", false);
+    const answer = questionOuter(page, "r0q0", true);
+
+    await addImage(question, IMG.landscape);
+    await expect(slideImg(answer).first()).toBeVisible({ timeout: 5_000 });
+
+    await answer.scrollIntoViewIfNeeded();
+    await answer.locator(".slide").hover();
+    const removeBtn = answer.locator(".slide-img-btns button", { hasText: "remove ×" });
+    await expect(removeBtn).toBeVisible();
+    await removeBtn.click();
+
+    await expect(slideImg(answer)).toHaveCount(0);
+    await question.scrollIntoViewIfNeeded();
+    await expect(slideImg(question)).toHaveCount(0);
+  });
+
+  test("per-image unlink ✂ on answer slide removes from answer only", async ({ page }) => {
+    const question = questionOuter(page, "r0q0", false);
+    const answer = questionOuter(page, "r0q0", true);
+
+    await addImage(question, IMG.landscape);
+    await expect(slideImg(answer).first()).toBeVisible({ timeout: 5_000 });
+
+    await answer.scrollIntoViewIfNeeded();
+    await answer.locator(".slide").hover();
+    const unlinkBtn = answer.locator(".slide-img-btns button", { hasText: "unlink ✂" });
+    await expect(unlinkBtn).toBeVisible();
+    await unlinkBtn.click();
+
+    await expect(slideImg(answer)).toHaveCount(0);
+    await question.scrollIntoViewIfNeeded();
+    await expect(slideImg(question).first()).toBeVisible();
+  });
+
   test("answer slide can have its own independent image after unlinking", async ({ page }) => {
     const question = questionOuter(page, "r0q0", false);
     const answer = questionOuter(page, "r0q0", true);
