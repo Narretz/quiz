@@ -227,7 +227,8 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
          data-slide-id=${id} data-answers=${withAnswers ? "1" : "0"}>
       ${q ? html`
         <div lang="de" title="German question" data-role="de" style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${qFs}px;line-height:${qLh}">
-          <span style="font-size:${numFs}px;font-weight:bold">${num}</span>${" "}<span ref=${deTextRef} contentEditable class="q-text__field"
+          <span class="q-num" style="font-size:${numFs}px;font-weight:bold"
+                onClick=${(e) => { e.stopPropagation(); focusEnd(deTextRef.current); }}>${num}</span>${" "}<span ref=${deTextRef} contentEditable class="q-text__field"
                onBlur=${(e) => {
                  const text = e.target.innerText.trim();
                  if (text === (q.text.de || "")) return;
@@ -252,7 +253,8 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
           <span class="q-text__tag q-text__tag--de" onClick=${(e) => { e.stopPropagation(); focusEnd(deTextRef.current); }}>de</span>
         </div>
         <div lang="en" title="English question" data-role="en" class=${q.text.en ? '' : 'q-block--empty'} style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${qFs}px;line-height:${qLh}">
-          <span style="font-size:${numFs}px;font-weight:bold">${num}</span>${" "}<span ref=${enTextRef} contentEditable class="q-text__field"
+          <span class="q-num" style="font-size:${numFs}px;font-weight:bold"
+                onClick=${(e) => { e.stopPropagation(); focusEnd(enTextRef.current); }}>${num}</span>${" "}<span ref=${enTextRef} contentEditable class="q-text__field"
                onBlur=${(e) => {
                  const text = e.target.innerText.trim();
                  if (text === (q.text.en || "")) return;

@@ -416,10 +416,15 @@
         outline: none;
     }
 
+    .q-num {
+        cursor: text;
+        user-select: none;
+    }
+
     .q-text__field:empty {
         display: inline-block;
-        min-width: 1em;
-        min-height: 1.2em;
+        min-width: 2em;
+        min-height: 1.3em;
         vertical-align: middle;
     }
 
