@@ -236,9 +236,9 @@ export function astToQuiz(ast) {
     const de = firstText;
     const en = cells.find((c) => c.metadata.col === 1)?.text?.trim() ?? "";
     const deAnswer =
-      cells.find((c) => c.metadata.col === 2)?.text?.trim() ?? "";
+      (cells.find((c) => c.metadata.col === 2)?.text?.trim() ?? "").replace(/\n/g, " ");
     const enAnswer =
-      cells.find((c) => c.metadata.col === 3)?.text?.trim() || deAnswer;
+      (cells.find((c) => c.metadata.col === 3)?.text?.trim() || deAnswer).replace(/\n/g, " ");
 
     currentRound.questions.push({
       text: { de, en },

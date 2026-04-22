@@ -70,6 +70,28 @@ describe("astToQuiz", () => {
     assert.deepStrictEqual(q.answers, { de: "Antwort", en: "Answer" });
   });
 
+  it("preserves newlines in question text", () => {
+    const ast = sheet([
+      row(cell(0, "Round 1", { bold: true })),
+      row(cell(0, "Zeile 1\nZeile 2"), cell(1, "Line 1\nLine 2"), cell(2, "A"), cell(3, "A")),
+    ]);
+    const quiz = astToQuiz(ast);
+    const q = quiz.rounds[0].questions[0];
+    assert.strictEqual(q.text.de, "Zeile 1\nZeile 2");
+    assert.strictEqual(q.text.en, "Line 1\nLine 2");
+  });
+
+  it("converts newlines to spaces in answer text", () => {
+    const ast = sheet([
+      row(cell(0, "Round 1", { bold: true })),
+      row(cell(0, "F"), cell(1, "Q"), cell(2, "Ant\nwort"), cell(3, "An\nswer")),
+    ]);
+    const quiz = astToQuiz(ast);
+    const q = quiz.rounds[0].questions[0];
+    assert.strictEqual(q.answers.de, "Ant wort");
+    assert.strictEqual(q.answers.en, "An swer");
+  });
+
   it("defaults EN answer to DE answer when col 3 is empty", () => {
     const ast = sheet([
       row(cell(0, "R1", { bold: true })),
