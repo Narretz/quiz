@@ -170,7 +170,8 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
            onClick=${(e) => {
              if (e.target === e.currentTarget && ansDeRef.current) ansDeRef.current.focus();
            }}>
-        <span class="answer-bar__tag answer-bar__tag--de"
+        <span title="German answer"
+              class="answer-bar__tag answer-bar__tag--de"
               onClick=${(e) => { e.stopPropagation(); focusEnd(ansDeRef.current); }}>de</span>
         <span ref=${ansDeRef} contentEditable class="answer-bar__field answer-bar__field--de"
              onBlur=${(e) => {
@@ -214,7 +215,7 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
                if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
              }}>
         </span>
-        <span class=${`answer-bar__tag answer-bar__tag--en ${!ansEn ? 'answer-bar__tag--edit' : ''}`}
+        <span title="English answer" class=${`answer-bar__tag answer-bar__tag--en ${!ansEn ? 'answer-bar__tag--edit' : ''}`}
               onClick=${(e) => { e.stopPropagation(); focusEnd(ansEnRef.current); }}>en</span>
       </div>
     `;
@@ -225,7 +226,7 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
     <div class="slide" ref=${slideRef} style="background-color:${bg};color:${style.textColor || '#000'}"
          data-slide-id=${id} data-answers=${withAnswers ? "1" : "0"}>
       ${q ? html`
-        <div lang="de" data-role="de" style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${qFs}px;line-height:${qLh}">
+        <div lang="de" title="German question" data-role="de" style="position:absolute;left:${px(pad)};top:${px(pad)};width:${px(deW)};font-size:${qFs}px;line-height:${qLh}">
           <span style="font-size:${numFs}px;font-weight:bold">${num}</span>${" "}<span ref=${deTextRef} contentEditable class="q-text__field"
                onBlur=${(e) => {
                  const text = e.target.innerText.trim();
@@ -250,7 +251,7 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
                }}></span>
           <span class="q-text__tag q-text__tag--de" onClick=${(e) => { e.stopPropagation(); focusEnd(deTextRef.current); }}>de</span>
         </div>
-        <div lang="en" data-role="en" class=${q.text.en ? '' : 'q-block--empty'} style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${qFs}px;line-height:${qLh}">
+        <div lang="en" title="English question" data-role="en" class=${q.text.en ? '' : 'q-block--empty'} style="position:absolute;left:${px(pad)};top:${px(2.5)};width:${px(enW)};font-size:${qFs}px;line-height:${qLh}">
           <span style="font-size:${numFs}px;font-weight:bold">${num}</span>${" "}<span ref=${enTextRef} contentEditable class="q-text__field"
                onBlur=${(e) => {
                  const text = e.target.innerText.trim();
