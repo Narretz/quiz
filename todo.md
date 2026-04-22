@@ -1,4 +1,17 @@
-# Validation
+# Layout
+
+- No Phones: image juts into text in pptx (margin not respected?) ✅
+- videos don't have preview image in pptx, only distorted icon ✅
+- answer area with long answers still bigger than with short answers (gueye) but with batistuta as well for some reason
+  -> probably fixed by other text fitting changes
+- 2 golden rules: text overlaps ✅
+- Lego ideas: description text overlaps ✅
+- cannot add some question text in line with the question number ✅
+- when video is playing, hide answer bar
+- editing titles out of sync between question/answer ✅
+- adding long answers does not reposition the question text ✅
+
+# Validation ✅
 
 - check if answer(s) are in either text block
 - check if all question slides have at least some content: questions have either text or media, answers have either different media or answer in one language
@@ -22,7 +35,7 @@
 - Feld für Email-Adresse ✅
 - format multiple choice questions
 
-# Bilingual round titles (de/en)
+# Bilingual round titles (de/en) ✅
 
 Currently `desc.text` for title slides is a plain string. To support separate DE/EN:
 
