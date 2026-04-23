@@ -3,3 +3,4 @@ extracted-old/
 quizzes/
 test-results/
 .claude/worktrees
+tmp/
