@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { astToQuiz } from "../quiz-core.js";
+import { astToQuiz, normalizeQuizStructure } from "../quiz-core.js";
 
 // --- AST builders (mimic officeparser output) ---
 
@@ -302,5 +302,116 @@ describe("astToQuiz", () => {
       const quiz = astToQuiz(ast);
       assert.strictEqual(quiz.rounds[0].name, "Solo");
     });
+  });
+});
+
+describe("normalizeQuizStructure", () => {
+  function makeRound(name, qCount) {
+    return {
+      name,
+      description: { de: "", en: "" },
+      questions: Array.from({ length: qCount }, () => ({
+        text: { de: "Q", en: "Q" },
+        answers: { de: "A", en: "A" },
+      })),
+    };
+  }
+
+  function goodQuiz() {
+    return {
+      date: "2026-01-01",
+      rounds: [
+        makeRound("R1", 10),
+        makeRound("R2", 10),
+        makeRound("R3", 10),
+        makeRound("R4", 10),
+        makeRound("Name 10", 1),
+        makeRound("Jackpot!", 4),
+      ],
+    };
+  }
+
+  it("accepts a valid 6-round quiz unchanged", () => {
+    const quiz = goodQuiz();
+    normalizeQuizStructure(quiz);
+    assert.deepStrictEqual(quiz.rounds.map((r) => r.questions.length), [10, 10, 10, 10, 1, 4]);
+  });
+
+  it("fills placeholder rounds up to target counts", () => {
+    const quiz = goodQuiz();
+    quiz.rounds[1].questions = [];
+    quiz.rounds[3].questions = [];
+    quiz.rounds[4].questions = [];
+    quiz.rounds[5].questions = [];
+    normalizeQuizStructure(quiz);
+    assert.deepStrictEqual(quiz.rounds.map((r) => r.questions.length), [10, 10, 10, 10, 1, 4]);
+    // Filled questions are empty
+    assert.deepStrictEqual(quiz.rounds[1].questions[0], { text: { de: "", en: "" }, answers: { de: "", en: "" } });
+  });
+
+  it("fills a partially-populated round up to target", () => {
+    const quiz = goodQuiz();
+    quiz.rounds[0].questions = quiz.rounds[0].questions.slice(0, 5);
+    normalizeQuizStructure(quiz);
+    assert.strictEqual(quiz.rounds[0].questions.length, 10);
+    // Existing five are preserved with their text
+    assert.strictEqual(quiz.rounds[0].questions[4].text.de, "Q");
+    // New five are empty
+    assert.strictEqual(quiz.rounds[0].questions[5].text.de, "");
+  });
+
+  it("throws with round summary when there are fewer than 6 rounds", () => {
+    const quiz = goodQuiz();
+    quiz.rounds = quiz.rounds.slice(0, 4);
+    assert.throws(
+      () => normalizeQuizStructure(quiz),
+      (err) => {
+        assert.match(err.message, /Expected 6 rounds, found 4/);
+        assert.match(err.message, /"R1" \(10 q\)/);
+        assert.match(err.message, /"R4" \(10 q\)/);
+        assert.match(err.message, /bold title row/);
+        return true;
+      },
+    );
+  });
+
+  it("throws when there are more than 6 rounds", () => {
+    const quiz = goodQuiz();
+    quiz.rounds.push(makeRound("Extra", 0));
+    assert.throws(() => normalizeQuizStructure(quiz), /Expected 6 rounds, found 7/);
+  });
+
+  it("throws with '(none)' when there are no rounds at all", () => {
+    assert.throws(
+      () => normalizeQuizStructure({ rounds: [] }),
+      /Expected 6 rounds, found 0: \(none\)/,
+    );
+  });
+
+  it("throws when a regular round has more than 10 questions", () => {
+    const quiz = goodQuiz();
+    quiz.rounds[2].questions.push({ text: { de: "Extra", en: "Extra" }, answers: { de: "", en: "" } });
+    assert.throws(
+      () => normalizeQuizStructure(quiz),
+      /Round 3 \("R3"\) has 11 questions; expected at most 10/,
+    );
+  });
+
+  it("throws when Name 10 round has more than 1 question", () => {
+    const quiz = goodQuiz();
+    quiz.rounds[4].questions.push({ text: { de: "Extra", en: "Extra" }, answers: { de: "", en: "" } });
+    assert.throws(
+      () => normalizeQuizStructure(quiz),
+      /Round 5 \("Name 10"\) has 2 questions; expected at most 1/,
+    );
+  });
+
+  it("throws when Jackpot round has more than 4 questions", () => {
+    const quiz = goodQuiz();
+    quiz.rounds[5].questions.push({ text: { de: "Extra", en: "Extra" }, answers: { de: "", en: "" } });
+    assert.throws(
+      () => normalizeQuizStructure(quiz),
+      /Round 6 \("Jackpot!"\) has 5 questions; expected at most 4/,
+    );
   });
 });

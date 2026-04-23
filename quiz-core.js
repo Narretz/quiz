@@ -228,6 +228,44 @@ export function normalizeSavedQuiz(saved) {
   };
 }
 
+/**
+ * Validates a parsed quiz has the expected 6-round shape and fills each round
+ * up to its target question count with empty questions. Having fewer questions
+ * than expected is fine (they get filled). Having MORE than the target is an
+ * error the user must fix in the xlsx. Call after astToQuiz on upload; the
+ * parser itself stays pure so unit tests can check isolated parsing behaviors
+ * with smaller fixtures.
+ *
+ * Target question counts:
+ *   rounds 1-4: 10
+ *   round 5 (Name 10): 1
+ *   round 6 (Jackpot): 4
+ */
+export function normalizeQuizStructure(quiz) {
+  const rounds = quiz?.rounds || [];
+  if (rounds.length !== 6) {
+    const summary = rounds.map((r) => `"${r.name}" (${r.questions.length} q)`).join(", ") || "(none)";
+    throw new Error(
+      `Expected 6 rounds, found ${rounds.length}: ${summary}. ` +
+      `Check that each round starts with a bold title row.`
+    );
+  }
+  const targets = [10, 10, 10, 10, 1, 4];
+  for (let i = 0; i < 6; i++) {
+    const r = rounds[i];
+    const n = r.questions.length;
+    const target = targets[i];
+    if (n > target) {
+      throw new Error(
+        `Round ${i + 1} ("${r.name}") has ${n} questions; expected at most ${target}.`
+      );
+    }
+    while (r.questions.length < target) {
+      r.questions.push({ text: { de: "", en: "" }, answers: { de: "", en: "" } });
+    }
+  }
+}
+
 export function astToQuiz(ast) {
   const sheet =
     ast.content.find((s) => s.metadata.sheetName === "Tabelle1") ??

@@ -25,6 +25,52 @@ test.describe("upload", () => {
     await expect(page.locator(".status")).toContainText("rounds");
   });
 
+  test("shows a main-menu error when upload fails to parse", async ({ page }) => {
+    await page.goto("/");
+    const fileInput = page.locator('input[type="file"][accept=".xlsx"]');
+    // Feed a non-xlsx file — officeParser will throw.
+    await fileInput.setInputFiles({ name: "broken.xlsx", mimeType: "application/octet-stream", buffer: Buffer.from("not a real xlsx") });
+
+    const errorBanner = page.locator(".main-status--error");
+    await expect(errorBanner).toBeVisible({ timeout: 10_000 });
+    await expect(errorBanner).toContainText("Error:");
+    // Still on the home view (no slides were rendered).
+    await expect(page.locator(".slide")).toHaveCount(0);
+  });
+
+  test("shows a main-menu error when a round is missing", async ({ page }) => {
+    await page.goto("/");
+    const fileInput = page.locator('input[type="file"][accept=".xlsx"]');
+    await fileInput.setInputFiles(path.resolve("tests/files/missing-round.xlsx"));
+
+    const errorBanner = page.locator(".main-status--error");
+    await expect(errorBanner).toBeVisible({ timeout: 10_000 });
+    await expect(errorBanner).toContainText("Expected 6 rounds, found 5");
+    await expect(page.locator(".slide")).toHaveCount(0);
+  });
+
+  test("shows a main-menu error when the first round title is missing", async ({ page }) => {
+    await page.goto("/");
+    const fileInput = page.locator('input[type="file"][accept=".xlsx"]');
+    await fileInput.setInputFiles(path.resolve("tests/files/missing-first-round-title.xlsx"));
+
+    const errorBanner = page.locator(".main-status--error");
+    await expect(errorBanner).toBeVisible({ timeout: 10_000 });
+    await expect(errorBanner).toContainText("Expected 6 rounds, found 5");
+    await expect(page.locator(".slide")).toHaveCount(0);
+  });
+
+  test("shows a main-menu error when a round has too many questions", async ({ page }) => {
+    await page.goto("/");
+    const fileInput = page.locator('input[type="file"][accept=".xlsx"]');
+    await fileInput.setInputFiles(path.resolve("tests/files/too-many-questions.xlsx"));
+
+    const errorBanner = page.locator(".main-status--error");
+    await expect(errorBanner).toBeVisible({ timeout: 10_000 });
+    await expect(errorBanner).toContainText("has 11 questions");
+    await expect(page.locator(".slide")).toHaveCount(0);
+  });
+
   test("persists quiz and shows it in saved list", async ({ page }) => {
     await page.goto("/");
     const fileInput = page.locator('input[type="file"][accept=".xlsx"]');

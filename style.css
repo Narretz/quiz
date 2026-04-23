@@ -172,6 +172,22 @@
         color: #666;
     }
 
+    .main-status {
+        margin: 0.75rem 0 1rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        background: #eff4ff;
+        color: #1e3a8a;
+        border: 1px solid #c7d2fe;
+    }
+
+    .main-status--error {
+        background: #fee2e2;
+        color: #991b1b;
+        border-color: #fca5a5;
+    }
+
     .quiz-stats {
         font-size: 0.85rem;
         color: #666;

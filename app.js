@@ -35,6 +35,8 @@ function App() {
 
   const quizLoaded = !!currentQuiz.value;
   const quizLabel = quizLoaded ? (currentQuiz.value.name || currentQuizId.value) : "";
+  const statusText = status.value;
+  const isError = statusText.startsWith("Error:");
 
   return html`
     <h1>
@@ -59,6 +61,7 @@ function App() {
           <span>Load a saved quiz</span><${SavedQuizBar} onLoad=${loadSavedQuiz} />
         </label>
       </div>
+      ${statusText && html`<div class=${`main-status ${isError ? 'main-status--error' : ''}`}>${statusText}</div>`}
       <div class="howto">
         <h2>How does it work?</h2>
         <p>Upload an .xlsx file in the usual format. A quiz is created with the default structure and slides.</p>
