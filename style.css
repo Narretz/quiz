@@ -188,6 +188,11 @@
         border-color: #fca5a5;
     }
 
+    .main-status a {
+        color: inherit;
+        text-decoration: underline;
+    }
+
     .quiz-stats {
         font-size: 0.85rem;
         color: #666;

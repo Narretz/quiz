@@ -61,11 +61,16 @@ function App() {
           <span>Load a saved quiz</span><${SavedQuizBar} onLoad=${loadSavedQuiz} />
         </label>
       </div>
-      ${statusText && html`<div class=${`main-status ${isError ? 'main-status--error' : ''}`}>${statusText}</div>`}
+      ${statusText && html`
+        <div class=${`main-status ${isError ? 'main-status--error' : ''}`}>
+          ${statusText}
+          ${isError && html` — <a href="lib/assets/example-quiz.xlsx" download="example-quiz.xlsx">Download an example .xlsx</a> to see the expected format.`}
+        </div>
+      `}
       <div class="howto">
         <h2>How does it work?</h2>
         <ul>
-          <li>You can upload an .xlsx file in a specific format. A quiz is created with the questions, and the default service slides.</li>
+          <li>You can upload an .xlsx file in a specific format (<a href="lib/assets/example-quiz.xlsx" download="example-quiz.xlsx">download an example</a>). A quiz is created with the questions, and the default service slides.</li>
           <li>Or you can create a blank quiz with 4x10 rounds, Name 10, and a Jackpot Round, and all the service slides</li>
           <li>Quizzes are saved locally in this browser, so you can load quizzes later and continue editing.</li>
         </ul>

@@ -69,6 +69,10 @@ test.describe("upload", () => {
     await expect(errorBanner).toBeVisible({ timeout: 10_000 });
     await expect(errorBanner).toContainText("has 11 questions");
     await expect(page.locator(".slide")).toHaveCount(0);
+
+    // Error banner includes a link to download the example xlsx.
+    const exampleLink = errorBanner.locator("a[download]");
+    await expect(exampleLink).toHaveAttribute("href", /example-quiz\.xlsx$/);
   });
 
   test("persists quiz and shows it in saved list", async ({ page }) => {
