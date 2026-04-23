@@ -146,6 +146,7 @@
         font-size: 0.9rem;
         background: #2563eb;
         color: #fff;
+        text-transform: none;
     }
 
     button:disabled {
