@@ -1,0 +1,16 @@
+# GitHub Pages config — Jekyll just passes files through.
+# Dev-only files/folders are excluded from the served site. The runtime
+# example xlsx in lib/assets/ is intentionally kept.
+exclude:
+  - node_modules
+  - .husky
+  - e2e
+  - tests
+  - cli.js
+  - generate-pptx.js
+  - parse-quiz.js
+  - package.json
+  - package-lock.json
+  - playwright.config.js
+  - README.md
+  - CLAUDE.md
