@@ -3,7 +3,7 @@ import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { INTRO_SLIDES } from "../lib/intro-slides.js";
 import { SLIDE_STYLE, getSlideImages } from "../quiz-core.js";
-import { PT_SCALE, px, PX, layoutImageBelowText, layoutTwoImagesBelowText } from "../lib/utils.js";
+import { PT_SCALE, px, PX, layoutImageBelowText, layoutTwoImagesBelowText, layoutImageBelowY, layoutTwoImagesBelowY } from "../lib/utils.js";
 import { slideStyle, slideImages, jackpotSize, quizEmail } from "../lib/state.js";
 import { ImageActions } from "./image-actions.js";
 import { SlideImage } from "./slide-image.js";
@@ -131,32 +131,32 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc, descIdx }
   }
 
   if (style === "golden-rules") {
-    const { pad: p } = SLIDE_STYLE;
+    const rulesY = imgEntry ? data.imgRulesStartY : data.rulesStartY;
+    const rH = imgEntry ? data.imgRuleHeight : data.ruleHeight;
+    const ruleFs = imgEntry ? (data.imgRuleFontSize ?? data.ruleFontSize) : data.ruleFontSize;
+    const textBottom = rulesY + data.rules.length * rH;
 
     if (imgEntry) {
-      const textRef = useRef(null);
       const imgElRef = useRef(null);
       const img1ElRef = useRef(null);
 
       useLayoutEffect(() => {
         if (hasTwoImages) {
-          layoutTwoImagesBelowText(textRef.current, imgElRef.current, img1ElRef.current, imgEntry, imgEntry1);
+          layoutTwoImagesBelowY(imgElRef.current, img1ElRef.current, imgEntry, imgEntry1, textBottom);
         } else {
-          layoutImageBelowText(textRef.current, imgElRef.current, imgEntry);
+          layoutImageBelowY(imgElRef.current, imgEntry, textBottom);
         }
       });
 
       return html`
         <div class="slide-outer" data-desc-idx=${descIdx}>
           <div class="slide" style="background-color:${bg};color:${fg}">
-            <div ref=${textRef} style="position:absolute;left:0;top:${px(p)};width:100%;text-align:center">
-              <div style="font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
-                ${data.title.text}
-              </div>
-              ${data.rules.map((rule) => html`
-                <div style="font-size:${data.ruleFontSize * PT_SCALE}px;color:${c(data.ruleColor)};margin-top:4px">${rule}</div>
-              `)}
+            <div style="position:absolute;left:0;top:${px(data.titleY)};width:100%;text-align:center;font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
+              ${data.title.text}
             </div>
+            ${data.rules.map((rule, ri) => html`
+              <div style="position:absolute;left:0;top:${px(rulesY + ri * rH)};width:100%;text-align:center;font-size:${ruleFs * PT_SCALE}px;color:${c(data.ruleColor)}">${rule}</div>
+            `)}
             <${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} imgRef=${imgElRef} slideKey=${slideKey} imgIdx=${0}
                  isSource=${false} linkKey=${null} onRerender=${onRerender} />
             ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} type=${imgEntry1.type} name=${imgEntry1.name} imgRef=${img1ElRef} slideKey=${slideKey} imgIdx=${1}
@@ -175,7 +175,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc, descIdx }
             ${data.title.text}
           </div>
           ${data.rules.map((rule, ri) => html`
-            <div style="position:absolute;left:0;top:${px(data.rulesStartY + ri * data.ruleHeight)};width:100%;text-align:center;font-size:${data.ruleFontSize * PT_SCALE}px;color:${c(data.ruleColor)}">${rule}</div>
+            <div style="position:absolute;left:0;top:${px(rulesY + ri * rH)};width:100%;text-align:center;font-size:${ruleFs * PT_SCALE}px;color:${c(data.ruleColor)}">${rule}</div>
           `)}
           ${mediaOverlay()}
         </div>

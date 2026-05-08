@@ -574,17 +574,17 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
   }
 
   if (style === "golden-rules") {
-    const titleY = imgEntry ? pad : data.titleY;
-    const rulesY = imgEntry ? pad + 0.6 : data.rulesStartY;
+    const rulesY = imgEntry ? data.imgRulesStartY : data.rulesStartY;
+    const rH = imgEntry ? data.imgRuleHeight : (data.ruleHeight || 1.0);
+    const ruleFs = imgEntry ? (data.imgRuleFontSize ?? data.ruleFontSize) : data.ruleFontSize;
     slide.addText(data.title.text, {
-      x: 0, y: titleY, w: "100%", h: 0.6,
+      x: 0, y: data.titleY, w: "100%", h: 0.6,
       fontSize: data.title.fontSize, bold: true, underline: true, color: resolveColor(data.title.color), align: "center",
     });
-    const rH = data.ruleHeight || 1.0;
     data.rules.forEach((rule, ri) => {
       slide.addText(rule, {
         x: 0, y: rulesY + ri * rH, w: "100%", h: rH,
-        fontSize: data.ruleFontSize, color: resolveColor(data.ruleColor), align: "center", valign: "middle",
+        fontSize: ruleFs, color: resolveColor(data.ruleColor), align: "center", valign: "middle",
       });
     });
     if (imgEntry) {

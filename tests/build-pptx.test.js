@@ -424,20 +424,74 @@ describe("buildPptx", () => {
     });
   });
 
-  describe("golden-rules rule height", () => {
-    it("uses ruleHeight from template data for rule spacing", () => {
+  describe("golden-rules layout", () => {
+    const grData = INTRO_SLIDES.find((s) => s.id === "golden-rules");
+    const fakeImg = { data: "data:image/png;base64,abc", width: 800, height: 600 };
+
+    function ruleTexts(slide) {
+      return slide.texts.filter((t) => typeof t.content === "string" && /^\d\./.test(t.content));
+    }
+    function titleText(slide) {
+      return slide.texts.find((t) => t.content === grData.title.text);
+    }
+
+    it("uses ruleHeight and ruleFontSize from template data without image", () => {
       const grIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "golden-rules");
       assert.ok(grIdx !== -1, "golden-rules descriptor should exist");
       const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
       const slide = pptx.slides[grIdx];
 
-      const ruleTexts = slide.texts.filter((t) => typeof t.content === "string" && t.content.startsWith("1.") || typeof t.content === "string" && t.content.startsWith("2."));
-      assert.strictEqual(ruleTexts.length, 2, "should have 2 rule text boxes");
-      const rH = ruleTexts[1].opts.y - ruleTexts[0].opts.y;
-      assert.ok(Math.abs(rH - 1.2) < 0.01,
-        `rule spacing ${rH} should be ~1.2 (ruleHeight from template)`);
-      assert.ok(Math.abs(ruleTexts[0].opts.h - 1.2) < 0.01,
-        `rule box height ${ruleTexts[0].opts.h} should be ~1.2`);
+      const rules = ruleTexts(slide);
+      assert.strictEqual(rules.length, 2, "should have 2 rule text boxes");
+      assert.ok(Math.abs(rules[0].opts.y - grData.rulesStartY) < 0.01,
+        `first rule y ${rules[0].opts.y} should equal rulesStartY ${grData.rulesStartY}`);
+      const rH = rules[1].opts.y - rules[0].opts.y;
+      assert.ok(Math.abs(rH - grData.ruleHeight) < 0.01,
+        `rule spacing ${rH} should equal ruleHeight ${grData.ruleHeight}`);
+      assert.strictEqual(rules[0].opts.fontSize, grData.ruleFontSize);
+    });
+
+    it("uses imgRuleHeight and imgRuleFontSize when image is present", () => {
+      const grIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "golden-rules");
+      const images = { "intro-3:0": fakeImg };
+      const pptx = buildPptx(descriptors, PptxSpy, images, {}, {}, {}, questions);
+      const slide = pptx.slides[grIdx];
+
+      const rules = ruleTexts(slide);
+      assert.strictEqual(rules.length, 2);
+      assert.ok(Math.abs(rules[0].opts.y - grData.imgRulesStartY) < 0.01,
+        `first rule y ${rules[0].opts.y} should equal imgRulesStartY ${grData.imgRulesStartY}`);
+      const rH = rules[1].opts.y - rules[0].opts.y;
+      assert.ok(Math.abs(rH - grData.imgRuleHeight) < 0.01,
+        `rule spacing ${rH} should equal imgRuleHeight ${grData.imgRuleHeight}`);
+      assert.strictEqual(rules[0].opts.fontSize, grData.imgRuleFontSize);
+    });
+
+    it("keeps title at titleY in both image and no-image modes", () => {
+      const grIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "golden-rules");
+
+      const noImg = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const titleNoImg = titleText(noImg.slides[grIdx]);
+      assert.ok(titleNoImg, "title text should render");
+      assert.ok(Math.abs(titleNoImg.opts.y - grData.titleY) < 0.01);
+
+      const withImg = buildPptx(descriptors, PptxSpy, { "intro-3:0": fakeImg }, {}, {}, {}, questions);
+      const titleWithImg = titleText(withImg.slides[grIdx]);
+      assert.ok(Math.abs(titleWithImg.opts.y - grData.titleY) < 0.01,
+        "title should stay at titleY when image is added");
+    });
+
+    it("places image below the rules block", () => {
+      const grIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "golden-rules");
+      const images = { "intro-3:0": fakeImg };
+      const pptx = buildPptx(descriptors, PptxSpy, images, {}, {}, {}, questions);
+      const slide = pptx.slides[grIdx];
+
+      assert.strictEqual(slide.images.length, 1, "should add one image");
+      const expectedTextBottom = grData.imgRulesStartY + grData.rules.length * grData.imgRuleHeight;
+      const expectedImgTop = expectedTextBottom + SLIDE_STYLE.pad;
+      assert.ok(slide.images[0].y >= expectedImgTop - 0.01,
+        `image y ${slide.images[0].y} should be >= ${expectedImgTop} (textBottom + pad)`);
     });
   });
 
