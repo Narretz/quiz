@@ -248,11 +248,10 @@ describe("buildPptx", () => {
       const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions, { jackpotSize: 300 });
       const slide = pptx.slides[jackpotTitleIdx];
 
-      // 300 + ~50 for today
       const hasSubtitle = slide.texts.some((t) =>
-        typeof t.content === "string" && t.content.includes("ca. 350 €")
+        typeof t.content === "string" && t.content.includes(`ca. ${300 + DEFAULT_MONEY} €`)
       );
-      assert.ok(hasSubtitle, "Jackpot title should show ca. 350 €");
+      assert.ok(hasSubtitle, `Jackpot title should show ca. ${300 + DEFAULT_MONEY} €`);
     });
 
     it("does add jackpot subtitle with DEFAULT_MONEY when jackpotSize is 0", () => {

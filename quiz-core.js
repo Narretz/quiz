@@ -9,7 +9,7 @@ import { INTRO_SLIDES, EXTRA_SLIDES } from "./lib/intro-slides.js";
  * jackpot size when it was just cracked: 10 teams, each 5€ entry fee
  * @type {Number}
  */
-export const DEFAULT_MONEY = 50;
+export const DEFAULT_MONEY = 70;
 
 /** Slide dimensions and font sizes — single source of truth for PPTX and preview. */
 export const SLIDE_STYLE = {
