@@ -359,12 +359,12 @@ describe("validateQuiz", () => {
       assert.equal(forR0.length, 0);
     });
 
-    it("labels Antworten divider slides as Answers 1 and Answers 2", () => {
+    it("does not flag Antworten divider slides for missing media", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz));
       const labels = issues.filter((i) => i.message === messages.TITLE_NO_IMAGE).map((i) => i.label);
-      assert.ok(labels.includes("Answers 1"));
-      assert.ok(labels.includes("Answers 2"));
+      assert.ok(!labels.includes("Answers 1"), "Answers 1 (antworten-s0) should be exempt from no-media check");
+      assert.ok(!labels.includes("Answers 2"), "Answers 2 (antworten-s1) should be exempt from no-media check");
     });
 
     it("shows round name string (not [object Object]) for bilingual title descriptors", () => {
