@@ -30,11 +30,15 @@ export const SLIDE_STYLE = {
 export const AUDIO_DIMENSIONS = { width: 280, height: 80 };
 
 /**
- * Effective click-to-reveal state for an answer slide.
- * Jackpot answer descriptors default to on (desc.jackpot); user can override via `reveals[slideKey]`.
+ * Effective click-to-reveal state for a slide.
+ * - Question answer slides: jackpot defaults on (desc.jackpot); user can override via `reveals[slideKey]`.
+ * - Intro/extra slides: opt in via `data.reveal` (e.g. "image", "lines"); the renderer tags the
+ *   matching shape with objectName="reveal-answer", which the post-processor animates.
  */
 export function isRevealEffective(reveals, desc) {
-  if (!desc || desc.type !== "question" || !desc.withAnswers) return false;
+  if (!desc) return false;
+  if (desc.type === "intro") return !!desc.data?.reveal;
+  if (desc.type !== "question" || !desc.withAnswers) return false;
   const explicit = reveals?.[`${desc.id}:1`];
   return explicit == null ? !!desc.jackpot : !!explicit;
 }
@@ -429,7 +433,7 @@ function resolveColor(c) {
 }
 
 /** Add an image below text, contain-fit to remaining slide space. */
-function addImageBelowText(slide, entry, textBottom) {
+function addImageBelowText(slide, entry, textBottom, opts = {}) {
   const { pad, width: W, height: H } = SLIDE_STYLE;
   const imgTop = textBottom + pad;
   const boxW = W - 2 * pad;
@@ -437,15 +441,17 @@ function addImageBelowText(slide, entry, textBottom) {
   if (boxH <= 0) return;
   const ar = entry.width / entry.height;
   const { w, h } = fit(boxW, boxH, ar);
-  slide.addImage({
+  const imgOpts = {
     data: entry.data,
     x: (W - w) / 2, y: imgTop, w, h,
     sizing: { type: "contain", w, h },
-  });
+  };
+  if (opts.objectName) imgOpts.objectName = opts.objectName;
+  slide.addImage(imgOpts);
 }
 
 /** Add two images side-by-side below text, contain-fit to remaining slide space. */
-function addTwoImagesBelowText(slide, entry0, entry1, textBottom) {
+function addTwoImagesBelowText(slide, entry0, entry1, textBottom, opts = {}) {
   const { pad, width: W, height: H } = SLIDE_STYLE;
   const imgTop = textBottom + pad;
   const fullW = W - 2 * pad;
@@ -453,14 +459,18 @@ function addTwoImagesBelowText(slide, entry0, entry1, textBottom) {
   if (boxH <= 0) return;
   const gap = pad;
   const boxW = (fullW - gap) / 2;
+  let first = true;
   for (const [entry, xOff] of [[entry0, pad], [entry1, pad + boxW + gap]]) {
     const ar = entry.width / entry.height;
     const { w, h } = fit(boxW, boxH, ar);
-    slide.addImage({
+    const imgOpts = {
       data: entry.data,
       x: xOff + (boxW - w) / 2, y: imgTop + (boxH - h) / 2, w, h,
       sizing: { type: "contain", w, h },
-    });
+    };
+    if (first && opts.objectName) imgOpts.objectName = opts.objectName;
+    slide.addImage(imgOpts);
+    first = false;
   }
 }
 
@@ -579,8 +589,9 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
     });
     if (imgEntry) {
       const textBottom = rulesY + data.rules.length * rH;
-      if (hasTwoImages) addTwoImagesBelowText(slide, imgEntry, imgEntry1, textBottom);
-      else addImageBelowText(slide, imgEntry, textBottom);
+      const imgOpts = data.reveal === "image" ? { objectName: "reveal-answer" } : {};
+      if (hasTwoImages) addTwoImagesBelowText(slide, imgEntry, imgEntry1, textBottom, imgOpts);
+      else addImageBelowText(slide, imgEntry, textBottom, imgOpts);
     }
     return;
   }
@@ -603,25 +614,34 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
       }
       if (y != null) y += lh;
     }
+    const revealOpts = data.reveal === "lines" ? { objectName: "reveal-answer" } : {};
     if (imgEntry) {
+      let firstText = true;
       for (const g of groups) {
-        slide.addText(g.runs, { x: pad, y: g.y, w: W - 2 * pad, h: g.h, align: "center", valign: "top" });
+        const opts = { x: pad, y: g.y, w: W - 2 * pad, h: g.h, align: "center", valign: "top" };
+        if (firstText && revealOpts.objectName) opts.objectName = revealOpts.objectName;
+        slide.addText(g.runs, opts);
+        firstText = false;
       }
       if (hasTwoImages) addTwoImagesBelowText(slide, imgEntry, imgEntry1, y);
       else addImageBelowText(slide, imgEntry, y);
     } else if (groups.length === 1) {
-      slide.addText(groups[0].runs, { x: pad, y: 0, w: W - 2 * pad, h: "100%", align: "center", valign: "middle" });
+      slide.addText(groups[0].runs, { x: pad, y: 0, w: W - 2 * pad, h: "100%", align: "center", valign: "middle", ...revealOpts });
     } else {
       // Multiple groups with gaps — center the whole block vertically
       const totalH = groups.reduce((sum, g) => sum + g.h, 0) + data.lines.reduce((sum, l) => sum + (l.marginTop || 0), 0);
       let cy = (H - totalH) / 2;
+      let firstText = true;
       for (let gi = 0; gi < groups.length; gi++) {
         const g = groups[gi];
         // Find marginTop of first line in this group
         const lineIdx = groups.slice(0, gi).reduce((sum, gg) => sum + gg.runs.length, 0);
         const firstLine = data.lines[lineIdx];
         if (firstLine?.marginTop) cy += firstLine.marginTop;
-        slide.addText(g.runs, { x: pad, y: cy, w: W - 2 * pad, h: g.h, align: "center", valign: "top" });
+        const opts = { x: pad, y: cy, w: W - 2 * pad, h: g.h, align: "center", valign: "top" };
+        if (firstText && revealOpts.objectName) opts.objectName = revealOpts.objectName;
+        slide.addText(g.runs, opts);
+        firstText = false;
         cy += g.h;
       }
     }

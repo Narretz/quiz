@@ -298,6 +298,32 @@ describe("buildPptx", () => {
       const tagged = slide.texts.find((t) => t.opts.objectName === "reveal-answer");
       assert.ok(!tagged, "explicit reveal=false should un-tag the jackpot answer bar");
     });
+
+    it("tags the golden-rules image with reveal-answer when reveal=image and image present", () => {
+      const grIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "golden-rules");
+      const fakeImg = { data: "data:image/png;base64,abc", width: 800, height: 600 };
+      const images = { "intro-3:0": fakeImg };
+      const pptx = buildPptx(descriptors, PptxSpy, images, {}, {}, {}, questions);
+      const slide = pptx.slides[grIdx];
+      const tagged = slide.images.find((i) => i.objectName === "reveal-answer");
+      assert.ok(tagged, "golden-rules image should be tagged for click-to-reveal");
+    });
+
+    it("does not tag golden-rules when no image is present", () => {
+      const grIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "golden-rules");
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[grIdx];
+      const tagged = slide.images.find((i) => i.objectName === "reveal-answer");
+      assert.ok(!tagged, "no image means nothing to tag");
+    });
+
+    it("tags the begin slide text with reveal-answer when reveal=lines", () => {
+      const beginIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "begin");
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[beginIdx];
+      const tagged = slide.texts.find((t) => t.opts.objectName === "reveal-answer");
+      assert.ok(tagged, "begin slide text should be tagged for click-to-reveal");
+    });
   });
 
   describe("image-below-text positioning", () => {
