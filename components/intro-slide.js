@@ -53,12 +53,12 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc, descIdx }
     const sections = data.sections.filter((sec) => !sec.showIf || vars[sec.showIf]);
     const cp = data.contentPad || 0;
     const compact = imgEntry && data.compactWhenImage;
+    const scale = compact?.fontSizeScale ?? 1;
     const titleY = imgEntry && !compact ? SLIDE_STYLE.pad : data.titleY;
-    const sectionStartY = compact ? compact.sectionStartY
-      : (imgEntry ? SLIDE_STYLE.pad + 0.6 : data.sectionStartY);
-    const sectionGap = compact?.sectionGap ?? data.sectionGap;
-    const defaultFontSize = compact?.defaultFontSize ?? data.defaultFontSize;
-    const lineHeight = compact?.lineHeight ?? data.lineHeight;
+    const sectionStartY = compact?.sectionStartY ?? (imgEntry ? SLIDE_STYLE.pad + 0.6 : data.sectionStartY);
+    const sectionGap = compact?.sectionGap ?? (data.sectionGap * scale);
+    const defaultFontSize = compact?.defaultFontSize ?? (data.defaultFontSize * scale);
+    const lineHeight = compact?.lineHeight ?? (data.lineHeight * scale);
 
     let textBottom = sectionStartY;
     const sectionEls = sections.map((sec, si) => {
@@ -66,7 +66,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc, descIdx }
       const lines = sec.lines.filter((line) => !line.showIf || vars[line.showIf]);
       const sectionH = sec.wrap ? (sectionGap || (SLIDE_STYLE.height - y)) : lines.length * lineHeight;
       textBottom = Math.max(textBottom, y + sectionH);
-      const renderRuns = (runs) => runs.map((r) => html`<span style="color:${c(r.color || data.defaultColor)};${r.bold ? 'font-weight:bold;' : ''}${r.underline ? 'text-decoration:underline;' : ''}${r.fontSize ? `font-size:${r.fontSize * PT_SCALE}px;` : ''}">${replaceVars(r.text, vars)}</span>`);
+      const renderRuns = (runs) => runs.map((r) => html`<span style="color:${c(r.color || data.defaultColor)};${r.bold ? 'font-weight:bold;' : ''}${r.underline ? 'text-decoration:underline;' : ''}${r.fontSize !== undefined ? `font-size:${r.fontSize * scale * PT_SCALE}px;` : ''}">${replaceVars(r.text, vars)}</span>`);
       // Centered sections (no bullet) span the full slide width so long single
       // lines fit without wrapping; bulleted/wrap sections keep contentPad.
       const useFullWidth = !sec.bullet;

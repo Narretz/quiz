@@ -525,12 +525,15 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
     const sections = data.sections.filter((sec) => !sec.showIf || vars[sec.showIf]);
     const cp = data.contentPad || 0;
     const compact = imgEntry && data.compactWhenImage;
+    // Explicit overrides win; otherwise fontSizeScale (default 1) is applied
+    // to font sizes and spacings. Positions (titleY, sectionStartY) are not
+    // scaled — they're absolute placements.
+    const scale = compact?.fontSizeScale ?? 1;
     const titleY = imgEntry && !compact ? pad : data.titleY;
-    const sectionStartY = compact ? compact.sectionStartY
-      : (imgEntry ? pad + 0.6 : data.sectionStartY);
-    const sectionGap = compact?.sectionGap ?? data.sectionGap;
-    const defaultFontSize = compact?.defaultFontSize ?? data.defaultFontSize;
-    const lineHeight = compact?.lineHeight ?? data.lineHeight;
+    const sectionStartY = compact?.sectionStartY ?? (imgEntry ? pad + 0.6 : data.sectionStartY);
+    const sectionGap = compact?.sectionGap ?? (data.sectionGap * scale);
+    const defaultFontSize = compact?.defaultFontSize ?? (data.defaultFontSize * scale);
+    const lineHeight = compact?.lineHeight ?? (data.lineHeight * scale);
     slide.addText(data.title.text, {
       x: 0, y: titleY, w: "100%", h: 0.6,
       fontSize: data.title.fontSize, bold: true, underline: true,
@@ -544,7 +547,7 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
         const runs = line.runs.map((r) => ({
           text: replaceVars(r.text, vars),
           options: {
-            fontSize: r.fontSize || defaultFontSize,
+            fontSize: r.fontSize !== undefined ? r.fontSize * scale : defaultFontSize,
             bold: r.bold || false,
             underline: r.underline || false,
             color: resolveColor(r.color || data.defaultColor),

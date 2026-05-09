@@ -148,8 +148,12 @@ Defined in `lib/intro-slides.js` as templates with precise positioning (in inche
 
 Three rendering styles are dispatched on `data.style`:
 - `welcome` — unique layout (logo background + toucans + title/subtitle).
-- `rules` — title at top, then a list of sections with rich-text lines. Per-section `bullet` prepends a marker; `wrap: true` renders the section as one text block (auto-wrapping); `lineValign: "middle"` centers each line vertically in its `lineHeight` row. Slide-level `contentPad` widens horizontal padding; `compactWhenImage: { defaultFontSize, sectionStartY, sectionGap, lineHeight }` overrides values when an image is present (used by golden-rules to keep title at `titleY`); `reveal: "image"` tags the image with `objectName: "reveal-answer"` for click-to-reveal. Used by intro-1 rules, intro-2 format (with `wrap`+`bullet`), intro-3 golden-rules (with `compactWhenImage`+`lineValign:middle`+`reveal:image`), prizes, goodbye.
-- `begin` — vertically-centered stack of lines with optional `marginTop` between groups; `reveal: "lines"` tags the first text block. Used by intro-4 begin, break-1, break-2, points, no-phones.
+- `rules` — title at top, then a list of sections with rich-text lines. Per-section `bullet` prepends a marker; `wrap: true` renders the section as one text block (auto-wrapping); `lineValign: "middle"` centers each line vertically in its `lineHeight` row. Slide-level `contentPad` widens horizontal padding; `noImages: true` forbids image actions; `reveal: "image"` tags the image with `objectName: "reveal-answer"` for click-to-reveal. `compactWhenImage` shrinks the slide when an image is present — see below. Used by intro-1 rules, intro-2 format (with `wrap`+`bullet`), intro-3 golden-rules (with `compactWhenImage`+`lineValign:middle`+`reveal:image`), prizes, goodbye.
+- `begin` — vertically-centered stack of lines with optional `marginTop` between groups. Line heights are wrap-aware (estimate computed from text length × fontSize / frame width). `reveal: "lines"` tags the first text block. `compactWhenImage` shrinks fonts and margins (see below). Used by intro-4 begin, break-1, break-2, points, no-phones.
+
+**`compactWhenImage`** has the same shape on both styles:
+- `fontSizeScale: <number>` — multiplies all font sizes (data + per-run) and spacings (lineHeight, sectionGap, marginTop) by this factor when an image is present. Convenient for proportional shrinking.
+- For `rules`, explicit absolute overrides also work and take precedence: `defaultFontSize`, `sectionStartY`, `sectionGap`, `lineHeight`. Used by golden-rules where the compact font/spacing/position aren't a uniform scale of the normal values.
 
 ### Debug Mode
 
