@@ -582,8 +582,11 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
   if (style === "begin") {
     // Split lines into groups separated by marginTop gaps. Each line's box
     // height accounts for word wrap so long bilingual sentences don't push
-    // into the next group's box.
+    // into the next group's box. When an image is present and the template
+    // opts in via compactWhenImage.fontSizeScale, all font sizes and margins
+    // shrink proportionally so the image gets more room.
     const frameW = W - 2 * pad;
+    const scale = (imgEntry && data.compactWhenImage?.fontSizeScale) || 1;
     const lineH = (pts, wraps = 1) => (pts / 72) * 1.2 * wraps;
     const wrapLines = (text, pts) => {
       const charW = pts * 0.55 / 72; // rough Arial average; bold runs slightly wider
@@ -593,16 +596,17 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
     const groups = []; // [{ y, runs, h }]
     let y = imgEntry ? pad : null; // absolute positioning for image layout, null for centered
     for (const l of data.lines) {
-      if (l.marginTop && y != null) y += l.marginTop;
-      const fs = l.fontSize || 20;
+      const margin = (l.marginTop || 0) * scale;
+      if (margin && y != null) y += margin;
+      const fs = (l.fontSize || 20) * scale;
       const lh = lineH(fs, wrapLines(l.text, fs));
-      const run = { text: l.text + "\n", options: { fontSize: l.fontSize, bold: !!l.bold, color: resolveColor(l.color) } };
+      const run = { text: l.text + "\n", options: { fontSize: fs, bold: !!l.bold, color: resolveColor(l.color) } };
       const lastGroup = groups[groups.length - 1];
       if (lastGroup && !l.marginTop) {
         lastGroup.runs.push(run);
         lastGroup.h += lh;
       } else {
-        groups.push({ y, runs: [run], h: lh });
+        groups.push({ y, runs: [run], h: lh, marginTop: margin });
       }
       if (y != null) y += lh;
     }

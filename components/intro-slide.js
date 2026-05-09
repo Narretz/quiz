@@ -117,12 +117,13 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc, descIdx }
 
     if (imgEntry) {
       const { pad: p } = SLIDE_STYLE;
+      const scale = data.compactWhenImage?.fontSizeScale || 1;
       return html`
         <div class="slide-outer" data-desc-idx=${descIdx}>
           <div class="slide" style="background-color:${bg};color:${fg}">
             <div ref=${textRef} style="position:absolute;left:${px(p)};top:${px(p)};width:${px(SLIDE_STYLE.width - 2 * p)};text-align:center">
               ${data.lines.map((l) => html`
-                <div style="font-size:${l.fontSize * PT_SCALE}px;${l.bold ? 'font-weight:bold;' : ''}color:${c(l.color)};${l.marginTop ? `margin-top:${l.marginTop * PX}px;` : ''}">${l.text}</div>
+                <div style="font-size:${(l.fontSize * scale) * PT_SCALE}px;${l.bold ? 'font-weight:bold;' : ''}color:${c(l.color)};${l.marginTop ? `margin-top:${l.marginTop * scale * PX}px;` : ''}">${l.text}</div>
               `)}
             </div>
             <${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} imgRef=${imgElRef} slideKey=${slideKey} imgIdx=${0}
