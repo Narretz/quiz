@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import path from "path";
 import { seedQuiz } from "./seed.js";
+import { DEFAULT_MONEY } from "../quiz-core.js";
 
 test.describe("quiz loaded", () => {
   test.beforeEach(async ({ page }) => {
@@ -91,16 +92,14 @@ test.describe("quiz loaded", () => {
     await jackpotInput.fill("300");
     await jackpotInput.press("Enter");
 
+    const expected = `ca. ${300 + DEFAULT_MONEY} €`;
     const jackpotTitle = page.locator('.slide[data-slide-id="title-r5"]');
     await jackpotTitle.scrollIntoViewIfNeeded();
-    // 50 extra for today
-    await expect(jackpotTitle).toContainText("ca. 350 €");
+    await expect(jackpotTitle).toContainText(expected);
 
     const jackpotAnsTitle = page.locator('.slide[data-slide-id="title-r5-ans"]');
     await jackpotAnsTitle.scrollIntoViewIfNeeded();
-    // 50 extra for today
-    await expect(jackpotTitle).toContainText("ca. 350 €");
-
+    await expect(jackpotAnsTitle).toContainText(expected);
   });
 
   test("email input updates goodbye slide", async ({ page }) => {
