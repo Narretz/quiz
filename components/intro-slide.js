@@ -67,9 +67,14 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc, descIdx }
       const sectionH = sec.wrap ? (sectionGap || (SLIDE_STYLE.height - y)) : lines.length * lineHeight;
       textBottom = Math.max(textBottom, y + sectionH);
       const renderRuns = (runs) => runs.map((r) => html`<span style="color:${c(r.color || data.defaultColor)};${r.bold ? 'font-weight:bold;' : ''}${r.underline ? 'text-decoration:underline;' : ''}${r.fontSize ? `font-size:${r.fontSize * PT_SCALE}px;` : ''}">${replaceVars(r.text, vars)}</span>`);
+      // Centered sections (no bullet) span the full slide width so long single
+      // lines fit without wrapping; bulleted/wrap sections keep contentPad.
+      const useFullWidth = !sec.bullet;
+      const sx = useFullWidth ? 0 : SLIDE_STYLE.pad + cp;
+      const sw = useFullWidth ? SLIDE_STYLE.width : SLIDE_STYLE.width - 2 * SLIDE_STYLE.pad - 2 * cp;
       const wrapStyles = sec.wrap ? `height:${px(sectionH)};overflow:hidden;` : '';
       return html`
-        <div style="position:absolute;left:${px(SLIDE_STYLE.pad + cp)};top:${px(y)};width:${px(SLIDE_STYLE.width - 2 * SLIDE_STYLE.pad - 2 * cp)};${wrapStyles}font-size:${defaultFontSize * PT_SCALE}px;text-align:center;color:${c(data.defaultColor)};line-height:${lineHeight * PX}px">
+        <div style="position:absolute;left:${px(sx)};top:${px(y)};width:${px(sw)};${wrapStyles}font-size:${defaultFontSize * PT_SCALE}px;text-align:center;color:${c(data.defaultColor)};line-height:${lineHeight * PX}px">
           ${lines.map((line) => html`<div>${sec.bullet ? sec.bullet + " " : null}${renderRuns(line.runs)}</div>`)}
         </div>
       `;

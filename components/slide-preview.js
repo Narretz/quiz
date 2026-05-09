@@ -126,8 +126,10 @@ export function SlidePreview() {
           anchor = tocEntries[tocIdx].anchor;
           tocIdx++;
         }
-        // Intro slides 0-2 have no media support (id=null); intro 3+ and extra slides do
-        const introId = desc.introIndex != null ? (desc.introIndex >= 3 ? desc.id : null) : desc.id;
+        // Intro slides 0-2 have no media support (id=null); intro 3+ and extra slides do,
+        // unless the template opts out via noImages (e.g., prizes — no room for an image).
+        const introId = desc.data?.noImages ? null
+          : (desc.introIndex != null ? (desc.introIndex >= 3 ? desc.id : null) : desc.id);
         elements.push(html`<${IntroSlide} key=${"i-" + i} introIndex=${desc.introIndex} desc=${desc} descIdx=${i} anchor=${anchor} id=${introId} onRerender=${onRerender} />`);
       } else if (desc.type === "description") {
         elements.push(html`<${DescriptionSlide} key=${"d-" + i} desc=${desc} descIdx=${i} onRerender=${onRerender} />`);

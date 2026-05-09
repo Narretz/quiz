@@ -86,15 +86,13 @@ const variations = [
   { label: "no-phones no image",       data: ex("no-phones"),      id: "v-np-noimg" },
   { label: "no-phones + image",        data: ex("no-phones"),      id: "v-np-img",   imgs: [landscape] },
 
-  // --- rules style without compactWhenImage: prizes ---
-  { label: "prizes no image",          data: ex("prizes"),         id: "v-prizes-noimg" },
-  { label: "prizes + image",           data: ex("prizes"),         id: "v-prizes-img",  imgs: [portrait] },
-  { label: "prizes + 2 images",        data: ex("prizes"),         id: "v-prizes-img2", imgs: [portrait, landscape] },
+  // --- rules style: prizes (noImages — image support intentionally disabled) ---
+  { label: "prizes (no images allowed)", data: ex("prizes"),       id: "v-prizes" },
 
-  // --- goodbye: rules style with showIf email ---
-  { label: "goodbye no image, no email",  data: ex("goodbye"),     id: "v-gb-noemail" },
-  { label: "goodbye no image, email",     data: ex("goodbye"),     id: "v-gb-email" },
-  { label: "goodbye + image, email",      data: ex("goodbye"),     id: "v-gb-emailimg", imgs: [landscape] },
+  // --- goodbye: rules style with showIf email + compactWhenImage ---
+  { label: "goodbye no image",            data: ex("goodbye"),     id: "v-gb-noimg" },
+  { label: "goodbye + 1 image",           data: ex("goodbye"),     id: "v-gb-img1", imgs: [landscape] },
+  { label: "goodbye + 2 images",          data: ex("goodbye"),     id: "v-gb-img2", imgs: [portrait, landscape] },
 ];
 
 // Insert a small "label" title slide before each variation so the PPTX is browsable.

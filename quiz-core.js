@@ -489,7 +489,7 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
   if (!data) return;
   const { width: W, height: H, pad } = SLIDE_STYLE;
   const style = data.style || data.id; // migration fallback for old saves
-  const slideKey = desc?.id ? `${desc.id}:0` : null;
+  const slideKey = desc?.id && !data.noImages ? `${desc.id}:0` : null;
   const [imgEntry, imgEntry1] = slideKey && images ? getSlideImages(images, slideKey) : [null, null];
 
   if (style === "welcome") {
@@ -560,9 +560,13 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
         slide.addText(allRuns, { x: pad + cp, y, w: W - 2 * pad - 2 * cp, h: sectionH, valign: "top" });
         textBottom = Math.max(textBottom, y + sectionH);
       } else {
+        // Centered text: use the full slide width so long lines fit without
+        // wrapping. Visual padding comes from align:center, not from the frame.
+        const x = sec.bullet ? pad + cp : 0;
+        const w = sec.bullet ? W - 2 * pad - 2 * cp : "100%";
         let ly = y;
         for (const line of lines) {
-          const opts = { x: pad + cp, y: ly, w: W - 2 * pad - 2 * cp, h: lineHeight, align: "center" };
+          const opts = { x, y: ly, w, h: lineHeight, align: "center" };
           if (sec.lineValign || data.lineValign) opts.valign = sec.lineValign || data.lineValign;
           slide.addText(lineToRuns(line), opts);
           ly += lineHeight;
@@ -576,13 +580,22 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
   }
 
   if (style === "begin") {
-    // Split lines into groups separated by marginTop gaps
-    const lineH = (pts) => (pts / 72) * 1.2;
+    // Split lines into groups separated by marginTop gaps. Each line's box
+    // height accounts for word wrap so long bilingual sentences don't push
+    // into the next group's box.
+    const frameW = W - 2 * pad;
+    const lineH = (pts, wraps = 1) => (pts / 72) * 1.2 * wraps;
+    const wrapLines = (text, pts) => {
+      const charW = pts * 0.55 / 72; // rough Arial average; bold runs slightly wider
+      const cpl = Math.max(1, Math.floor(frameW / charW));
+      return text.split("\n").reduce((sum, seg) => sum + Math.max(1, Math.ceil((seg.length || 1) / cpl)), 0);
+    };
     const groups = []; // [{ y, runs, h }]
     let y = imgEntry ? pad : null; // absolute positioning for image layout, null for centered
     for (const l of data.lines) {
       if (l.marginTop && y != null) y += l.marginTop;
-      const lh = lineH(l.fontSize || 20);
+      const fs = l.fontSize || 20;
+      const lh = lineH(fs, wrapLines(l.text, fs));
       const run = { text: l.text + "\n", options: { fontSize: l.fontSize, bold: !!l.bold, color: resolveColor(l.color) } };
       const lastGroup = groups[groups.length - 1];
       if (lastGroup && !l.marginTop) {

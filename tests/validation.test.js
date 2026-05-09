@@ -321,7 +321,8 @@ describe("validateQuiz", () => {
       const quiz = fullQuiz();
       const issues = validateQuiz(inputs(quiz));
       const extraIssues = issues.filter((i) => i.message === messages.SPECIAL_SLIDE_NO_IMAGE);
-      // break-1, points, break-2, prizes, no-phones, goodbye + intro-3 (golden-rules), intro-4 (begin) = 8
+      // break-1, points, break-2, no-phones, goodbye + intro-3 (golden-rules), intro-4 (begin) = 7
+      // (prizes opts out via noImages)
       assert.ok(extraIssues.length >= 6);
     });
 
@@ -334,9 +335,15 @@ describe("validateQuiz", () => {
       assert.ok(labels.includes("Break 1"));
       assert.ok(labels.includes("Points 1"));
       assert.ok(labels.includes("Break 2"));
-      assert.ok(labels.includes("Points 2"));
       assert.ok(labels.includes("No Phones"));
       assert.ok(labels.includes("Goodbye"));
+    });
+
+    it("does not flag slides whose template opts out via noImages (e.g. prizes)", () => {
+      const quiz = fullQuiz();
+      const issues = validateQuiz(inputs(quiz));
+      const labels = issues.filter((i) => i.message === messages.SPECIAL_SLIDE_NO_IMAGE).map((i) => i.label);
+      assert.ok(!labels.includes("Points 2"), "prizes (Points 2) should be exempt");
     });
 
     it("does not flag intros 0-2 (no image support)", () => {
