@@ -375,8 +375,19 @@ describe("buildPptx", () => {
 
       const textEl = slide.texts.find((t) => Array.isArray(t.content) && t.content.some((r) => r.text?.includes("NO PHONES!")));
       assert.ok(textEl, "NO PHONES! text should be present");
-      // Single group, no image → full-slide centered layout
       assert.strictEqual(textEl.opts.h, "100%", "without image, text box should be 100% height (centered)");
+    });
+
+    it("passes per-line outline and highlight through to addText runs", () => {
+      const noPhonesIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "no-phones");
+      const noPhonesData = descriptors[noPhonesIdx].data;
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[noPhonesIdx];
+
+      const textEl = slide.texts.find((t) => Array.isArray(t.content) && t.content.some((r) => r.text?.includes("NO PHONES!")));
+      const run = textEl.content.find((r) => r.text?.includes("NO PHONES!"));
+      assert.deepStrictEqual(run.options.outline, noPhonesData.lines[0].outline,
+        "outline from template should be on the run");
     });
   });
 

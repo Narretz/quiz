@@ -603,7 +603,10 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
       if (margin && y != null) y += margin;
       const fs = (l.fontSize || 20) * scale;
       const lh = lineH(fs, wrapLines(l.text, fs));
-      const run = { text: l.text + "\n", options: { fontSize: fs, bold: !!l.bold, color: resolveColor(l.color) } };
+      const runOpts = { fontSize: fs, bold: !!l.bold, color: resolveColor(l.color) };
+      if (l.outline) runOpts.outline = l.outline;
+      if (l.highlight) runOpts.highlight = l.highlight;
+      const run = { text: l.text + "\n", options: runOpts };
       const lastGroup = groups[groups.length - 1];
       if (lastGroup && !l.marginTop) {
         lastGroup.runs.push(run);

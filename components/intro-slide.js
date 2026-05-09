@@ -137,11 +137,17 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc, descIdx }
       `;
     }
 
+    const extra = (l) => {
+      let s = '';
+      if (l.outline) s += `-webkit-text-stroke:${l.outline.size}px #${l.outline.color};`;
+      if (l.highlight) s += `background-color:#${l.highlight};`;
+      return s;
+    };
     return html`
       <div class="slide-outer" data-desc-idx=${descIdx}>
         <div class="slide title-slide" style="background-color:${bg};color:${fg}">
           ${data.lines.map((l) => html`
-            <div style="font-size:${l.fontSize * PT_SCALE}px;${l.bold ? 'font-weight:bold;' : ''}color:${c(l.color)};padding:0 ${px(SLIDE_STYLE.pad)};${l.marginTop ? `margin-top:${l.marginTop * PX}px;` : ''}">${l.text}</div>
+            <div style="font-size:${l.fontSize * PT_SCALE}px;${l.bold ? 'font-weight:bold;' : ''}color:${c(l.color)};padding:0 ${px(SLIDE_STYLE.pad)};${l.marginTop ? `margin-top:${l.marginTop * PX}px;` : ''}${extra(l)}">${l.text}</div>
           `)}
           ${mediaOverlay()}
         </div>
