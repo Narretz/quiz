@@ -208,6 +208,10 @@ export function normalizeSavedQuiz(saved) {
             text: { de: d.text, en: "" },
             subtitle: typeof d.subtitle === "string" ? { de: d.subtitle, en: "" } : d.subtitle,
           };
+        if (d.type === "intro" && (d.data?.style === "format" || d.data?.style === "golden-rules")) {
+          const fresh = INTRO_SLIDES.find((s) => s.id === d.data.id);
+          if (fresh) return { ...d, data: fresh };
+        }
         return d;
       })
     : buildSlideDescriptors(saved.quiz);
@@ -432,6 +436,13 @@ function resolveColor(c) {
   return (c || SLIDE_STYLE.textColor).replace("#", "");
 }
 
+/** Convenience wrapper: dispatch to one- or two-image variant, no-op if no image. */
+function addImagesBelowText(slide, imgEntry, imgEntry1, textBottom, opts = {}) {
+  if (!imgEntry) return;
+  if (imgEntry1) addTwoImagesBelowText(slide, imgEntry, imgEntry1, textBottom, opts);
+  else addImageBelowText(slide, imgEntry, textBottom, opts);
+}
+
 /** Add an image below text, contain-fit to remaining slide space. */
 function addImageBelowText(slide, entry, textBottom, opts = {}) {
   const { pad, width: W, height: H } = SLIDE_STYLE;
@@ -480,7 +491,6 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
   const style = data.style || data.id; // migration fallback for old saves
   const slideKey = desc?.id ? `${desc.id}:0` : null;
   const [imgEntry, imgEntry1] = slideKey && images ? getSlideImages(images, slideKey) : [null, null];
-  const hasTwoImages = imgEntry && imgEntry1;
 
   if (style === "welcome") {
     // Background logo — full slide, cover
@@ -513,86 +523,55 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
   if (style === "rules") {
     const vars = { money, email };
     const sections = data.sections.filter((sec) => !sec.showIf || vars[sec.showIf]);
-    const titleY = imgEntry ? pad : data.titleY;
-    let sectionStartY = imgEntry ? pad + 0.6 : data.sectionStartY;
+    const cp = data.contentPad || 0;
+    const compact = imgEntry && data.compactWhenImage;
+    const titleY = imgEntry && !compact ? pad : data.titleY;
+    const sectionStartY = compact ? compact.sectionStartY
+      : (imgEntry ? pad + 0.6 : data.sectionStartY);
+    const sectionGap = compact?.sectionGap ?? data.sectionGap;
+    const defaultFontSize = compact?.defaultFontSize ?? data.defaultFontSize;
+    const lineHeight = compact?.lineHeight ?? data.lineHeight;
     slide.addText(data.title.text, {
       x: 0, y: titleY, w: "100%", h: 0.6,
-      fontSize: data.title.fontSize, bold: true, underline: true, color: resolveColor(data.title.color), align: "center",
+      fontSize: data.title.fontSize, bold: true, underline: true,
+      color: resolveColor(data.title.color), align: "center", fontFace: data.title.fontFace,
     });
     let textBottom = sectionStartY;
     sections.forEach((sec, si) => {
-      let y = sectionStartY + si * data.sectionGap;
-      for (const line of sec.lines) {
-        if (line.showIf && !vars[line.showIf]) continue;
+      const y = sectionStartY + si * sectionGap;
+      const lines = sec.lines.filter((line) => !line.showIf || vars[line.showIf]);
+      const lineToRuns = (line) => {
         const runs = line.runs.map((r) => ({
           text: replaceVars(r.text, vars),
           options: {
-            fontSize: r.fontSize || data.defaultFontSize,
+            fontSize: r.fontSize || defaultFontSize,
             bold: r.bold || false,
             underline: r.underline || false,
-            color: resolveColor(r.color),
-          },
-        }));
-        slide.addText(runs, { x: pad, y, w: W - 2 * pad, h: data.lineHeight, align: "center" });
-        y += data.lineHeight;
-        textBottom = Math.max(textBottom, y);
-      }
-    });
-    if (imgEntry) {
-      if (hasTwoImages) addTwoImagesBelowText(slide, imgEntry, imgEntry1, textBottom);
-      else addImageBelowText(slide, imgEntry, textBottom);
-    }
-    return;
-  }
-
-  if (style === "format") {
-    const cp = data.contentPad || 0;
-    slide.addText(data.title.text, {
-      x: 0, y: data.titleY, w: "100%", h: 0.6,
-      fontSize: data.title.fontSize, bold: !!data.title.bold, underline: true, color: resolveColor(data.title.color),
-      align: "center", fontFace: data.title.fontFace,
-    });
-    data.sections.forEach((sec, si) => {
-      const y = data.sectionStartY + si * data.sectionGap;
-      const allRuns = [];
-      for (const line of sec.lines) {
-        const runs = line.runs.map((r) => ({
-          text: r.text,
-          options: {
-            fontSize: r.fontSize || data.defaultFontSize,
-            bold: r.bold || false,
             color: resolveColor(r.color || data.defaultColor),
           },
         }));
-        runs[0].text = sec.bullet + " " + runs[0].text;
-        allRuns.push(...runs, { text: "\n" });
+        if (sec.bullet) runs[0].text = sec.bullet + " " + runs[0].text;
+        return runs;
+      };
+      if (sec.wrap) {
+        const allRuns = [];
+        for (const line of lines) allRuns.push(...lineToRuns(line), { text: "\n" });
+        const sectionH = sectionGap || (H - y);
+        slide.addText(allRuns, { x: pad + cp, y, w: W - 2 * pad - 2 * cp, h: sectionH, valign: "top" });
+        textBottom = Math.max(textBottom, y + sectionH);
+      } else {
+        let ly = y;
+        for (const line of lines) {
+          const opts = { x: pad + cp, y: ly, w: W - 2 * pad - 2 * cp, h: lineHeight, align: "center" };
+          if (sec.lineValign || data.lineValign) opts.valign = sec.lineValign || data.lineValign;
+          slide.addText(lineToRuns(line), opts);
+          ly += lineHeight;
+          textBottom = Math.max(textBottom, ly);
+        }
       }
-      const sectionH = data.sectionGap || (H - y);
-      slide.addText(allRuns, { x: pad + cp, y, w: W - 2 * pad - 2 * cp, h: sectionH, valign: "top" });
     });
-    return;
-  }
-
-  if (style === "golden-rules") {
-    const rulesY = imgEntry ? data.imgRulesStartY : data.rulesStartY;
-    const rH = imgEntry ? data.imgRuleHeight : (data.ruleHeight || 1.0);
-    const ruleFs = imgEntry ? (data.imgRuleFontSize ?? data.ruleFontSize) : data.ruleFontSize;
-    slide.addText(data.title.text, {
-      x: 0, y: data.titleY, w: "100%", h: 0.6,
-      fontSize: data.title.fontSize, bold: true, underline: true, color: resolveColor(data.title.color), align: "center",
-    });
-    data.rules.forEach((rule, ri) => {
-      slide.addText(rule, {
-        x: 0, y: rulesY + ri * rH, w: "100%", h: rH,
-        fontSize: ruleFs, color: resolveColor(data.ruleColor), align: "center", valign: "middle",
-      });
-    });
-    if (imgEntry) {
-      const textBottom = rulesY + data.rules.length * rH;
-      const imgOpts = data.reveal === "image" ? { objectName: "reveal-answer" } : {};
-      if (hasTwoImages) addTwoImagesBelowText(slide, imgEntry, imgEntry1, textBottom, imgOpts);
-      else addImageBelowText(slide, imgEntry, textBottom, imgOpts);
-    }
+    const imgOpts = data.reveal === "image" ? { objectName: "reveal-answer" } : {};
+    addImagesBelowText(slide, imgEntry, imgEntry1, textBottom, imgOpts);
     return;
   }
 
@@ -623,8 +602,7 @@ function renderIntroSlide(slide, data, assets, desc, images, money, email) {
         slide.addText(g.runs, opts);
         firstText = false;
       }
-      if (hasTwoImages) addTwoImagesBelowText(slide, imgEntry, imgEntry1, y);
-      else addImageBelowText(slide, imgEntry, y);
+      addImagesBelowText(slide, imgEntry, imgEntry1, y);
     } else if (groups.length === 1) {
       slide.addText(groups[0].runs, { x: pad, y: 0, w: W - 2 * pad, h: "100%", align: "center", valign: "middle", ...revealOpts });
     } else {

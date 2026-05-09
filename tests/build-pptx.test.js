@@ -426,45 +426,50 @@ describe("buildPptx", () => {
 
   describe("golden-rules layout", () => {
     const grData = INTRO_SLIDES.find((s) => s.id === "golden-rules");
+    const grLines = grData.sections[0].lines;
     const fakeImg = { data: "data:image/png;base64,abc", width: 800, height: 600 };
 
     function ruleTexts(slide) {
-      return slide.texts.filter((t) => typeof t.content === "string" && /^\d\./.test(t.content));
+      return slide.texts.filter((t) =>
+        Array.isArray(t.content) && /^\d\./.test(t.content[0]?.text || "")
+      );
     }
     function titleText(slide) {
       return slide.texts.find((t) => t.content === grData.title.text);
     }
 
-    it("uses ruleHeight and ruleFontSize from template data without image", () => {
+    it("uses lineHeight and defaultFontSize from template data without image", () => {
       const grIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "golden-rules");
       assert.ok(grIdx !== -1, "golden-rules descriptor should exist");
       const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
       const slide = pptx.slides[grIdx];
 
       const rules = ruleTexts(slide);
-      assert.strictEqual(rules.length, 2, "should have 2 rule text boxes");
-      assert.ok(Math.abs(rules[0].opts.y - grData.rulesStartY) < 0.01,
-        `first rule y ${rules[0].opts.y} should equal rulesStartY ${grData.rulesStartY}`);
+      assert.strictEqual(rules.length, grLines.length, `should have ${grLines.length} rule text boxes`);
+      assert.ok(Math.abs(rules[0].opts.y - grData.sectionStartY) < 0.01,
+        `first rule y ${rules[0].opts.y} should equal sectionStartY ${grData.sectionStartY}`);
       const rH = rules[1].opts.y - rules[0].opts.y;
-      assert.ok(Math.abs(rH - grData.ruleHeight) < 0.01,
-        `rule spacing ${rH} should equal ruleHeight ${grData.ruleHeight}`);
-      assert.strictEqual(rules[0].opts.fontSize, grData.ruleFontSize);
+      assert.ok(Math.abs(rH - grData.lineHeight) < 0.01,
+        `rule spacing ${rH} should equal lineHeight ${grData.lineHeight}`);
+      assert.strictEqual(rules[0].content[0].options.fontSize, grData.defaultFontSize);
+      assert.strictEqual(rules[0].opts.valign, "middle", "rules should be vertically centered in their box");
     });
 
-    it("uses imgRuleHeight and imgRuleFontSize when image is present", () => {
+    it("uses compactWhenImage overrides when image is present", () => {
       const grIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "golden-rules");
       const images = { "intro-3:0": fakeImg };
       const pptx = buildPptx(descriptors, PptxSpy, images, {}, {}, {}, questions);
       const slide = pptx.slides[grIdx];
+      const compact = grData.compactWhenImage;
 
       const rules = ruleTexts(slide);
-      assert.strictEqual(rules.length, 2);
-      assert.ok(Math.abs(rules[0].opts.y - grData.imgRulesStartY) < 0.01,
-        `first rule y ${rules[0].opts.y} should equal imgRulesStartY ${grData.imgRulesStartY}`);
+      assert.strictEqual(rules.length, grLines.length);
+      assert.ok(Math.abs(rules[0].opts.y - compact.sectionStartY) < 0.01,
+        `first rule y ${rules[0].opts.y} should equal compact.sectionStartY ${compact.sectionStartY}`);
       const rH = rules[1].opts.y - rules[0].opts.y;
-      assert.ok(Math.abs(rH - grData.imgRuleHeight) < 0.01,
-        `rule spacing ${rH} should equal imgRuleHeight ${grData.imgRuleHeight}`);
-      assert.strictEqual(rules[0].opts.fontSize, grData.imgRuleFontSize);
+      assert.ok(Math.abs(rH - compact.lineHeight) < 0.01,
+        `rule spacing ${rH} should equal compact.lineHeight ${compact.lineHeight}`);
+      assert.strictEqual(rules[0].content[0].options.fontSize, compact.defaultFontSize);
     });
 
     it("keeps title at titleY in both image and no-image modes", () => {
@@ -478,7 +483,7 @@ describe("buildPptx", () => {
       const withImg = buildPptx(descriptors, PptxSpy, { "intro-3:0": fakeImg }, {}, {}, {}, questions);
       const titleWithImg = titleText(withImg.slides[grIdx]);
       assert.ok(Math.abs(titleWithImg.opts.y - grData.titleY) < 0.01,
-        "title should stay at titleY when image is added");
+        "title should stay at titleY when image is added (compactWhenImage prevents shift)");
     });
 
     it("places image below the rules block", () => {
@@ -486,12 +491,176 @@ describe("buildPptx", () => {
       const images = { "intro-3:0": fakeImg };
       const pptx = buildPptx(descriptors, PptxSpy, images, {}, {}, {}, questions);
       const slide = pptx.slides[grIdx];
+      const compact = grData.compactWhenImage;
 
       assert.strictEqual(slide.images.length, 1, "should add one image");
-      const expectedTextBottom = grData.imgRulesStartY + grData.rules.length * grData.imgRuleHeight;
+      const expectedTextBottom = compact.sectionStartY + grLines.length * compact.lineHeight;
       const expectedImgTop = expectedTextBottom + SLIDE_STYLE.pad;
       assert.ok(slide.images[0].y >= expectedImgTop - 0.01,
         `image y ${slide.images[0].y} should be >= ${expectedImgTop} (textBottom + pad)`);
+    });
+  });
+
+  describe("rules style with image", () => {
+    const fakeImg = { data: "data:image/png;base64,abc", width: 800, height: 600 };
+
+    it("uses titleY and sectionStartY from template when no image", () => {
+      const rulesIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "rules");
+      const rulesData = descriptors[rulesIdx].data;
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[rulesIdx];
+
+      const title = slide.texts.find((t) => t.content === rulesData.title.text);
+      assert.ok(title, "title should render");
+      assert.strictEqual(title.opts.y, rulesData.titleY, "title y should equal template titleY");
+      assert.strictEqual(slide.images.length, 0, "no image should be added");
+    });
+
+    it("moves title to pad and shifts sections up when image present", () => {
+      const rulesIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "rules");
+      const rulesData = descriptors[rulesIdx].data;
+      const pptx = buildPptx(descriptors, PptxSpy, { "intro-1:0": fakeImg }, {}, {}, {}, questions);
+      const slide = pptx.slides[rulesIdx];
+
+      const title = slide.texts.find((t) => t.content === rulesData.title.text);
+      assert.strictEqual(title.opts.y, SLIDE_STYLE.pad, "title should move to pad with image");
+
+      const lineBlocks = slide.texts.filter((t) => Array.isArray(t.content));
+      assert.ok(lineBlocks.length > 0, "should have line text blocks");
+      const minLineY = Math.min(...lineBlocks.map((t) => t.opts.y));
+      assert.ok(minLineY < rulesData.sectionStartY,
+        `first line y ${minLineY} should be above template sectionStartY ${rulesData.sectionStartY} when image present`);
+    });
+
+    it("places image below text bottom", () => {
+      const rulesIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "rules");
+      const pptx = buildPptx(descriptors, PptxSpy, { "intro-1:0": fakeImg }, {}, {}, {}, questions);
+      const slide = pptx.slides[rulesIdx];
+
+      assert.strictEqual(slide.images.length, 1, "should add one image");
+      const textBottoms = slide.texts
+        .filter((t) => typeof t.opts.y === "number" && typeof t.opts.h === "number")
+        .map((t) => t.opts.y + t.opts.h);
+      const maxTextBottom = Math.max(...textBottoms);
+      assert.ok(slide.images[0].y >= maxTextBottom - 0.01,
+        `image y ${slide.images[0].y} should be >= text bottom ${maxTextBottom}`);
+    });
+
+    it("filters out sections whose showIf var is empty (goodbye email)", () => {
+      const goodbyeIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "goodbye");
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions, { email: "" });
+      const slide = pptx.slides[goodbyeIdx];
+
+      const hasEmailLine = slide.texts.some((t) =>
+        Array.isArray(t.content) && t.content.some((r) => r.text?.includes("{email}"))
+      );
+      assert.ok(!hasEmailLine, "{email} placeholder line should be filtered when email empty");
+    });
+  });
+
+  describe("format style layout", () => {
+    it("renders underlined title at template titleY", () => {
+      const formatIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "format");
+      const formatData = descriptors[formatIdx].data;
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[formatIdx];
+
+      const title = slide.texts.find((t) => t.content === formatData.title.text);
+      assert.ok(title, "title should render");
+      assert.strictEqual(title.opts.y, formatData.titleY);
+      assert.ok(title.opts.underline, "title should be underlined");
+    });
+
+    it("renders one text block per section at sectionStartY + i*sectionGap", () => {
+      const formatIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "format");
+      const formatData = descriptors[formatIdx].data;
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[formatIdx];
+
+      const sections = slide.texts.filter((t) => Array.isArray(t.content));
+      assert.strictEqual(sections.length, formatData.sections.length, "one text block per section");
+      sections.sort((a, b) => a.opts.y - b.opts.y);
+      sections.forEach((sec, si) => {
+        const expectedY = formatData.sectionStartY + si * formatData.sectionGap;
+        assert.ok(Math.abs(sec.opts.y - expectedY) < 0.01,
+          `section ${si} y ${sec.opts.y} should equal ${expectedY}`);
+      });
+    });
+
+    it("prepends bullet to the first run of each line", () => {
+      const formatIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "format");
+      const formatData = descriptors[formatIdx].data;
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[formatIdx];
+
+      const sections = slide.texts.filter((t) => Array.isArray(t.content));
+      const bullet = formatData.sections[0].bullet;
+      sections.forEach((sec, si) => {
+        const expectedBullets = formatData.sections[si].lines.length;
+        const bulletRuns = sec.content.filter((r) => r.text?.startsWith(bullet + " "));
+        assert.strictEqual(bulletRuns.length, expectedBullets,
+          `section ${si} should have ${expectedBullets} bulleted lines, got ${bulletRuns.length}`);
+      });
+    });
+
+    it("applies contentPad to x and width", () => {
+      const formatIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "format");
+      const formatData = descriptors[formatIdx].data;
+      const cp = formatData.contentPad || 0;
+      assert.ok(cp > 0, "test assumes template has contentPad > 0");
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[formatIdx];
+
+      const sec = slide.texts.find((t) => Array.isArray(t.content));
+      assert.ok(Math.abs(sec.opts.x - (SLIDE_STYLE.pad + cp)) < 0.01,
+        `x ${sec.opts.x} should equal pad + contentPad (${SLIDE_STYLE.pad + cp})`);
+      assert.ok(Math.abs(sec.opts.w - (SLIDE_STYLE.width - 2 * SLIDE_STYLE.pad - 2 * cp)) < 0.01,
+        `w ${sec.opts.w} should equal W - 2*(pad + contentPad)`);
+    });
+  });
+
+  describe("begin style multi-group layout", () => {
+    const lineH = (pts) => (pts / 72) * 1.2;
+
+    it("renders two text blocks for points slide (marginTop creates a group break)", () => {
+      const pointsIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "points");
+      assert.ok(pointsIdx !== -1, "points descriptor should exist");
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[pointsIdx];
+
+      assert.strictEqual(slide.texts.length, 2, "marginTop on second line should split into two text blocks");
+    });
+
+    it("vertically centers the multi-group block accounting for marginTop", () => {
+      const pointsIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "points");
+      const pointsData = descriptors[pointsIdx].data;
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[pointsIdx];
+
+      const blocks = [...slide.texts].sort((a, b) => a.opts.y - b.opts.y);
+      const h0 = lineH(pointsData.lines[0].fontSize);
+      const h1 = lineH(pointsData.lines[1].fontSize);
+      const margin = pointsData.lines[1].marginTop;
+      const totalH = h0 + h1 + margin;
+      const expectedY0 = (SLIDE_STYLE.height - totalH) / 2;
+      const expectedY1 = expectedY0 + h0 + margin;
+
+      assert.ok(Math.abs(blocks[0].opts.y - expectedY0) < 0.01,
+        `first block y ${blocks[0].opts.y} should equal (H - totalH)/2 = ${expectedY0}`);
+      assert.ok(Math.abs(blocks[1].opts.y - expectedY1) < 0.01,
+        `second block y ${blocks[1].opts.y} should equal y0 + h0 + marginTop = ${expectedY1}`);
+    });
+
+    it("merges lines without marginTop into a single centered block (intro-4 begin)", () => {
+      const beginIdx = descriptors.findIndex((d) => d.type === "intro" && d.data?.id === "begin");
+      const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
+      const slide = pptx.slides[beginIdx];
+
+      assert.strictEqual(slide.texts.length, 1, "lines without marginTop should share one text block");
+      assert.strictEqual(slide.texts[0].opts.h, "100%", "single-group block uses 100% height for centering");
+      const allText = slide.texts[0].content.map((r) => r.text).join("");
+      assert.ok(allText.includes("Lasst uns anfangen"), "DE line should be present");
+      assert.ok(allText.includes("Let us begin"), "EN line should be present");
     });
   });
 

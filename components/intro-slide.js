@@ -3,7 +3,7 @@ import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { INTRO_SLIDES } from "../lib/intro-slides.js";
 import { SLIDE_STYLE, getSlideImages } from "../quiz-core.js";
-import { PT_SCALE, px, PX, layoutImageBelowText, layoutTwoImagesBelowText, layoutImageBelowY, layoutTwoImagesBelowY } from "../lib/utils.js";
+import { PT_SCALE, px, PX, layoutImagesBelowText, layoutImageBelowY, layoutTwoImagesBelowY } from "../lib/utils.js";
 import { slideStyle, slideImages, jackpotSize, quizEmail } from "../lib/state.js";
 import { ImageActions } from "./image-actions.js";
 import { SlideImage } from "./slide-image.js";
@@ -51,132 +51,49 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc, descIdx }
 
   if (style === "rules") {
     const sections = data.sections.filter((sec) => !sec.showIf || vars[sec.showIf]);
-    if (imgEntry) {
-      const textRef = useRef(null);
-      const imgElRef = useRef(null);
-      const img1ElRef = useRef(null);
-      useLayoutEffect(() => {
-        if (hasTwoImages) {
-          layoutTwoImagesBelowText(textRef.current, imgElRef.current, img1ElRef.current, imgEntry, imgEntry1);
-        } else {
-          layoutImageBelowText(textRef.current, imgElRef.current, imgEntry);
-        }
-      });
-      return html`
-        <div class="slide-outer" data-desc-idx=${descIdx}>
-          <div class="slide" style="background-color:${bg};color:${fg}">
-            <div ref=${textRef} style="position:absolute;left:0;top:${px(SLIDE_STYLE.pad)};width:100%;text-align:center">
-              <div style="font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
-                ${data.title.text}
-              </div>
-              ${sections.map((sec) => html`
-                <div style="font-size:${data.defaultFontSize * PT_SCALE}px;margin-top:8px">
-                  ${sec.lines.filter((line) => !line.showIf || vars[line.showIf]).map((line) => html`
-                    <div>${line.runs.map((r) => html`<span style="color:${c(r.color)};${r.bold ? 'font-weight:bold;' : ''}${r.underline ? 'text-decoration:underline;' : ''}${r.fontSize ? `font-size:${r.fontSize * PT_SCALE}px;` : ''}">${replaceVars(r.text, vars)}</span>`)}</div>
-                  `)}
-                </div>
-              `)}
-            </div>
-            <${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} imgRef=${imgElRef} slideKey=${slideKey} imgIdx=${0}
-                 isSource=${false} linkKey=${null} onRerender=${onRerender} />
-            ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} type=${imgEntry1.type} name=${imgEntry1.name} imgRef=${img1ElRef} slideKey=${slideKey} imgIdx=${1}
-                 isSource=${false} linkKey=${null} onRerender=${onRerender} />`}
-            ${mediaOverlay()}
-          </div>
-          ${actionsOverlay()}
-        </div>
-      `;
-    }
-
-    return html`
-      <div class="slide-outer" data-desc-idx=${descIdx}>
-        <div class="slide" style="background-color:${bg};color:${fg}">
-          <div style="position:absolute;left:0;top:${px(data.titleY)};width:100%;text-align:center;font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
-            ${data.title.text}
-          </div>
-          ${sections.map((sec, si) => html`
-            <div style="position:absolute;left:${px(SLIDE_STYLE.pad)};top:${px(data.sectionStartY + si * data.sectionGap)};width:${px(SLIDE_STYLE.width - 2 * SLIDE_STYLE.pad)};font-size:${data.defaultFontSize * PT_SCALE}px;text-align:center">
-              ${sec.lines.filter((line) => !line.showIf || vars[line.showIf]).map((line) => html`
-                <div>${line.runs.map((r) => html`<span style="color:${c(r.color)};${r.bold ? 'font-weight:bold;' : ''}${r.underline ? 'text-decoration:underline;' : ''}${r.fontSize ? `font-size:${r.fontSize * PT_SCALE}px;` : ''}">${replaceVars(r.text, vars)}</span>`)}</div>
-              `)}
-            </div>
-          `)}
-          ${mediaOverlay()}
-        </div>
-        ${actionsOverlay()}
-      </div>
-    `;
-  }
-
-  if (style === "format") {
     const cp = data.contentPad || 0;
-    return html`
-      <div class="slide-outer" data-desc-idx=${descIdx}>
-        <div class="slide" style="background-color:${bg};color:${fg}">
-          <div style="position:absolute;left:0;top:${px(data.titleY)};width:100%;text-align:center;font-size:${data.title.fontSize * PT_SCALE}px;${data.title.bold ? 'font-weight:bold;' : ''}text-decoration:underline;color:${c(data.title.color)};font-family:${data.title.fontFace || 'inherit'}">
-            ${data.title.text}
-          </div>
-          ${data.sections.map((sec, si) => html`
-            <div style="position:absolute;left:${px(SLIDE_STYLE.pad + cp)};top:${px(data.sectionStartY + si * data.sectionGap)};width:${px(SLIDE_STYLE.width - 2 * SLIDE_STYLE.pad - 2 * cp)};font-size:${data.defaultFontSize * PT_SCALE}px;color:${c(data.defaultColor)}">
-              ${sec.lines.map((line) => html`
-                <div>● ${line.runs.map((r) => html`<span style="${r.bold ? 'font-weight:bold;' : ''}">${r.text}</span>`)}</div>
-              `)}
-            </div>
-          `)}
-          ${mediaOverlay()}
-        </div>
-        ${actionsOverlay()}
-      </div>
-    `;
-  }
+    const compact = imgEntry && data.compactWhenImage;
+    const titleY = imgEntry && !compact ? SLIDE_STYLE.pad : data.titleY;
+    const sectionStartY = compact ? compact.sectionStartY
+      : (imgEntry ? SLIDE_STYLE.pad + 0.6 : data.sectionStartY);
+    const sectionGap = compact?.sectionGap ?? data.sectionGap;
+    const defaultFontSize = compact?.defaultFontSize ?? data.defaultFontSize;
+    const lineHeight = compact?.lineHeight ?? data.lineHeight;
 
-  if (style === "golden-rules") {
-    const rulesY = imgEntry ? data.imgRulesStartY : data.rulesStartY;
-    const rH = imgEntry ? data.imgRuleHeight : data.ruleHeight;
-    const ruleFs = imgEntry ? (data.imgRuleFontSize ?? data.ruleFontSize) : data.ruleFontSize;
-    const textBottom = rulesY + data.rules.length * rH;
-
-    if (imgEntry) {
-      const imgElRef = useRef(null);
-      const img1ElRef = useRef(null);
-
-      useLayoutEffect(() => {
-        if (hasTwoImages) {
-          layoutTwoImagesBelowY(imgElRef.current, img1ElRef.current, imgEntry, imgEntry1, textBottom);
-        } else {
-          layoutImageBelowY(imgElRef.current, imgEntry, textBottom);
-        }
-      });
-
+    let textBottom = sectionStartY;
+    const sectionEls = sections.map((sec, si) => {
+      const y = sectionStartY + si * sectionGap;
+      const lines = sec.lines.filter((line) => !line.showIf || vars[line.showIf]);
+      const sectionH = sec.wrap ? (sectionGap || (SLIDE_STYLE.height - y)) : lines.length * lineHeight;
+      textBottom = Math.max(textBottom, y + sectionH);
+      const renderRuns = (runs) => runs.map((r) => html`<span style="color:${c(r.color || data.defaultColor)};${r.bold ? 'font-weight:bold;' : ''}${r.underline ? 'text-decoration:underline;' : ''}${r.fontSize ? `font-size:${r.fontSize * PT_SCALE}px;` : ''}">${replaceVars(r.text, vars)}</span>`);
+      const wrapStyles = sec.wrap ? `height:${px(sectionH)};overflow:hidden;` : '';
       return html`
-        <div class="slide-outer" data-desc-idx=${descIdx}>
-          <div class="slide" style="background-color:${bg};color:${fg}">
-            <div style="position:absolute;left:0;top:${px(data.titleY)};width:100%;text-align:center;font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
-              ${data.title.text}
-            </div>
-            ${data.rules.map((rule, ri) => html`
-              <div style="position:absolute;left:0;top:${px(rulesY + ri * rH)};width:100%;text-align:center;font-size:${ruleFs * PT_SCALE}px;color:${c(data.ruleColor)}">${rule}</div>
-            `)}
-            <${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} imgRef=${imgElRef} slideKey=${slideKey} imgIdx=${0}
-                 isSource=${false} linkKey=${null} onRerender=${onRerender} />
-            ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} type=${imgEntry1.type} name=${imgEntry1.name} imgRef=${img1ElRef} slideKey=${slideKey} imgIdx=${1}
-                 isSource=${false} linkKey=${null} onRerender=${onRerender} />`}
-            ${mediaOverlay()}
-          </div>
-          ${actionsOverlay()}
+        <div style="position:absolute;left:${px(SLIDE_STYLE.pad + cp)};top:${px(y)};width:${px(SLIDE_STYLE.width - 2 * SLIDE_STYLE.pad - 2 * cp)};${wrapStyles}font-size:${defaultFontSize * PT_SCALE}px;text-align:center;color:${c(data.defaultColor)};line-height:${lineHeight * PX}px">
+          ${lines.map((line) => html`<div>${sec.bullet ? sec.bullet + " " : null}${renderRuns(line.runs)}</div>`)}
         </div>
       `;
-    }
+    });
+
+    const imgElRef = useRef(null);
+    const img1ElRef = useRef(null);
+    useLayoutEffect(() => {
+      if (!imgEntry) return;
+      if (hasTwoImages) layoutTwoImagesBelowY(imgElRef.current, img1ElRef.current, imgEntry, imgEntry1, textBottom);
+      else layoutImageBelowY(imgElRef.current, imgEntry, textBottom);
+    });
 
     return html`
       <div class="slide-outer" data-desc-idx=${descIdx}>
-        <div class="slide" style="background-color:${bg};color:${fg}">
-          <div style="position:absolute;left:0;top:${px(data.titleY)};width:100%;text-align:center;font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
+        <div class="slide" id=${anchor || undefined} style="background-color:${bg};color:${fg}">
+          <div style="position:absolute;left:0;top:${px(titleY)};width:100%;text-align:center;font-size:${data.title.fontSize * PT_SCALE}px;font-weight:bold;text-decoration:underline;color:${c(data.title.color)}">
             ${data.title.text}
           </div>
-          ${data.rules.map((rule, ri) => html`
-            <div style="position:absolute;left:0;top:${px(rulesY + ri * rH)};width:100%;text-align:center;font-size:${ruleFs * PT_SCALE}px;color:${c(data.ruleColor)}">${rule}</div>
-          `)}
+          ${sectionEls}
+          ${imgEntry && html`<${SlideImage} src=${imgEntry.data} type=${imgEntry.type} name=${imgEntry.name} imgRef=${imgElRef} slideKey=${slideKey} imgIdx=${0}
+               isSource=${false} linkKey=${null} onRerender=${onRerender} />`}
+          ${hasTwoImages && html`<${SlideImage} src=${imgEntry1.data} type=${imgEntry1.type} name=${imgEntry1.name} imgRef=${img1ElRef} slideKey=${slideKey} imgIdx=${1}
+               isSource=${false} linkKey=${null} onRerender=${onRerender} />`}
           ${mediaOverlay()}
         </div>
         ${actionsOverlay()}
@@ -190,11 +107,7 @@ export function IntroSlide({ introIndex, anchor, id, onRerender, desc, descIdx }
     const img1ElRef = useRef(null);
 
     useLayoutEffect(() => {
-      if (hasTwoImages) {
-        layoutTwoImagesBelowText(textRef.current, imgElRef.current, img1ElRef.current, imgEntry, imgEntry1);
-      } else {
-        layoutImageBelowText(textRef.current, imgElRef.current, imgEntry);
-      }
+      layoutImagesBelowText(textRef.current, imgElRef.current, img1ElRef.current, imgEntry, imgEntry1);
     });
 
     if (imgEntry) {

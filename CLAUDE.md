@@ -130,8 +130,8 @@ This pattern keeps action buttons accessible on hover without being clipped by t
 
 Title slides and intro slides (golden-rules, begin) always place text at the top and contain-fit the image to the remaining space below. This is **separate from** the question slide image layout -- it does not use `computeImageLayout()` or `fitSlideText()`. Both sides share a single helper:
 
-- **Preview**: `layoutImageBelowText(textEl, imgEl, imgEntry)` in `lib/utils.js` -- measures text height via DOM, positions image below. Used by `title-slide.js` and `intro-slide.js` (golden-rules, begin) in their `useLayoutEffect`.
-- **PPTX**: `addImageBelowText(slide, entry, textBottom)` in `quiz-core.js` -- contain-fits image to space below a given Y coordinate. Used by `buildPptx()` (title slides) and `renderIntroSlide()` (golden-rules, begin).
+- **Preview**: `layoutImagesBelowText(textEl, imgEl, img1El, imgEntry, imgEntry1)` in `lib/utils.js` -- measures text height via DOM, positions image(s) below. Wraps the one/two-image variants. Used by `title-slide.js` and `intro-slide.js` (begin) in their `useLayoutEffect`. The `rules` style uses `layoutImageBelowY`/`layoutTwoImagesBelowY` instead because it computes textBottom in JS.
+- **PPTX**: `addImagesBelowText(slide, imgEntry, imgEntry1, textBottom, opts)` in `quiz-core.js` -- contain-fits one or two images below a given Y coordinate. Used by `buildPptx()` (title slides) and `renderIntroSlide()` (rules, begin).
 
 ### Audio
 
@@ -145,6 +145,11 @@ Audio works correctly in PowerPoint. LibreOffice Impress has known issues (autop
 ### Intro Slides
 
 Defined in `lib/intro-slides.js` as templates with precise positioning (in inches). Snapshotted into descriptors on upload. The first 3 intro slides (welcome, rules, format) have `id: null` passed to them in `slide-preview.js`, disabling media support. Slides 4-5 (golden-rules, begin) support images.
+
+Three rendering styles are dispatched on `data.style`:
+- `welcome` — unique layout (logo background + toucans + title/subtitle).
+- `rules` — title at top, then a list of sections with rich-text lines. Per-section `bullet` prepends a marker; `wrap: true` renders the section as one text block (auto-wrapping); `lineValign: "middle"` centers each line vertically in its `lineHeight` row. Slide-level `contentPad` widens horizontal padding; `compactWhenImage: { defaultFontSize, sectionStartY, sectionGap, lineHeight }` overrides values when an image is present (used by golden-rules to keep title at `titleY`); `reveal: "image"` tags the image with `objectName: "reveal-answer"` for click-to-reveal. Used by intro-1 rules, intro-2 format (with `wrap`+`bullet`), intro-3 golden-rules (with `compactWhenImage`+`lineValign:middle`+`reveal:image`), prizes, goodbye.
+- `begin` — vertically-centered stack of lines with optional `marginTop` between groups; `reveal: "lines"` tags the first text block. Used by intro-4 begin, break-1, break-2, points, no-phones.
 
 ### Debug Mode
 

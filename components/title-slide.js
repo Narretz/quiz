@@ -2,7 +2,7 @@ import { h } from "preact";
 import { useRef, useLayoutEffect } from "preact/hooks";
 import htm from "htm";
 import { SLIDE_STYLE, getSlideImages, DEFAULT_MONEY } from "../quiz-core.js";
-import { PT_SCALE, PX, px, layoutImageBelowText, layoutTwoImagesBelowText } from "../lib/utils.js";
+import { PT_SCALE, PX, px, layoutImagesBelowText } from "../lib/utils.js";
 import { slideStyle, slideImages, slideDescriptors, jackpotSize, scheduleSave } from "../lib/state.js";
 import { ImageActions } from "./image-actions.js";
 import { SlideImage } from "./slide-image.js";
@@ -75,11 +75,7 @@ export function TitleSlide({ desc, descIdx, anchor, onRerender }) {
   }, [titleEn]);
 
   useLayoutEffect(() => {
-    if (hasTwoImages) {
-      layoutTwoImagesBelowText(textRef.current, imgRef.current, img1Ref.current, imgEntry, imgEntry1);
-    } else {
-      layoutImageBelowText(textRef.current, imgRef.current, imgEntry);
-    }
+    layoutImagesBelowText(textRef.current, imgRef.current, img1Ref.current, imgEntry, imgEntry1);
   });
 
   function renderTitle() {
