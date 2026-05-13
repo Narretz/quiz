@@ -297,7 +297,7 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
            isSource=${!withAnswers} linkKey=${`${id}:${withAnswers ? 0 : 1}`} onRerender=${onRerender} />`}
     </div>
     ${id && html`<${ImageActions} id=${id} withAnswers=${withAnswers} imgEntry=${imgEntry}
-                   slideKey=${slideKey} jackpot=${desc.jackpot} onRerender=${onRerender} />`}
+                   slideKey=${slideKey} jackpot=${desc.jackpot} descIdx=${descIdx} onRerender=${onRerender} />`}
     </div>
   `;
 }

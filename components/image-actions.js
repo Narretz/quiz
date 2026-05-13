@@ -2,11 +2,11 @@ import { h } from "preact";
 import htm from "htm";
 import { SLIDE_STYLE } from "../quiz-core.js";
 import { loadMediaFile, extractVideoFrame } from "../lib/utils.js";
-import { slideImages, setImage, removeImage, manualOverrides, setManualOverride, slideOverrides, slideReveals, setSlideReveal, scheduleSave, debug } from "../lib/state.js";
+import { slideImages, setImage, removeImage, manualOverrides, setManualOverride, slideOverrides, slideReveals, setSlideReveal, scheduleSave, debug, moveQuestion, canMoveQuestion } from "../lib/state.js";
 
 const html = htm.bind(h);
 
-export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKey, imgEntry, slideKey, jackpot = false, onRerender }) {
+export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKey, imgEntry, slideKey, jackpot = false, descIdx = null, onRerender }) {
   const images = slideImages.value;
   const imgEntry1 = images[slideKey + ":1"] || null;
   const hasAnyMedia = imgEntry || imgEntry1;
@@ -184,6 +184,14 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
   const displayFs = effective?.fontSize ?? SLIDE_STYLE.question.fontSize;
   const displayLs = effective?.lineSpacing ?? SLIDE_STYLE.question.lineSpacing;
 
+  const canMoveUp = descIdx != null && canMoveQuestion(descIdx, -1);
+  const canMoveDown = descIdx != null && canMoveQuestion(descIdx, +1);
+  const showMoveButtons = descIdx != null && isQuestion && /^r\d+q\d+$/.test(id || "");
+
+  function doMove(dir) {
+    if (moveQuestion(descIdx, dir)) onRerender();
+  }
+
   const isAnswerSlide = isQuestion && withAnswers;
   const explicitReveal = slideReveals.value[slideKey];
   const revealOn = explicitReveal == null ? jackpot : !!explicitReveal;
@@ -223,6 +231,10 @@ export function ImageActions({ id, withAnswers, isQuestion = true, linkedSlideKe
         `}
         ${isSource && linkKey && imgEntry && images[linkKey]?.data === imgEntry.data && html`
           <button tabindex="-1" onClick=${() => { removeImage(linkKey); removeImage(linkKey + ":1"); scheduleSave(); onRerender(); }}>remove ${hasMaxSlots ? "all" : "media"} from linked</button>
+        `}
+        ${showMoveButtons && html`
+          <button tabindex="-1" onClick=${() => doMove(-1)} disabled=${!canMoveUp} title="Move before previous">↑</button>
+          <button tabindex="-1" onClick=${() => doMove(+1)} disabled=${!canMoveDown} title="Move after next">↓</button>
         `}
         ${!hasMaxSlots && html`
           <label>
