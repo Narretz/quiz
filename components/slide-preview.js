@@ -12,6 +12,21 @@ import { QuestionSlide } from "./question-slide.js";
 const html = htm.bind(h);
 
 function buildSections(quiz, descriptors) {
+  // Single-round shape: one section containing every descriptor, two TOC entries
+  // (round + answers — anchors land on title-r0 and title-r0-ans via slugify of the round name).
+  if (quiz.shape === "single-round") {
+    const indices = descriptors.map((_, i) => i);
+    const name = getRoundName(descriptors, quiz, 0);
+    return {
+      descriptors,
+      sections: [{ label: "", indices }],
+      tocEntries: [
+        { label: name, anchor: slugify(name) },
+        { label: `${name} Answers`, anchor: slugify(name) + "-answers" },
+      ],
+    };
+  }
+
   const sections = [{ label: "", indices: [0, 1, 2, 3, 4] }]; // 5 intro slides
   const tocEntries = [{ label: "Intro", anchor: "intro" }];
   let idx = 5; // skip 5 intro slides

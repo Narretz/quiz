@@ -9,6 +9,13 @@ const html = htm.bind(h);
 
 function buildTocEntries(quiz, descriptors) {
   if (!quiz) return [];
+  if (quiz.shape === "single-round") {
+    const name = getRoundName(descriptors, quiz, 0);
+    return [
+      { label: name, anchor: slugify(name) },
+      { label: `${name} Answers`, anchor: slugify(name) + "-answers" },
+    ];
+  }
   const entries = [{ label: "Intro", anchor: "intro" }];
 
   function pushRound(ri) {

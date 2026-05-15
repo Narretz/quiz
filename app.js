@@ -1,5 +1,5 @@
 import { h, render } from "preact";
-import { effect } from "@preact/signals";
+import { effect, signal } from "@preact/signals";
 import htm from "htm";
 import {
   currentQuiz, currentQuizId, slideDescriptors, slideImages, quizQuestions, manualOverrides,
@@ -15,7 +15,10 @@ import { SlidePreview } from "./components/slide-preview.js";
 
 const html = htm.bind(h);
 
+const singleRoundCount = signal(10);
+
 function App() {
+  singleRoundCount.value;
   // Touch all signals so App re-renders when any change
   currentQuiz.value; currentQuizId.value; slideDescriptors.value; slideImages.value;
   quizQuestions.value; manualOverrides.value; slideStyle.value; savedList.value; status.value;
@@ -55,7 +58,22 @@ function App() {
         </label>
         <label>
           <span>Create a blank quiz with Tipperary structure</span>
-          <button class="new-quiz-btn" onClick=${createBlankQuiz}>Create quiz</button>
+          <button class="new-quiz-btn" onClick=${() => createBlankQuiz()}>Create quiz</button>
+        </label>
+        <label>
+          <span>Create a single-round quiz</span>
+          <span class="single-round-create">
+            <input type="number" min="1" max="50" value=${singleRoundCount.value}
+                   onInput=${(e) => {
+                     const n = parseInt(e.target.value, 10);
+                     if (n >= 1) singleRoundCount.value = n;
+                   }}
+                   title="Number of questions" />
+            <button class="new-single-round-btn"
+                    onClick=${() => createBlankQuiz({ shape: "single-round", questionCount: singleRoundCount.value })}>
+              Create ${singleRoundCount.value}-question round
+            </button>
+          </span>
         </label>
         <label>
           <span>Load a saved quiz</span><${SavedQuizBar} onLoad=${loadSavedQuiz} />

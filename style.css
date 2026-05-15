@@ -57,6 +57,18 @@
         font-size: 0.9rem;
     }
 
+    .single-round-create {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+
+    .single-round-create input[type="number"] {
+        width: 4rem;
+        padding: 0.4rem;
+        font-size: 1rem;
+    }
+
     .controls {
         display: flex;
         gap: 1rem;

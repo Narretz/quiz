@@ -369,6 +369,22 @@ export function buildSlideDescriptors(quiz) {
     slides.push({ type: "title", text, subtitle: subtitle || null, id: id || null });
   }
 
+  // Single-round shape: round + answer phase, no intros, no extras.
+  if (quiz.shape === "single-round") {
+    const r = quiz.rounds[0];
+    addTitle({ de: r.name, en: "" }, null, "title-r0");
+    if (r.description?.de) slides.push({ type: "description", text: r.description, id: "desc-r0" });
+    const count = r.questions.length;
+    for (let i = 0; i < count; i++) {
+      slides.push({ type: "question", id: `r0q${i}`, num: i + 1, withAnswers: false });
+    }
+    addTitle({ de: r.name, en: "" }, null, "title-r0-ans");
+    for (let i = 0; i < count; i++) {
+      slides.push({ type: "question", id: `r0q${i}`, num: i + 1, withAnswers: true });
+    }
+    return slides;
+  }
+
   function addRoundQuestions(rounds, roundOffset, withAnswers) {
     for (let r = 0; r < rounds.length; r++) {
       const ri = roundOffset + r;

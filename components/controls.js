@@ -60,8 +60,10 @@ export function Controls() {
       <div class="controls quiz-meta">
         <label>Name<input type="text" class="setting-input setting-input--name" value=${quiz.name ?? ""} placeholder=${quizId || ""} onChange=${onNameChange} /></label>
         <label>Date<input type="date" class="setting-input setting-input--date" value=${quiz.date ?? ""} onChange=${onDateChange} /></label>
-        <label>Jackpot €<input type="number" class="setting-input" min="0" value=${jackpotSize.value} onChange=${onJackpotChange} /></label>
-        <label>Email<input type="email" class="setting-input setting-input--email" value=${quizEmail.value} onChange=${onEmailChange} /></label>
+        ${quiz.shape !== "single-round" && html`
+          <label>Jackpot €<input type="number" class="setting-input" min="0" value=${jackpotSize.value} onChange=${onJackpotChange} /></label>
+          <label>Email<input type="email" class="setting-input setting-input--email" value=${quizEmail.value} onChange=${onEmailChange} /></label>
+        `}
       </div>
     `}
     <div class="controls ${debug ? 'controls--sticky' : ''}">
