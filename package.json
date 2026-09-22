@@ -17,7 +17,7 @@
     "pptxgenjs": "^4.0.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.59.1",
+    "@playwright/test": "^1.63.0",
     "husky": "^9.1.7"
   }
 }
