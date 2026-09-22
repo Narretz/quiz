@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { seedQuiz } from "./seed.js";
+import { seedQuiz, buildSeedRecord } from "./seed.js";
 
 test.describe("validation bar", () => {
   test.beforeEach(async ({ page }) => {
@@ -160,7 +160,8 @@ test.describe("validation bar", () => {
   });
 
   test("debug Validate checkbox shows the bar live without downloading", async ({ page }) => {
-    await page.goto(`/?quiz=${encodeURIComponent("2025-11-30")}&debug=true`);
+    const { id } = await buildSeedRecord();
+    await page.goto(`/?quiz=${encodeURIComponent(id)}&debug=true`);
     await page.locator(".slide").first().waitFor({ timeout: 10_000 });
 
     await expect(page.locator(".validation-bar")).toHaveCount(0);
@@ -174,7 +175,8 @@ test.describe("validation bar", () => {
   });
 
   test("Validate checkbox state persists across reloads", async ({ page }) => {
-    await page.goto(`/?quiz=${encodeURIComponent("2025-11-30")}&debug=true`);
+    const { id } = await buildSeedRecord();
+    await page.goto(`/?quiz=${encodeURIComponent(id)}&debug=true`);
     await page.locator(".slide").first().waitFor({ timeout: 10_000 });
 
     const checkbox = page.locator(".style-controls label", { hasText: "Validate" }).locator("input[type=checkbox]");
