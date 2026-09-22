@@ -32,12 +32,12 @@ function sheet(rows, sheetName = "Tabelle1") {
 describe("astToQuiz", () => {
   it("parses Excel serial date from bold single-cell row", () => {
     const ast = sheet([
-      row(cell(0, "46035", { bold: true })),   // 2026-01-12
+      row(cell(0, "46035", { bold: true })),   // 2026-01-13
       row(cell(0, "Round 1", { bold: true })),
       row(cell(0, "Q1"), cell(1, "Q1en"), cell(2, "A1"), cell(3, "A1en")),
     ]);
     const quiz = astToQuiz(ast);
-    assert.strictEqual(quiz.date, "2026-01-12");
+    assert.strictEqual(quiz.date, "2026-01-13");
   });
 
   it("returns null date when no serial date row exists", () => {

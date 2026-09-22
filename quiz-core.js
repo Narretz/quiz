@@ -316,8 +316,9 @@ export function astToQuiz(ast) {
     if (date === null && firstIsBold && cells.length === 1) {
       const serial = parseInt(firstText, 10);
       if (!isNaN(serial)) {
-        const epoch = new Date(1899, 11, 30);
-        date = new Date(epoch.getTime() + serial * 86400000)
+        // Excel serial dates count days from 1899-12-30. Use UTC throughout —
+        // a local-time epoch shifts the ISO date by one day east of UTC.
+        date = new Date(Date.UTC(1899, 11, 30) + serial * 86400000)
           .toISOString()
           .split("T")[0];
         continue;
