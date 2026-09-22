@@ -183,7 +183,9 @@ Preview scaling: `PT_SCALE = 576 / (10 * 72)` for pt->px, `PX = 576 / 10` for in
 
 E2E tests use `seedQuiz(page)` (in `e2e/seed.js`) to parse the XLSX in Node and seed IndexedDB directly, avoiding slow file uploads for every test. Only the "upload" describe block in `quiz.spec.js` tests actual XLSX upload.
 
-The Playwright config starts the web server on port 3004 (`node cli.js web --port 3004`) with `reuseExistingServer: false` to avoid conflicts with the dev server.
+The Playwright config starts the web server on the first free port from 3004 (`node cli.js web --port <port> --no-reload`) with `reuseExistingServer: false` to avoid conflicts with the dev server.
+
+**Dev server**: `npm run dev` (= `node cli.js web`, port 3003) live-reloads on file changes: CSS-only changes swap stylesheets in place, anything else reloads the page. `--no-reload` disables it.
 
 ## Conventions
 

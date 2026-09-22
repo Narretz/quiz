@@ -34,7 +34,7 @@ export default defineConfig({
     baseURL: `http://localhost:${port}`,
   },
   webServer: {
-    command: `node cli.js web --port ${port}`,
+    command: `node cli.js web --port ${port} --no-reload`,
     port,
     reuseExistingServer: false,
   },
