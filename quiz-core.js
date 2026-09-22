@@ -24,7 +24,7 @@ export const SLIDE_STYLE = {
   title:    { fontSize: 40 },
   num:      { fontSize: 23 },
   question: { fontSize: 20, lineSpacing: 110 },
-  answer:   { fontSize: 20, color: '#FFFFFF', backgroundColor: '#CC0000' },
+  answer:   { fontSize: 20, color: '#FFFFFF', backgroundColor: '#CC0000', sepGap: 15 }, // sepGap: pt on each side of ⬧
 };
 
 export const AUDIO_DIMENSIONS = { width: 280, height: 80 };
@@ -50,6 +50,26 @@ export function formatAnswer(q) {
   if (!en || de === en) return de;
   if (!de) return en;
   return `${de} ⬧ ${en}`;
+}
+
+// Width of a space in Arial (regular and bold), in em
+const ARIAL_SPACE_EM = 0.278;
+
+/**
+ * Answer text as pptxgenjs runs. Each side of the ⬧ separator gets
+ * SLIDE_STYLE.answer.sepGap pt (the preview uses the same value as CSS margin):
+ * a regular space, so lines can still break there, widened via charSpacing.
+ */
+export function formatAnswerRuns(q) {
+  const de = (q.answers.de || "").trim();
+  const en = (q.answers.en || "").trim();
+  if (!de || !en || de === en) {
+    const answer = formatAnswer(q);
+    return answer ? [{ text: answer }] : [];
+  }
+  const { fontSize, sepGap } = SLIDE_STYLE.answer;
+  const gap = { charSpacing: Math.max(0, sepGap - ARIAL_SPACE_EM * fontSize) };
+  return [{ text: de }, { text: " ", options: gap }, { text: "⬧" }, { text: " ", options: gap }, { text: en }];
 }
 
 
@@ -959,7 +979,7 @@ export function buildPptx(descriptors, PptxGenJS, images = {}, overrides = {}, a
           paraSpaceBefore: 5,
         };
         if (isRevealEffective(reveals, desc)) answerOpts.objectName = "reveal-answer";
-        slide.addText(answer, answerOpts);
+        slide.addText(formatAnswerRuns(q), answerOpts);
         // Image above answer bar (only when no question text — otherwise already placed)
         if (imgEntry && !hasQuestionText) {
           const imgTop = pad + 0.5;

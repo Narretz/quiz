@@ -1,6 +1,6 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { buildPptx, buildSlideDescriptors, SLIDE_STYLE, DEFAULT_MONEY } from "../quiz-core.js";
+import { buildPptx, buildSlideDescriptors, formatAnswerRuns, SLIDE_STYLE, DEFAULT_MONEY } from "../quiz-core.js";
 import { INTRO_SLIDES } from "../lib/intro-slides.js";
 
 // --- PptxGenJS spy ---
@@ -143,9 +143,22 @@ describe("buildPptx", () => {
     const aIdx = descriptors.findIndex((d) => d.type === "question" && d.id === "r0q0" && d.withAnswers);
     const pptx = buildPptx(descriptors, PptxSpy, {}, {}, {}, {}, questions);
     const slide = pptx.slides[aIdx];
-    const answerText = slide.texts.find((t) => typeof t.content === "string" && t.content.includes("Antwort 1"));
+    const answerText = slide.texts.find((t) => Array.isArray(t.content) && t.content[0]?.text === "Antwort 1");
     assert.ok(answerText, "answer bar should be present");
     assert.ok(answerText.opts.fill, "answer bar should have fill color");
+    assert.deepStrictEqual(answerText.content.map((r) => r.text), ["Antwort 1", " ", "⬧", " ", "Answer 1"]);
+  });
+
+  it("widens the answer separator spaces to SLIDE_STYLE.answer.sepGap", () => {
+    const [, space] = formatAnswerRuns({ answers: { de: "A", en: "B" } });
+    const { fontSize, sepGap } = SLIDE_STYLE.answer;
+    assert.ok(Math.abs(space.options.charSpacing + 0.278 * fontSize - sepGap) < 1e-9);
+  });
+
+  it("renders a single run when the answer has one language", () => {
+    assert.deepStrictEqual(formatAnswerRuns({ answers: { de: "A", en: "A" } }), [{ text: "A" }]);
+    assert.deepStrictEqual(formatAnswerRuns({ answers: { de: "", en: "B" } }), [{ text: "B" }]);
+    assert.deepStrictEqual(formatAnswerRuns({ answers: { de: "", en: "" } }), []);
   });
 
   it("places image on slide when provided", () => {

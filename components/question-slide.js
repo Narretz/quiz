@@ -18,6 +18,21 @@ function focusEnd(el) {
   sel.collapseToEnd();
 }
 
+// Click on the answer bar's empty area: does it belong to the EN side of the ⬧?
+// Clicks in the bar's padding count as the nearest text line.
+function clickedAfterSep(e) {
+  const bar = e.currentTarget;
+  const sep = bar.querySelector(".answer-bar__sep").getBoundingClientRect();
+  if (!sep.width) return false; // separator hidden — only DE is shown
+  const range = document.createRange();
+  range.selectNodeContents(bar);
+  const text = range.getBoundingClientRect();
+  const y = Math.min(Math.max(e.clientY, text.top + 1), text.bottom - 1);
+  if (y > sep.bottom) return true;
+  if (y < sep.top) return false;
+  return e.clientX > sep.left + sep.width / 2;
+}
+
 function translateUrl(source, target, text) {
   return `https://translate.google.com/?sl=${source}&tl=${target}&text=${encodeURIComponent(text)}&op=translate`;
 }
@@ -88,6 +103,7 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
   const qLh = SLIDE_STYLE.question.lineSpacing / 100;
   const numFs = SLIDE_STYLE.num.fontSize * PT_SCALE;
   const ansFs = SLIDE_STYLE.answer.fontSize * PT_SCALE;
+  const ansSepGap = SLIDE_STYLE.answer.sepGap * PT_SCALE;
   const ansDe = q?.answers?.de || "";
   const ansEnRaw = q?.answers?.en || "";
   const ansEn = ansEnRaw !== ansDe ? ansEnRaw : "";
@@ -170,9 +186,10 @@ export function QuestionSlide({ desc, descIdx, onRerender }) {
     const cls = `answer-bar${filled ? ' answer-bar--filled' : ''}${isGhost ? ' answer-bar--ghost' : ''}`;
     return html`
       <div ref=${isGhost ? null : ansBarRef} class=${cls}
-           style="font-size:${ansFs}px;background:${SLIDE_STYLE.answer.backgroundColor};color:${SLIDE_STYLE.answer.color}"
+           style="font-size:${ansFs}px;--sep-gap:${ansSepGap}px;background:${SLIDE_STYLE.answer.backgroundColor};color:${SLIDE_STYLE.answer.color}"
            onClick=${(e) => {
-             if (e.target === e.currentTarget && ansDeRef.current) ansDeRef.current.focus();
+             if (e.target !== e.currentTarget) return;
+             focusEnd(clickedAfterSep(e) ? ansEnRef.current : ansDeRef.current);
            }}>
         <span title="German answer"
               class="answer-bar__tag answer-bar__tag--de"

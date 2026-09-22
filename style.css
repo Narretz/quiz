@@ -335,10 +335,15 @@
         display: block;
     }
 
+    /* Filled fields flow inline so the bar wraps like the PPTX text ("de ⬧ en"
+       as one run). Empty fields get an inline-block click target. */
     .answer-bar__field {
-        display: inline-block;
         outline: none;
         cursor: text;
+    }
+
+    .answer-bar__field:empty {
+        display: inline-block;
         min-width: 1em;
         min-height: 1.2em;
         vertical-align: middle;
@@ -349,18 +354,22 @@
         outline-offset: 2px;
     }
 
+    /* --sep-gap = SLIDE_STYLE.answer.sepGap (the PPTX widens the spaces around ⬧
+       to the same width). inline-block keeps line-break opportunities around it. */
     .answer-bar__sep {
-        padding: 0 4px;
+        display: inline-block;
+        margin: 0 var(--sep-gap);
         user-select: none;
     }
 
-    .answer-bar__sep--hover {
-        visibility: hidden;
-    }
-
-    .answer-bar:hover .answer-bar__sep--hover,
-    .answer-bar:focus-within .answer-bar__sep--hover {
-        visibility: visible;
+    /* PPTX omits the separator and empty fields — take them out of layout
+       unless the bar is being edited. --measure forces the resting layout
+       while fitSlideText reads the bar height. */
+    .answer-bar:not(:hover):not(:focus-within) .answer-bar__sep--hover,
+    .answer-bar:not(:hover):not(:focus-within) .answer-bar__field:empty,
+    .answer-bar--measure .answer-bar__sep--hover,
+    .answer-bar--measure .answer-bar__field:empty:not(:focus) {
+        display: none;
     }
 
     .answer-bar__tag {
