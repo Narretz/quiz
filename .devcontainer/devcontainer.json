@@ -1,0 +1,20 @@
+{
+  "name": "Pub Quiz",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:26",
+  "features": {
+    "ghcr.io/anthropics/devcontainer-features/claude-code:latest": {}
+  },
+  "mounts": [
+    "source=${localEnv:HOME}/.claude,target=/home/node/.claude,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.claude.json,target=/home/node/.claude.json,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.gitconfig,target=/home/node/.gitconfig,type=bind,readonly",
+    "source=${localEnv:HOME}/.ssh,target=/home/node/.ssh,type=bind,readonly"
+  ],
+  "postCreateCommand": "npm install && npx playwright install --with-deps chromium",
+  "appPort": ["6174:3003", "6175:3004"],
+  "containerEnv": {
+    "NPM_CONFIG_FUND": "false",
+    "DISABLE_AUTOUPDATER": "1"
+  },
+  "remoteUser": "node"
+}
